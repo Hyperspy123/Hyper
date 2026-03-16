@@ -6,7 +6,7 @@ import { I18nProvider } from '@/lib/i18n';
 
 // Pages
 import Index from './pages/Index';
-import Auth from './pages/Auth'; // Your new professional Auth page
+import Auth from './pages/Auth'; 
 import BookCourt from './pages/BookCourt';
 import MyBookings from './pages/MyBookings';
 import Rewards from './pages/Rewards';
@@ -29,7 +29,6 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Main App Routes */}
-            <Route path="/my-bookings" element={<MyBookings />} />
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/book/:id" element={<BookCourt />} />
