@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { ChevronRight, Clock, Calendar, Zap, MapPin } from 'lucide-react';
+import { ChevronRight, Clock, Zap, CalendarDays } from 'lucide-react';
 
 export default function BookCourt() {
   const { id } = useParams();
@@ -14,7 +14,6 @@ export default function BookCourt() {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
 
-  // 1. Clear Time Slots with AM/PM
   const timeSlots = [
     { id: "16:00", label: "04:00 PM" },
     { id: "17:30", label: "05:30 PM" },
@@ -24,20 +23,28 @@ export default function BookCourt() {
     { id: "23:30", label: "11:30 PM" },
   ];
 
-  // 2. Simple logic for the next 4 days as Buttons
-  const getDays = () => {
-    const days = [];
-    const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  // Logic for the 4 compact date squares
+  const getDateButtons = () => {
+    const dates = [];
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    
     for (let i = 0; i < 4; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
-      days.push({
+      
+      let label = "";
+      if (i === 0) label = "TODAY";
+      else if (i === 1) label = "TOMORROW";
+      else label = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+
+      dates.push({
         iso: d.toISOString().split('T')[0],
-        name: i === 0 ? 'اليوم' : names[d.getDay()],
-        num: d.getDate()
+        dayLabel: label,
+        dateNum: d.getDate(),
+        month: months[d.getMonth()]
       });
     }
-    return days;
+    return dates;
   };
 
   useEffect(() => {
@@ -60,88 +67,85 @@ export default function BookCourt() {
     const startTime = new Date(`${selectedDate} ${selectedTime}`).toISOString();
     const endTime = new Date(new Date(startTime).getTime() + 90 * 60000).toISOString(); 
 
-    // Double-booking check: prevents others from booking same place/time
-    const { data: taken } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('court_id', id)
-      .eq('start_time', startTime)
-      .eq('status', 'confirmed')
-      .maybeSingle();
+    const { data: taken } = await supabase.from('bookings').select('id')
+      .eq('court_id', id).eq('start_time', startTime).eq('status', 'confirmed').maybeSingle();
 
     if (taken) {
-      alert("عذراً، هذا الوقت محجوز بالفعل. يرجى اختيار وقت آخر.");
+      alert("This slot is already booked. Please choose another time.");
       setBookingInProgress(false);
       return;
     }
 
     const { error } = await supabase.from('bookings').insert([{ 
-      court_id: id, 
-      user_id: user.id, 
-      start_time: startTime, 
-      end_time: endTime, 
-      status: 'confirmed'
+      court_id: id, user_id: user.id, start_time: startTime, end_time: endTime, status: 'confirmed'
     }]);
 
-    if (!error) {
-      alert("تم الحجز بنجاح! نراك في الملعب 🎾");
-      navigate('/my-bookings');
-    }
+    if (!error) navigate('/my-bookings');
     setBookingInProgress(false);
   };
 
-  if (loading) return <div className="min-h-screen bg-[#0a0f3c] flex items-center justify-center text-cyan-500 font-black">جاري التحميل...</div>;
+  if (loading) return <div className="min-h-screen bg-[#0a0f3c]" />;
 
   return (
     <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-10" dir="rtl">
       <Header />
       
       <div className="p-4 flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10">
-          <ChevronRight size={24} className="text-cyan-400" />
+        <button onClick={() => navigate(-1)} className="p-2 bg-white/5 rounded-xl border border-white/10">
+          <ChevronRight size={22} className="text-cyan-400" />
         </button>
-        <h1 className="text-2xl font-black italic">تأكيد الحجز</h1>
+        <h1 className="text-xl font-black italic tracking-tighter">BOOKING DETAILS</h1>
       </div>
 
-      <main className="p-6 max-w-lg mx-auto space-y-10">
+      <main className="px-6 max-w-md mx-auto space-y-8 text-right">
         
-        {/* Step 1: Big Date Buttons */}
-        <section className="space-y-4">
-          <h3 className="text-gray-400 text-xs font-bold flex items-center gap-2 tracking-widest uppercase">
-            ١. اختر التاريخ
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            {getDays().map((day) => (
+        {/* Court Preview - Smaller */}
+        <div className="bg-[#14224d] rounded-3xl p-4 border border-white/5 flex items-center gap-4 shadow-xl">
+          <img src={court?.image_url} className="w-16 h-16 rounded-2xl object-cover border border-white/10" />
+          <div>
+            <h2 className="text-lg font-black">{court?.name}</h2>
+            <p className="text-cyan-400 font-bold text-sm">{court?.price_per_hour} SAR / Hour</p>
+          </div>
+        </div>
+
+        {/* Compact Date Grid */}
+        <section className="space-y-3">
+          <p className="text-gray-400 text-[10px] font-black tracking-[3px] uppercase flex items-center gap-2 justify-end">
+             اختر التاريخ <CalendarDays size={14} className="text-cyan-500" />
+          </p>
+          <div className="grid grid-cols-4 gap-2">
+            {getDateButtons().map((day) => (
               <button
                 key={day.iso}
                 onClick={() => setSelectedDate(day.iso)}
-                className={`p-6 rounded-[32px] border-2 transition-all flex flex-col items-center gap-1 ${
+                className={`flex flex-col items-center justify-center aspect-square rounded-2xl border-2 transition-all ${
                   selectedDate === day.iso 
-                  ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg scale-95' 
+                  ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg shadow-cyan-500/20' 
                   : 'bg-[#14224d] border-white/5 text-gray-400 hover:border-white/10'
                 }`}
               >
-                <span className="text-xs font-bold">{day.name}</span>
-                <span className="text-2xl font-black">{day.num}</span>
+                <span className="text-[8px] font-black">{day.dayLabel}</span>
+                <span className="text-lg font-black leading-none my-0.5">{day.dateNum}</span>
+                <span className="text-[9px] font-bold opacity-70">{day.month}</span>
               </button>
             ))}
           </div>
         </section>
 
-        {/* Step 2: Clear Time Buttons */}
-        <section className="space-y-4">
-          <h3 className="text-gray-400 text-xs font-bold flex items-center gap-2 tracking-widest uppercase">
-            ٢. اختر الوقت
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
+        {/* Compact Time Grid */}
+        <section className="space-y-3">
+          <p className="text-gray-400 text-[10px] font-black tracking-[3px] uppercase flex items-center gap-2 justify-end">
+             اختر الوقت <Clock size={14} className="text-cyan-500" />
+          </p>
+          <div className="grid grid-cols-3 gap-2">
             {timeSlots.map((slot) => (
               <button
                 key={slot.id}
                 onClick={() => setSelectedTime(slot.id)}
-                className={`py-5 rounded-[24px] border-2 font-black text-sm transition-all ${
+                className={`py-3 rounded-xl border-2 font-black text-[10px] transition-all ${
                   selectedTime === slot.id 
-                  ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg' 
-                  : 'bg-[#14224d] border-white/5 text-gray-400 hover:border-white/10'
+                  ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' 
+                  : 'bg-[#14224d] border-white/5 text-gray-400'
                 }`}
               >
                 {slot.label}
@@ -150,14 +154,14 @@ export default function BookCourt() {
           </div>
         </section>
 
-        {/* Final Button */}
+        {/* Action Button */}
         <button 
           onClick={handleConfirm}
           disabled={!selectedDate || !selectedTime || bookingInProgress}
-          className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[32px] font-black text-xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 disabled:opacity-10 transition-all"
+          className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-lg shadow-xl flex items-center justify-center gap-3 active:scale-95 disabled:opacity-10 transition-all mt-4"
         >
-          {bookingInProgress ? "جاري الحجز..." : "تأكيد الحجز الآن"}
-          <Zap size={24} className="fill-[#0a0f3c]" />
+          {bookingInProgress ? "PROCESSING..." : "CONFIRM BOOKING"}
+          <Zap size={20} className="fill-[#0a0f3c]" />
         </button>
       </main>
     </div>
