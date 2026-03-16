@@ -31,25 +31,33 @@ export default function BookCourt() {
   ];
 
   const getDateButtons = () => {
-    const dates = [];
+    const dates = []; // This is the corrected array name
     const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    
     for (let i = 0; i < 4; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
+      
       let label = i === 0 ? "TODAY" : i === 1 ? "TOMORROW" : d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+      
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      
       dates.push({
-        iso: d.toISOString().split('T')[0],
+        iso: `${year}-${month}-${day}`,
         dayLabel: label,
         dateNum: d.getDate(),
         month: months[d.getMonth()]
       });
     }
-    return dates;
+    return dates; // This now matches the array name 'dates'
   };
 
   useEffect(() => {
     const fetchCourt = async () => {
       if (!id) return;
+      setLoading(true);
       const { data, error } = await supabase.from('courts').select('*').eq('id', id).maybeSingle();
       if (data) {
         setCourt(data);
@@ -63,22 +71,23 @@ export default function BookCourt() {
 
   const handleConfirm = async () => {
     if (!selectedDate || !selectedTime) {
-      alert("Please select both date and time.");
+      alert("الرجاء اختيار التاريخ والوقت");
       return;
     }
     setBookingInProgress(true);
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { 
-      alert("Please login first");
+      alert("الرجاء تسجيل الدخول أولاً");
       navigate('/auth'); 
       return; 
     }
 
-    const startTime = new Date(`${selectedDate} ${selectedTime}`).toISOString();
+    // Fixed string construction to avoid timezone shifting
+    const startDateTimeStr = `${selectedDate}T${selectedTime}:00`;
+    const startTime = new Date(startDateTimeStr).toISOString();
     const endTime = new Date(new Date(startTime).getTime() + duration * 60000).toISOString(); 
 
-    // Double-booking check
     const { data: existing } = await supabase
       .from('bookings')
       .select('id')
@@ -88,7 +97,7 @@ export default function BookCourt() {
       .maybeSingle();
 
     if (existing) {
-      alert("This slot is already taken!");
+      alert("عذراً، هذا الوقت محجوز بالفعل!");
       setBookingInProgress(false);
       return;
     }
@@ -104,7 +113,7 @@ export default function BookCourt() {
     if (!error) {
       navigate('/my-bookings');
     } else {
-      alert("Error saving booking: " + error.message);
+      alert("خطأ في الحجز: " + error.message);
     }
     setBookingInProgress(false);
   };
@@ -117,7 +126,7 @@ export default function BookCourt() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-10" dir="rtl">
+    <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-24" dir="rtl">
       <Header />
       
       <div className="p-4 flex items-center gap-4">
@@ -134,11 +143,11 @@ export default function BookCourt() {
           <img src={court?.image_url} className="w-16 h-16 rounded-2xl object-cover border border-white/10" />
           <div className="text-left">
             <h2 className="text-lg font-black leading-tight">{court?.name || "ملعب بادل"}</h2>
-            <p className="text-cyan-400 font-bold text-sm">{court?.price_per_hour || 250} SAR / الساعة</p>
+            <p className="text-cyan-400 font-bold text-sm">{court?.price_per_hour || 250} SAR / ساعة</p>
           </div>
         </div>
 
-        {/* 1. Duration */}
+        {/* 1. Duration Selection */}
         <section className="space-y-3">
           <p className="text-gray-400 text-[10px] font-black tracking-[3px] uppercase flex items-center gap-2 justify-end">
              مدة اللعب <Timer size={14} className="text-cyan-500" />
@@ -207,7 +216,7 @@ export default function BookCourt() {
         <button 
           onClick={handleConfirm}
           disabled={!selectedDate || !selectedTime || bookingInProgress}
-          className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-lg shadow-xl flex items-center justify-center gap-3 active:scale-95 disabled:opacity-10 transition-all mt-4"
+          className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-lg shadow-xl flex items-center justify-center gap-3 active:scale-95 disabled:opacity-10 transition-all mt-4 mb-10"
         >
           {bookingInProgress ? "جاري الحجز..." : "تأكيد الحجز الآن"}
           <Zap size={20} className="fill-[#0a0f3c]" />
