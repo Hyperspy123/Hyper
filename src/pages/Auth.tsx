@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '@/LLL';
+import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Zap } from 'lucide-react';
 
