@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/LLL';
+import { supabase } from '../LLL';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import { Users, MapPin, Clock, Zap, Plus, Search } from 'lucide-react';

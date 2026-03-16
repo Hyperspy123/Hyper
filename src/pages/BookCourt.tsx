@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/LLL';
+import { supabase } from '../LLL';
 import Header from '@/components/Header';
 import { ChevronRight, Clock, Calendar, MapPin, Zap } from 'lucide-react';
 

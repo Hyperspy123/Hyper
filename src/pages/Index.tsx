@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/LLL'; 
+import { supabase } from '../LLL';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import { useI18n } from '@/lib/i18n';
