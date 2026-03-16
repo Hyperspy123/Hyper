@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { ChevronRight, Clock, Zap, CalendarDays } from 'lucide-react';
+import { ChevronRight, Clock, Zap, CalendarDays, Timer } from 'lucide-react';
 
 export default function BookCourt() {
   const { id } = useParams();
@@ -13,6 +13,7 @@ export default function BookCourt() {
   
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  const [duration, setDuration] = useState(90); // Default to 90
 
   const timeSlots = [
     { id: "16:00", label: "04:00 PM" },
@@ -23,20 +24,19 @@ export default function BookCourt() {
     { id: "23:30", label: "11:30 PM" },
   ];
 
-  // Logic for the 4 compact date squares
+  const durations = [
+    { label: "60 Min", value: 60 },
+    { label: "90 Min", value: 90 },
+    { label: "120 Min", value: 120 },
+  ];
+
   const getDateButtons = () => {
     const dates = [];
     const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-    
     for (let i = 0; i < 4; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
-      
-      let label = "";
-      if (i === 0) label = "TODAY";
-      else if (i === 1) label = "TOMORROW";
-      else label = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-
+      let label = i === 0 ? "TODAY" : i === 1 ? "TOMORROW" : d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
       dates.push({
         iso: d.toISOString().split('T')[0],
         dayLabel: label,
@@ -65,22 +65,30 @@ export default function BookCourt() {
     if (!user) { navigate('/auth'); return; }
 
     const startTime = new Date(`${selectedDate} ${selectedTime}`).toISOString();
-    const endTime = new Date(new Date(startTime).getTime() + 90 * 60000).toISOString(); 
+    const endTime = new Date(new Date(startTime).getTime() + duration * 60000).toISOString(); 
 
-    const { data: taken } = await supabase.from('bookings').select('id')
-      .eq('court_id', id).eq('start_time', startTime).eq('status', 'confirmed').maybeSingle();
+    // --- ANTI-DOUBLE BOOKING LOGIC ---
+    const { data: existingBooking } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('court_id', id)
+      .eq('start_time', startTime)
+      .eq('status', 'confirmed')
+      .maybeSingle();
 
-    if (taken) {
-      alert("This slot is already booked. Please choose another time.");
+    if (existingBooking) {
+      alert("This slot was just booked by someone else! Please choose another time.");
       setBookingInProgress(false);
       return;
     }
+    // ---------------------------------
 
     const { error } = await supabase.from('bookings').insert([{ 
       court_id: id, user_id: user.id, start_time: startTime, end_time: endTime, status: 'confirmed'
     }]);
 
     if (!error) navigate('/my-bookings');
+    else alert("Error: " + error.message);
     setBookingInProgress(false);
   };
 
@@ -94,21 +102,41 @@ export default function BookCourt() {
         <button onClick={() => navigate(-1)} className="p-2 bg-white/5 rounded-xl border border-white/10">
           <ChevronRight size={22} className="text-cyan-400" />
         </button>
-        <h1 className="text-xl font-black italic tracking-tighter">BOOKING DETAILS</h1>
+        <h1 className="text-xl font-black italic tracking-tighter uppercase">Court Selection</h1>
       </div>
 
-      <main className="px-6 max-w-md mx-auto space-y-8 text-right">
+      <main className="px-6 max-w-md mx-auto space-y-6 text-right">
         
-        {/* Court Preview - Smaller */}
+        {/* Court Preview */}
         <div className="bg-[#14224d] rounded-3xl p-4 border border-white/5 flex items-center gap-4 shadow-xl">
           <img src={court?.image_url} className="w-16 h-16 rounded-2xl object-cover border border-white/10" />
-          <div>
-            <h2 className="text-lg font-black">{court?.name}</h2>
+          <div className="text-left">
+            <h2 className="text-lg font-black leading-tight">{court?.name}</h2>
             <p className="text-cyan-400 font-bold text-sm">{court?.price_per_hour} SAR / Hour</p>
           </div>
         </div>
 
-        {/* Compact Date Grid */}
+        {/* 1. Duration Selector - Small & Clean */}
+        <section className="space-y-3">
+          <p className="text-gray-400 text-[10px] font-black tracking-[3px] uppercase flex items-center gap-2 justify-end">
+             مدة اللعب <Timer size={14} className="text-cyan-500" />
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {durations.map((d) => (
+              <button 
+                key={d.value} 
+                onClick={() => setDuration(d.value)} 
+                className={`py-2 rounded-xl border-2 font-black text-[10px] transition-all ${
+                  duration === d.value ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-[#14224d] border-white/5 text-gray-400'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* 2. Compact Date Grid */}
         <section className="space-y-3">
           <p className="text-gray-400 text-[10px] font-black tracking-[3px] uppercase flex items-center gap-2 justify-end">
              اختر التاريخ <CalendarDays size={14} className="text-cyan-500" />
@@ -121,18 +149,18 @@ export default function BookCourt() {
                 className={`flex flex-col items-center justify-center aspect-square rounded-2xl border-2 transition-all ${
                   selectedDate === day.iso 
                   ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg shadow-cyan-500/20' 
-                  : 'bg-[#14224d] border-white/5 text-gray-400 hover:border-white/10'
+                  : 'bg-[#14224d] border-white/5 text-gray-400'
                 }`}
               >
-                <span className="text-[8px] font-black">{day.dayLabel}</span>
-                <span className="text-lg font-black leading-none my-0.5">{day.dateNum}</span>
+                <span className="text-[8px] font-black leading-none">{day.dayLabel}</span>
+                <span className="text-lg font-black leading-none my-1">{day.dateNum}</span>
                 <span className="text-[9px] font-bold opacity-70">{day.month}</span>
               </button>
             ))}
           </div>
         </section>
 
-        {/* Compact Time Grid */}
+        {/* 3. Compact Time Grid */}
         <section className="space-y-3">
           <p className="text-gray-400 text-[10px] font-black tracking-[3px] uppercase flex items-center gap-2 justify-end">
              اختر الوقت <Clock size={14} className="text-cyan-500" />
