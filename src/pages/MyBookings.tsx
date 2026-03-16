@@ -32,7 +32,7 @@ export default function MyBookings() {
         )
       `)
       .eq('user_id', user.id)
-      .order('start_time', { ascending: false });
+      .order('start_time', { ascending: true }); // Ascending for upcoming matches
 
     if (!error) setBookings(data || []);
     setLoading(false);
@@ -53,16 +53,23 @@ export default function MyBookings() {
     const now = new Date();
     const bookingDate = new Date(b.start_time);
     
+    // 1. Cancelled Tab: Only show cancelled bookings
     if (activeTab === 'cancelled') return b.status === 'cancelled';
-    if (b.status === 'cancelled') return false; // Hide cancelled from other tabs
     
-    if (activeTab === 'current') return bookingDate >= now;
-    if (activeTab === 'previous') return bookingDate < now;
+    // 2. If it is cancelled, don't show it in Current or Previous
+    if (b.status === 'cancelled') return false; 
+    
+    // 3. Current Tab: Show confirmed bookings that are in the future or happening now
+    if (activeTab === 'current') return bookingDate >= now && b.status === 'confirmed';
+    
+    // 4. Previous Tab: Show confirmed bookings that have already passed
+    if (activeTab === 'previous') return bookingDate < now && b.status === 'confirmed';
+    
     return false;
   });
 
   return (
-    <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-20" dir="rtl">
+    <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-32" dir="rtl">
       <Header />
       
       <div className="p-6">
@@ -80,7 +87,7 @@ export default function MyBookings() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-3 rounded-xl font-bold text-xs transition-all ${
-                activeTab === tab ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg' : 'text-gray-400'
+                activeTab === tab ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-500/30' : 'text-gray-400'
               }`}
             >
               {tab === 'current' ? 'القادمة' : tab === 'previous' ? 'السابقة' : 'الملغاة'}
@@ -89,15 +96,15 @@ export default function MyBookings() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20 animate-pulse text-cyan-500 font-bold italic">جاري جلب بياناتك...</div>
+          <div className="flex justify-center py-20 text-cyan-500 font-bold italic animate-pulse">جاري جلب بياناتك...</div>
         ) : filteredBookings.length === 0 ? (
           <div className="text-center py-20 bg-white/5 rounded-[40px] border border-dashed border-white/10 opacity-50">
-             لا توجد حجوزات حالياً
+             لا توجد حجوزات في هذا القسم
           </div>
         ) : (
           <div className="space-y-4">
             {filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-[#14224d] rounded-[32px] p-5 border border-white/5 flex flex-col gap-4 relative overflow-hidden group">
+              <div key={booking.id} className="bg-[#14224d] rounded-[32px] p-5 border border-white/5 flex flex-col gap-4 relative overflow-hidden transition-all hover:border-white/20">
                 
                 {/* Header: Court Image and Status Badge */}
                 <div className="flex items-center justify-between">
@@ -108,12 +115,11 @@ export default function MyBookings() {
                     <div>
                       <h3 className="font-black text-lg">{booking.courts?.name}</h3>
                       <div className="flex items-center gap-1 text-cyan-400 text-[10px] font-black uppercase">
-                        <Hash size={10} /> {booking.id.slice(0, 8).toUpperCase()} {/* Reservation Number */}
+                        <Hash size={10} /> {booking.id.slice(0, 8).toUpperCase()}
                       </div>
                     </div>
                   </div>
                   
-                  {/* Dynamic Status Badge */}
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${
                     booking.status === 'confirmed' 
                     ? 'bg-green-500/10 text-green-500 border-green-500/20' 
@@ -125,13 +131,13 @@ export default function MyBookings() {
 
                 <hr className="border-white/5" />
 
-                {/* Details Section */}
+                {/* Details Section - Fixed local time display */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2 text-gray-400 text-xs font-bold">
+                  <div className="flex items-center gap-2 text-gray-300 text-xs font-bold">
                     <Calendar size={14} className="text-cyan-500" />
                     {new Date(booking.start_time).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'short' })}
                   </div>
-                  <div className="flex items-center gap-2 text-gray-400 text-xs font-bold">
+                  <div className="flex items-center gap-2 text-gray-300 text-xs font-bold">
                     <Clock size={14} className="text-cyan-500" />
                     {new Date(booking.start_time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                   </div>

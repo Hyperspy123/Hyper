@@ -31,7 +31,7 @@ export default function BookCourt() {
   ];
 
   const getDateButtons = () => {
-    const dates = []; // This is the corrected array name
+    const dates = [];
     const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
     
     for (let i = 0; i < 4; i++) {
@@ -45,13 +45,13 @@ export default function BookCourt() {
       const day = String(d.getDate()).padStart(2, '0');
       
       dates.push({
-        iso: `${year}-${month}-${day}`,
+        iso: `${year}-${month}-${day}`, // Local date format
         dayLabel: label,
         dateNum: d.getDate(),
         month: months[d.getMonth()]
       });
     }
-    return dates; // This now matches the array name 'dates'
+    return dates;
   };
 
   useEffect(() => {
@@ -83,11 +83,16 @@ export default function BookCourt() {
       return; 
     }
 
-    // Fixed string construction to avoid timezone shifting
-    const startDateTimeStr = `${selectedDate}T${selectedTime}:00`;
-    const startTime = new Date(startDateTimeStr).toISOString();
-    const endTime = new Date(new Date(startTime).getTime() + duration * 60000).toISOString(); 
+    // --- FIX FOR TIMING MISMATCH ---
+    // Create the date object using current local timezone (Riyadh)
+    // Format: YYYY-MM-DDTHH:MM:00
+    const localDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+    
+    // Convert to ISO string for Supabase (this will include the UTC 'Z')
+    const startTime = localDateTime.toISOString();
+    const endTime = new Date(localDateTime.getTime() + duration * 60000).toISOString(); 
 
+    // Check availability
     const { data: existing } = await supabase
       .from('bookings')
       .select('id')
@@ -118,12 +123,7 @@ export default function BookCourt() {
     setBookingInProgress(false);
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#0a0f3c] flex flex-col items-center justify-center gap-4">
-      <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-cyan-500 font-bold animate-pulse">جاري تحميل الملعب...</p>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen bg-[#0a0f3c] flex items-center justify-center text-cyan-500 font-black">جاري التحميل...</div>;
 
   return (
     <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-24" dir="rtl">
@@ -147,7 +147,7 @@ export default function BookCourt() {
           </div>
         </div>
 
-        {/* 1. Duration Selection */}
+        {/* 1. Duration */}
         <section className="space-y-3">
           <p className="text-gray-400 text-[10px] font-black tracking-[3px] uppercase flex items-center gap-2 justify-end">
              مدة اللعب <Timer size={14} className="text-cyan-500" />
