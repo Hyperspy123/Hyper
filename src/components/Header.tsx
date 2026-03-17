@@ -40,8 +40,8 @@ export default function Header() {
   return (
     <header className="p-5 flex justify-between items-center bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl" dir="rtl">
       
-      {/* Container for Button + Dropdown (Left side of screen) */}
-      <div className="relative inline-block text-left">
+      {/* Dropdown Container */}
+      <div className="relative">
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className={`p-2.5 rounded-xl border transition-all duration-300 z-[110] relative ${
@@ -53,16 +53,16 @@ export default function Header() {
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Fancy Dropdown - Anchored to the LEFT edge of the button */}
+        {/* The Fix: Added right-auto and ensured it stays within the left bounds */}
         <div 
-          className={`absolute top-14 left-0 w-[240px] bg-[#14224d] border border-white/10 rounded-[28px] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-300 origin-top-left z-[120] ${
+          className={`absolute top-14 left-0 right-auto w-[250px] bg-[#14224d] border border-white/10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.7)] transition-all duration-300 z-[120] ${
             isMenuOpen 
-            ? 'opacity-100 scale-100 translate-y-0' 
-            : 'opacity-0 scale-90 -translate-y-4 pointer-events-none'
+            ? 'opacity-100 scale-100 translate-y-0 visible' 
+            : 'opacity-0 scale-90 -translate-y-4 invisible pointer-events-none'
           }`}
-          style={{ transformOrigin: 'top left' }} // Hard-coded origin for safety
+          style={{ transformOrigin: 'top left' }} 
         >
-          <div className="p-3 space-y-1">
+          <div className="p-4 space-y-2">
             {menuItems.map((item) => (
               <button
                 key={item.path}
@@ -70,12 +70,12 @@ export default function Header() {
                 className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-cyan-500/10 transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/5 rounded-lg group-hover:bg-cyan-500/20 transition-colors">
+                  <div className="p-2 bg-white/5 rounded-lg group-hover:bg-cyan-500/20">
                     <item.icon size={18} className="text-cyan-400" />
                   </div>
-                  <span className="font-bold text-sm text-gray-200 group-hover:text-white">{item.label}</span>
+                  <span className="font-bold text-sm text-gray-200">{item.label}</span>
                 </div>
-                <ChevronLeft size={14} className="text-gray-600 rotate-180 group-hover:text-cyan-400 transition-transform" />
+                <ChevronLeft size={14} className="text-gray-600 rotate-180" />
               </button>
             ))}
 
@@ -91,7 +91,7 @@ export default function Header() {
               ) : (
                 <button 
                   onClick={() => { navigate('/auth'); setIsMenuOpen(false); }}
-                  className="w-full p-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-sm shadow-lg shadow-cyan-500/20"
+                  className="w-full p-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-sm"
                 >
                   تسجيل الدخول
                 </button>
@@ -101,25 +101,19 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Logo Section (Right side of screen) */}
-      <div 
-        className="flex items-center gap-2 cursor-pointer" 
-        onClick={() => navigate('/')}
-      >
+      {/* Logo */}
+      <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
         <h1 className="text-2xl font-black italic tracking-tighter text-white">
           هايب <span className="text-cyan-400 uppercase">Padel</span>
         </h1>
-        <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+        <div className="bg-cyan-500 p-1.5 rounded-lg">
           <Zap size={18} className="text-[#0a0f3c] fill-[#0a0f3c]" />
         </div>
       </div>
 
       {/* Click-away overlay */}
       {isMenuOpen && (
-        <div 
-          className="fixed inset-0 z-[90] bg-black/20 backdrop-blur-[2px]" 
-          onClick={() => setIsMenuOpen(false)} 
-        />
+        <div className="fixed inset-0 z-[90]" onClick={() => setIsMenuOpen(false)} />
       )}
     </header>
   );
