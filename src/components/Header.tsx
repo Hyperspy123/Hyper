@@ -38,27 +38,13 @@ export default function Header() {
   ];
 
   return (
-    <header className="p-5 flex flex-row-reverse justify-between items-center bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl">
+    <header className="p-5 flex items-center bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl h-20">
       
-      {/* 1. LOGO SECTION (Now on the Top Right) */}
-      <div 
-        className="flex items-center gap-2 cursor-pointer" 
-        onClick={() => navigate('/')}
-        dir="rtl"
-      >
-        <h1 className="text-2xl font-black italic tracking-tighter text-white">
-          هايب <span className="text-cyan-400 uppercase">Padel</span>
-        </h1>
-        <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.4)]">
-          <Zap size={18} className="text-[#0a0f3c] fill-[#0a0f3c]" />
-        </div>
-      </div>
-
-      {/* 2. MENU SECTION (Now on the Top Left) */}
-      <div className="relative">
+      {/* 1. MENU SECTION (FORCED LEFT) */}
+      <div className="flex-none relative z-[110]" dir="ltr">
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`p-2.5 rounded-xl border transition-all duration-300 z-[120] relative ${
+          className={`p-2.5 rounded-xl border transition-all duration-300 ${
             isMenuOpen 
             ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' 
             : 'bg-white/5 border-white/10 text-cyan-400'
@@ -67,14 +53,15 @@ export default function Header() {
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Fancy Dropdown - Anchored to Left side of screen */}
+        {/* Fancy Dropdown - Anchored to Physical Left */}
         <div 
           dir="rtl"
-          className={`absolute top-14 left-0 w-[240px] bg-[#14224d] border border-white/10 rounded-[32px] shadow-[0_25px_50px_rgba(0,0,0,0.8)] transition-all duration-300 z-[110] origin-top-left ${
+          className={`absolute top-14 left-0 w-[240px] bg-[#14224d] border border-white/10 rounded-[32px] shadow-[0_25px_50px_rgba(0,0,0,0.8)] transition-all duration-300 z-[120] ${
             isMenuOpen 
             ? 'opacity-100 scale-100 translate-y-0' 
             : 'opacity-0 scale-90 -translate-y-4 pointer-events-none'
           }`}
+          style={{ transformOrigin: 'top left' }}
         >
           <div className="p-4 space-y-2">
             {menuItems.map((item) => (
@@ -89,7 +76,7 @@ export default function Header() {
                   </div>
                   <span className="font-bold text-sm text-gray-200">{item.label}</span>
                 </div>
-                <ChevronLeft size={14} className="text-gray-600 rotate-180 group-hover:text-cyan-400" />
+                <ChevronLeft size={14} className="text-gray-600 rotate-180" />
               </button>
             ))}
 
@@ -115,9 +102,26 @@ export default function Header() {
         </div>
       </div>
 
+      {/* 2. SPACER - Pushes items to edges */}
+      <div className="flex-1"></div>
+
+      {/* 3. LOGO SECTION (FORCED RIGHT) */}
+      <div 
+        className="flex-none flex items-center gap-2 cursor-pointer" 
+        onClick={() => navigate('/')}
+        dir="rtl"
+      >
+        <h1 className="text-2xl font-black italic tracking-tighter text-white">
+          هايب <span className="text-cyan-400 uppercase">Padel</span>
+        </h1>
+        <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+          <Zap size={18} className="text-[#0a0f3c] fill-[#0a0f3c]" />
+        </div>
+      </div>
+
       {/* Click-away Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-[90] bg-black/20 backdrop-blur-[2px]" onClick={() => setIsMenuOpen(false)} />
+        <div className="fixed inset-0 z-[90] bg-black/20" onClick={() => setIsMenuOpen(false)} />
       )}
     </header>
   );
