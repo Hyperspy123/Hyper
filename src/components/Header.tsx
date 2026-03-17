@@ -9,7 +9,7 @@ import {
   User, 
   Settings, 
   Headphones, 
-  ChevronRight 
+  ChevronLeft 
 } from 'lucide-react';
 
 export default function Header() {
@@ -38,10 +38,24 @@ export default function Header() {
   ];
 
   return (
-    <header className="p-5 flex justify-between items-center bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl" dir="rtl">
+    <header className="p-5 flex flex-row-reverse justify-between items-center bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl">
       
-      {/* 1. Menu Button & Dropdown (Left Side) */}
-      <div className="relative inline-block" dir="ltr"> {/* Force LTR container to fix positioning */}
+      {/* 1. LOGO SECTION (Now on the Top Right) */}
+      <div 
+        className="flex items-center gap-2 cursor-pointer" 
+        onClick={() => navigate('/')}
+        dir="rtl"
+      >
+        <h1 className="text-2xl font-black italic tracking-tighter text-white">
+          هايب <span className="text-cyan-400 uppercase">Padel</span>
+        </h1>
+        <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+          <Zap size={18} className="text-[#0a0f3c] fill-[#0a0f3c]" />
+        </div>
+      </div>
+
+      {/* 2. MENU SECTION (Now on the Top Left) */}
+      <div className="relative">
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className={`p-2.5 rounded-xl border transition-all duration-300 z-[120] relative ${
@@ -53,22 +67,21 @@ export default function Header() {
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Fancy Dropdown - Anchored Left */}
+        {/* Fancy Dropdown - Anchored to Left side of screen */}
         <div 
-          dir="rtl" // Return to RTL for Arabic text inside
-          className={`absolute top-14 left-0 w-[240px] bg-[#14224d] border border-white/10 rounded-[32px] shadow-[0_25px_50px_rgba(0,0,0,0.8)] transition-all duration-300 z-[110] ${
+          dir="rtl"
+          className={`absolute top-14 left-0 w-[240px] bg-[#14224d] border border-white/10 rounded-[32px] shadow-[0_25px_50px_rgba(0,0,0,0.8)] transition-all duration-300 z-[110] origin-top-left ${
             isMenuOpen 
             ? 'opacity-100 scale-100 translate-y-0' 
             : 'opacity-0 scale-90 -translate-y-4 pointer-events-none'
           }`}
-          style={{ transformOrigin: 'top left' }}
         >
           <div className="p-4 space-y-2">
             {menuItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => { navigate(item.path); setIsMenuOpen(false); }}
-                className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-cyan-500/10 transition-all group text-right"
+                className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-cyan-500/10 transition-all group"
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/5 rounded-lg group-hover:bg-cyan-500/20">
@@ -76,7 +89,7 @@ export default function Header() {
                   </div>
                   <span className="font-bold text-sm text-gray-200">{item.label}</span>
                 </div>
-                <ChevronRight size={14} className="text-gray-600 rotate-180" />
+                <ChevronLeft size={14} className="text-gray-600 rotate-180 group-hover:text-cyan-400" />
               </button>
             ))}
 
@@ -84,12 +97,10 @@ export default function Header() {
               {user ? (
                 <button 
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-between p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-black text-sm"
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-black text-sm"
                 >
-                  <div className="flex items-center gap-3">
-                    <LogOut size={18} />
-                    <span>تسجيل الخروج</span>
-                  </div>
+                  <LogOut size={18} />
+                  <span>تسجيل الخروج</span>
                 </button>
               ) : (
                 <button 
@@ -101,19 +112,6 @@ export default function Header() {
               )}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* 2. Logo Section (Right Side) */}
-      <div 
-        className="flex items-center gap-2 cursor-pointer" 
-        onClick={() => navigate('/')}
-      >
-        <h1 className="text-2xl font-black italic tracking-tighter text-white">
-          هايب <span className="text-cyan-400 uppercase">Padel</span>
-        </h1>
-        <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.4)]">
-          <Zap size={18} className="text-[#0a0f3c] fill-[#0a0f3c]" />
         </div>
       </div>
 
