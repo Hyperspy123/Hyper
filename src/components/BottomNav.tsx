@@ -1,4 +1,4 @@
-import { Home, Calendar, Trophy, Medal, Zap } from 'lucide-react';
+import { Home, Calendar, Trophy, Gift, Zap } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function BottomNav() {
@@ -27,9 +27,9 @@ export default function BottomNav() {
       path: '/tournaments' 
     },
     { 
-      icon: Medal, // Swapped User for Medal
-      label: 'إنجازاتي', 
-      path: '/achievements' 
+      icon: Gift, // Changed icon to Gift for "Rewards"
+      label: 'مكافآتي', // UI label set to Rewards
+      path: '/rewards' // Path points to rewards
     },
   ];
 
@@ -56,7 +56,7 @@ export default function BottomNav() {
             
             {/* Active Indicator Dot */}
             {isActive && (
-              <div className="absolute -bottom-2 w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+              <div className="absolute -bottom-2 w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
             )}
           </button>
         );
