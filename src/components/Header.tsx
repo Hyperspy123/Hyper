@@ -40,11 +40,11 @@ export default function Header() {
   return (
     <header className="p-5 flex justify-between items-center bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl" dir="rtl">
       
-      {/* Dropdown Container */}
-      <div className="relative">
+      {/* Container for Dropdown */}
+      <div className="relative inline-block">
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`p-2.5 rounded-xl border transition-all duration-300 z-[110] relative ${
+          className={`p-2.5 rounded-xl border transition-all duration-300 z-[120] relative ${
             isMenuOpen 
             ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' 
             : 'bg-white/5 border-white/10 text-cyan-400'
@@ -53,14 +53,20 @@ export default function Header() {
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* The Fix: Added right-auto and ensured it stays within the left bounds */}
+        {/* DROPDOWN - The Physical Fix */}
         <div 
-          className={`absolute top-14 left-0 right-auto w-[250px] bg-[#14224d] border border-white/10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.7)] transition-all duration-300 z-[120] ${
+          dir="rtl" // Keep the text inside RTL
+          className={`absolute top-14 bg-[#14224d] border border-white/10 rounded-[32px] shadow-[0_25px_50px_rgba(0,0,0,0.8)] transition-all duration-300 z-[110] ${
             isMenuOpen 
-            ? 'opacity-100 scale-100 translate-y-0 visible' 
-            : 'opacity-0 scale-90 -translate-y-4 invisible pointer-events-none'
+            ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
+            : 'opacity-0 scale-90 -translate-y-4 pointer-events-none'
           }`}
-          style={{ transformOrigin: 'top left' }} 
+          style={{ 
+            width: '240px',
+            left: '0',      // Physical left
+            right: 'auto',  // Disable RTL right-anchoring
+            transformOrigin: 'top left' 
+          }}
         >
           <div className="p-4 space-y-2">
             {menuItems.map((item) => (
@@ -111,9 +117,9 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Click-away overlay */}
+      {/* Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-[90]" onClick={() => setIsMenuOpen(false)} />
+        <div className="fixed inset-0 z-[100] bg-black/20" onClick={() => setIsMenuOpen(false)} />
       )}
     </header>
   );
