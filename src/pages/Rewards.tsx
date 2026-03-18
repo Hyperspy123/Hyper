@@ -1,111 +1,93 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../LLL'; // Ensure this matches your Supabase client path
 import Header from '@/components/Header';
-import { Target, Gift, Star, ChevronLeft, Award, CheckCircle2, QrCode } from 'lucide-react';
+import { Target, Gift, Star, ChevronLeft, Award, QrCode, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 
 export default function Rewards() {
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState<{ [key: string]: number }>({});
   const [claimedId, setClaimedId] = useState<number | null>(null);
+  const navigate = useNavigate();
+
+  // Court IDs from your Supabase 'courts' table
+  const COURTS = {
+    DIRIYAH: "your-diriyah-court-uuid-here",
+    MALQA: "your-malqa-court-uuid-here"
+  };
+
+  useEffect(() => {
+    async function fetchStats() {
+      const { data: diriyahCount } = await supabase.rpc('get_user_booking_count', { target_court_id: COURTS.DIRIYAH });
+      const { data: malqaCount } = await supabase.rpc('get_user_booking_count', { target_court_id: COURTS.MALQA });
+
+      setCounts({
+        [COURTS.DIRIYAH]: parseInt(diriyahCount || "0"),
+        [COURTS.MALQA]: parseInt(malqaCount || "0")
+      });
+      setLoading(false);
+    }
+    fetchStats();
+  }, []);
 
   const courtData = [
     {
       name: "مركز هايب ١ - الدرعية",
       tasks: [
-        { id: 1, title: "خبير الدرعية", desc: "حجز ٥ مرات في الشهر", progress: 3, goal: 5, reward: "خصم 20%" },
-        { id: 2, title: "لاعب الصباح", desc: "اللعب مرتين قبل ١٢ ظهراً", progress: 1, goal: 2, reward: "مشروب طاقة مجاني" }
+        { id: 1, title: "خبير الدرعية", desc: "حجز ٥ مرات", progress: counts[COURTS.DIRIYAH] || 0, goal: 5, reward: "خصم 20%" },
       ]
     },
     {
       name: "مركز هايب ٢ - الملقا",
       tasks: [
-        { id: 3, title: "الولاء للملعب", desc: "حجز ٨ مرات في الشهر", progress: 8, goal: 8, reward: "ساعة مجانية", completed: true },
-        { id: 4, title: "نجم الملقا", desc: "الفوز في مباراة فزعة واحدة", progress: 0, goal: 1, reward: "١٠٠ نقطة إضافية" }
+        { id: 3, title: "الولاء للملعب", desc: "حجز ٨ مرات", progress: counts[COURTS.MALQA] || 0, goal: 8, reward: "ساعة مجانية" },
       ]
     }
   ];
 
+  if (loading) return (
+    <div className="min-h-screen bg-[#0a0f3c] flex items-center justify-center">
+      <Loader2 className="animate-spin text-cyan-400" size={40} />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-32" dir="rtl">
       <Header />
-      
       <div className="p-6 max-w-md mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => navigate(-1)} className="p-2 bg-white/5 rounded-xl border border-white/10 text-cyan-400">
-            <ChevronLeft size={20} className="rotate-180" />
-          </button>
-          <h1 className="text-3xl font-black italic tracking-tighter uppercase">مكافآتي</h1>
-        </div>
-
+        <h1 className="text-3xl font-black italic tracking-tighter uppercase mb-8">مكافآتي</h1>
         <div className="space-y-10">
           {courtData.map((court, idx) => (
             <section key={idx} className="space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-gray-400">
                 <Target size={16} className="text-cyan-400" />
-                <h2 className="text-sm font-black text-gray-400 tracking-widest uppercase">{court.name}</h2>
+                <h2 className="text-xs font-black uppercase tracking-widest">{court.name}</h2>
               </div>
-
-              <div className="grid gap-4">
-                {court.tasks.map((task) => {
-                  const isDone = task.progress >= task.goal;
-                  const isClaimed = claimedId === task.id;
-
-                  return (
-                    <div key={task.id} className="bg-[#14224d] rounded-[32px] p-6 border border-white/5 relative overflow-hidden transition-all duration-500">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-bold text-lg mb-1">{task.title}</h3>
-                          <p className="text-xs text-gray-400 mb-3">{task.desc}</p>
-                          <div className={`flex items-center gap-2 px-3 py-1 rounded-full w-fit border ${
-                            isDone ? 'bg-green-500/10 border-green-500/20' : 'bg-cyan-500/10 border-cyan-500/20'
-                          }`}>
-                            <Gift size={12} className={isDone ? 'text-green-500' : 'text-cyan-400'} />
-                            <span className={`text-[10px] font-black ${isDone ? 'text-green-500' : 'text-cyan-400'}`}>
-                              الجائزة: {task.reward}
-                            </span>
-                          </div>
-                        </div>
-                        {isDone ? (
-                          <Award size={24} className="text-yellow-400 fill-yellow-400 animate-pulse" />
-                        ) : (
-                          <Star size={24} className="text-white/10" />
-                        )}
+              {court.tasks.map((task) => {
+                const isDone = task.progress >= task.goal;
+                return (
+                  <div key={task.id} className="bg-[#14224d] rounded-[32px] p-6 border border-white/5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-bold text-lg leading-tight">{task.title}</h3>
+                        <p className="text-[10px] text-gray-500 mt-1">{task.desc}</p>
                       </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-[10px] font-black text-gray-500 tracking-tighter">
-                          <span>التقدم: {task.progress} / {task.goal}</span>
-                          <span>{Math.round((task.progress / task.goal) * 100)}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-1000 ease-out ${
-                              isDone ? 'bg-green-500' : 'bg-cyan-500'
-                            }`}
-                            style={{ width: `${(task.progress / task.goal) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Action Button */}
-                      {isDone && !isClaimed && (
-                        <button 
-                          onClick={() => setClaimedId(task.id)}
-                          className="w-full mt-5 py-3 bg-cyan-400 text-[#0a0f3c] rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)]"
-                        >
-                          استلام الكود <QrCode size={16} />
-                        </button>
-                      )}
-
-                      {isClaimed && (
-                        <div className="mt-5 p-4 bg-white/5 border border-dashed border-cyan-400/50 rounded-2xl text-center">
-                          <p className="text-[10px] text-gray-400 mb-1 uppercase font-black">كود الخصم الخاص بك</p>
-                          <p className="text-xl font-black text-cyan-400 tracking-[0.3em]">HYPE20-X82</p>
-                        </div>
-                      )}
+                      {isDone ? <Award className="text-yellow-400 fill-yellow-400" /> : <Star className="text-white/10" />}
                     </div>
-                  );
-                })}
-              </div>
+                    
+                    <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden mt-4">
+                      <div 
+                        className="h-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-all duration-1000"
+                        style={{ width: `${Math.min((task.progress / task.goal) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-2 text-[10px] font-bold text-gray-500">
+                      <span>{task.progress} / {task.goal} حجز</span>
+                      <span>الجائزة: {task.reward}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </section>
           ))}
         </div>
