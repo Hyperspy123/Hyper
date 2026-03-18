@@ -1,11 +1,12 @@
 import Header from '@/components/Header';
-import { Target, Gift, Star, ChevronLeft, Award, CheckCircle2 } from 'lucide-react';
+import { Target, Gift, Star, ChevronLeft, Award, CheckCircle2, QrCode } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 export default function Rewards() {
   const navigate = useNavigate();
+  const [claimedId, setClaimedId] = useState<number | null>(null);
 
-  // Mock data for the court achievements
   const courtData = [
     {
       name: "مركز هايب ١ - الدرعية",
@@ -46,8 +47,10 @@ export default function Rewards() {
               <div className="grid gap-4">
                 {court.tasks.map((task) => {
                   const isDone = task.progress >= task.goal;
+                  const isClaimed = claimedId === task.id;
+
                   return (
-                    <div key={task.id} className="bg-[#14224d] rounded-[32px] p-6 border border-white/5 relative overflow-hidden group">
+                    <div key={task.id} className="bg-[#14224d] rounded-[32px] p-6 border border-white/5 relative overflow-hidden transition-all duration-500">
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h3 className="font-bold text-lg mb-1">{task.title}</h3>
@@ -62,33 +65,42 @@ export default function Rewards() {
                           </div>
                         </div>
                         {isDone ? (
-                          <Award size={24} className="text-yellow-400 fill-yellow-400 animate-bounce" />
+                          <Award size={24} className="text-yellow-400 fill-yellow-400 animate-pulse" />
                         ) : (
                           <Star size={24} className="text-white/10" />
                         )}
                       </div>
 
-                      {/* Progress Tracker */}
                       <div className="space-y-2">
                         <div className="flex justify-between text-[10px] font-black text-gray-500 tracking-tighter">
                           <span>التقدم: {task.progress} / {task.goal}</span>
                           <span>{Math.round((task.progress / task.goal) * 100)}%</span>
                         </div>
-                        <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
                           <div 
                             className={`h-full transition-all duration-1000 ease-out ${
-                              isDone ? 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.6)]'
+                              isDone ? 'bg-green-500' : 'bg-cyan-500'
                             }`}
                             style={{ width: `${(task.progress / task.goal) * 100}%` }}
                           />
                         </div>
                       </div>
 
-                      {/* Claim Button - Only shows when 100% */}
-                      {isDone && (
-                        <button className="w-full mt-5 py-3 bg-green-500 text-[#0a0f3c] rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all">
-                          استلام المكافأة <CheckCircle2 size={16} />
+                      {/* Action Button */}
+                      {isDone && !isClaimed && (
+                        <button 
+                          onClick={() => setClaimedId(task.id)}
+                          className="w-full mt-5 py-3 bg-cyan-400 text-[#0a0f3c] rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)]"
+                        >
+                          استلام الكود <QrCode size={16} />
                         </button>
+                      )}
+
+                      {isClaimed && (
+                        <div className="mt-5 p-4 bg-white/5 border border-dashed border-cyan-400/50 rounded-2xl text-center">
+                          <p className="text-[10px] text-gray-400 mb-1 uppercase font-black">كود الخصم الخاص بك</p>
+                          <p className="text-xl font-black text-cyan-400 tracking-[0.3em]">HYPE20-X82</p>
+                        </div>
                       )}
                     </div>
                   );
