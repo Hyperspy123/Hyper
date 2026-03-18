@@ -15,7 +15,8 @@ import MyBookings from './pages/MyBookings';
 import Rewards from './pages/Rewards';
 import Tournaments from './pages/Tournaments';
 import Account from './pages/Account';
-import Settings from './pages/Settings'; // <--- 1. ADD THIS IMPORT
+import Settings from './pages/Settings'; 
+import Personal from './pages/Personal'; // <--- 1. أضفنا استيراد صفحة شخصي هنا
 import Contact from './pages/Contact';
 import Faz3a from './pages/Faz3a';
 import Notifications from './pages/Notifications';
@@ -54,7 +55,8 @@ const App = () => (
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/faz3a" element={<Faz3a />} />
                 <Route path="/account" element={<Account />} />
-                <Route path="/settings" element={<Settings />} /> {/* <--- 2. ADD THIS ROUTE */}
+                <Route path="/settings" element={<Settings />} /> 
+                <Route path="/personal" element={<Personal />} /> {/* <--- 2. أضفنا المسار الجديد هنا */}
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
