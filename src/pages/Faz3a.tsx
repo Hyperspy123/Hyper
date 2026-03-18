@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Users, MapPin, Clock, Zap, Plus, Search, Loader2, Target, Award, CheckCircle2 } from 'lucide-react';
+import { Users, MapPin, Clock, Zap, Plus, Search, Loader2, Target, Award, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-// Mock Data for the Community Directory
+// بيانات تجريبية للمجمع (اللاعبين المسجلين عامة)
 const communityPlayers = [
-  { id: 1, name: "سلطان الراجحي", level: "محترف", rank: "كينج 🦁", matches: 45, avatar: "S" },
-  { id: 2, name: "نايف محمد", level: "متوسط", rank: "هايب ⚡", matches: 22, avatar: "N" },
-  { id: 3, name: "عبدالله الفهد", level: "مبتدئ", rank: "مستجد 🥚", matches: 5, avatar: "A" },
+  { id: 1, name: "سلطان الراجحي", level: "محترف", rank: "كينج 🦁", matches: 45, avatar: "S", isPublic: true },
+  { id: 2, name: "نايف محمد", level: "متوسط", rank: "هايب ⚡", matches: 22, avatar: "N", isPublic: true },
+  { id: 3, name: "عبدالله الفهد", level: "مبتدئ", rank: "مستجد 🥚", matches: 5, avatar: "A", isPublic: true },
+  { id: 4, name: "فيصل خالد", level: "محترف", rank: "برنس 👑", matches: 30, avatar: "F", isPublic: true },
 ];
 
 export default function Faz3a() {
@@ -82,7 +83,7 @@ export default function Faz3a() {
                 onClick={() => setActiveTab('community')}
                 className={`flex-1 py-3 rounded-[20px] text-xs font-black uppercase transition-all ${activeTab === 'community' ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-500/20' : 'text-gray-500 hover:text-white'}`}
             >
-                مجمع اللاعبين
+                المجمع (العام)
             </button>
         </div>
 
@@ -91,7 +92,7 @@ export default function Faz3a() {
           <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
           <input 
             type="text" 
-            placeholder={activeTab === 'requests' ? "ابحث عن حي أو ملعب..." : "ابحث عن لاعب أو لقب..."}
+            placeholder={activeTab === 'requests' ? "ابحث عن حي أو ملعب..." : "ابحث عن لاعبين متاحين..."}
             className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all shadow-2xl backdrop-blur-md placeholder:text-gray-600"
           />
         </div>
@@ -135,24 +136,23 @@ export default function Faz3a() {
           </div>
         )}
 
-        {/* --- COMMUNITY DIRECTORY --- */}
+        {/* --- COMMUNITY (المجمع العام) --- */}
         {activeTab === 'community' && (
           <div className="space-y-4">
+            <p className="text-[10px] font-black text-gray-500 uppercase px-2 tracking-[0.2em]">اللاعبين المتاحين للتحدي</p>
             {communityPlayers.map((player) => (
-              <div key={player.id} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[30px] p-6 flex items-center justify-between group hover:border-cyan-500/40 transition-all">
+              <div key={player.id} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[30px] p-6 flex items-center justify-between group hover:border-cyan-500/40 transition-all shadow-xl">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-purple-500/20 border border-white/10 flex items-center justify-center font-black text-cyan-400 text-xl shadow-inner">
                         {player.avatar}
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-1">
                         <h4 className="font-black text-sm text-white">{player.name}</h4>
-                        <div className="flex gap-2 mt-1">
-                            <div className="flex items-center gap-1 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
-                                <Target size={8} className="text-cyan-400" />
+                        <div className="flex gap-2">
+                            <div className="flex items-center gap-1 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20">
                                 <span className="text-[8px] font-black text-cyan-400 uppercase">{player.level}</span>
                             </div>
-                            <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
-                                <Award size={8} className="text-yellow-400" />
+                            <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded-md border border-yellow-500/20">
                                 <span className="text-[8px] font-black text-yellow-400 uppercase">{player.rank}</span>
                             </div>
                         </div>
@@ -160,10 +160,10 @@ export default function Faz3a() {
                 </div>
                 
                 <button 
-                  onClick={() => toast.success(`تم إرسال دعوة فزعة لـ ${player.name}`, {
+                  onClick={() => toast.success(`تم إرسال طلب دعوة لـ ${player.name}`, {
                       icon: <CheckCircle2 className="text-cyan-400" />
                   })}
-                  className="px-4 py-2 bg-white/5 border border-white/10 text-cyan-400 hover:bg-cyan-500 hover:text-[#0a0f3c] rounded-xl text-[10px] font-black uppercase transition-all"
+                  className="px-4 py-2 bg-white/5 border border-white/10 text-cyan-400 hover:bg-cyan-500 hover:text-[#0a0f3c] rounded-xl text-[10px] font-black uppercase transition-all active:scale-95"
                 >
                   إرسال دعوة
                 </button>
