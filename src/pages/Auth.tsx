@@ -10,7 +10,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // Added for confirmation
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -55,7 +55,6 @@ export default function Auth() {
       }
       else if (mode === 'reset') {
         if (isRecoveryMode) {
-          // Check if passwords match
           if (password !== confirmPassword) {
             throw new Error("كلمات المرور غير متطابقة");
           }
@@ -84,8 +83,8 @@ export default function Auth() {
     <div className="min-h-screen bg-transparent flex flex-col justify-center px-6 text-white font-sans" dir="rtl">
       <div className="max-w-md mx-auto w-full bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 shadow-2xl relative overflow-hidden">
         
-        {/* Navigation */}
         <button 
+          type="button"
           onClick={() => {
             if (isRecoveryMode || mode === 'reset' || mode === 'signup') {
               setMode('signin');
@@ -94,7 +93,7 @@ export default function Auth() {
               navigate('/');
             }
           }} 
-          className="absolute top-6 right-6 p-2 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all"
+          className="absolute top-6 right-6 p-2 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all z-20"
         >
           <ChevronLeft size={20} className="rotate-180" />
         </button>
@@ -115,16 +114,16 @@ export default function Auth() {
               <div className="flex gap-4">
                 <div className="relative w-1/2">
                   <User className="absolute right-4 top-4 text-gray-500" size={18} />
-                  <input type="text" placeholder="الاسم" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                  <input name="first_name" type="text" placeholder="الاسم" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                 </div>
                 <div className="relative w-1/2">
                   <User className="absolute right-4 top-4 text-gray-500" size={18} />
-                  <input type="text" placeholder="العائلة" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                  <input name="last_name" type="text" placeholder="العائلة" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                 </div>
               </div>
               <div className="relative">
                 <Phone className="absolute right-4 top-4 text-gray-500" size={18} />
-                <input type="tel" placeholder="رقم الجوال" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+                <input name="phone" type="tel" placeholder="رقم الجوال" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
               </div>
             </>
           )}
@@ -132,16 +131,25 @@ export default function Auth() {
           {!isRecoveryMode && (
             <div className="relative">
               <Mail className="absolute right-4 top-4 text-gray-500" size={18} />
-              <input type="email" placeholder="البريد الإلكتروني" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input 
+                id="email"
+                name="email"
+                type="email" 
+                autoComplete="username"
+                placeholder="البريد الإلكتروني" 
+                className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+              />
             </div>
           )}
 
-          {/* Password Logic: Shows for signin, signup, and recovery. In recovery, it's the NEW password. */}
           {(mode !== 'reset' || isRecoveryMode) && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center px-2">
-                  <label className="text-[10px] font-black text-gray-500 uppercase mr-2">
+                  <label htmlFor="password" className="text-[10px] font-black text-gray-500 uppercase mr-2">
                     {isRecoveryMode ? 'كلمة المرور الجديدة' : 'كلمة المرور'}
                   </label>
                   {mode === 'signin' && (
@@ -152,18 +160,29 @@ export default function Auth() {
                 </div>
                 <div className="relative">
                   <Lock className="absolute right-4 top-4 text-gray-500" size={18} />
-                  <input type="password" placeholder="••••••••" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <input 
+                    id="password"
+                    name="password"
+                    type="password" 
+                    autoComplete={mode === 'signup' ? "new-password" : "current-password"}
+                    placeholder="••••••••" 
+                    className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    required 
+                  />
                 </div>
               </div>
 
-              {/* Confirm Password Field: Only shows during recovery */}
               {isRecoveryMode && (
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-gray-500 uppercase mr-4">تأكيد كلمة المرور</label>
                   <div className="relative">
                     <ShieldCheck className="absolute right-4 top-4 text-gray-500" size={18} />
                     <input 
+                      name="confirm_password"
                       type="password" 
+                      autoComplete="new-password"
                       placeholder="••••••••" 
                       className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" 
                       value={confirmPassword} 
@@ -176,7 +195,11 @@ export default function Auth() {
             </div>
           )}
 
-          <button disabled={loading} className="w-full py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-lg shadow-lg shadow-cyan-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 mt-6">
+          <button 
+            type="submit"
+            disabled={loading} 
+            className="w-full py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-lg shadow-lg shadow-cyan-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 mt-6"
+          >
             {loading ? <div className="w-6 h-6 border-2 border-[#0a0f3c] border-t-transparent animate-spin rounded-full" /> : (
               <>
                 <span>{mode === 'signin' ? 'تسجيل الدخول' : mode === 'signup' ? 'إنشاء حساب' : isRecoveryMode ? 'تحديث كلمة المرور' : 'إرسال الرابط'}</span>
@@ -188,7 +211,11 @@ export default function Auth() {
 
         {!isRecoveryMode && (
           <div className="text-center mt-8">
-            <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); }} className="text-xs font-black text-gray-500 hover:text-cyan-400 transition-colors uppercase tracking-widest">
+            <button 
+              type="button"
+              onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); }} 
+              className="text-xs font-black text-gray-500 hover:text-cyan-400 transition-colors uppercase tracking-widest"
+            >
               {mode === 'signup' ? 'لديك حساب؟ سجل دخولك' : 'ليس لديك حساب؟ سجل الآن'}
             </button>
           </div>
