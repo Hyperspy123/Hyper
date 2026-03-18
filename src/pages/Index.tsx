@@ -7,7 +7,7 @@ export default function Index() {
 
   const COURTS_DATA = [
     {
-      id: "d1111111-1111-1111-1111-111111111111", // Court 1
+      id: "d1111111-1111-1111-1111-111111111111",
       name: "ملعب ١",
       location: "الدرعية",
       price: "250",
@@ -15,7 +15,6 @@ export default function Index() {
       description: "تحدي: احجز ٥ مرات واحصل على خصم ٢٠٪"
     },
     {
-      // FIXED: Changed 'm' to 'b' to make it a valid Hex UUID
       id: "b2222222-2222-2222-2222-222222222222", 
       name: "ملعب ٢",
       location: "الملقا",
@@ -24,7 +23,7 @@ export default function Index() {
       description: "تحدي: احجز ٣ مرات واحصل على ساعة مجانية"
     },
     {
-      id: "33333333-3333-3333-3333-333333333333", // Court 3
+      id: "33333333-3333-3333-3333-333333333333",
       name: "ملعب ٣",
       location: "الصحافة",
       price: "250",
@@ -34,12 +33,12 @@ export default function Index() {
   ];
 
   const handleCourtClick = (courtId: string) => {
-    // Navigates using the clean, valid UUID
     navigate(`/book/${courtId}`);
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0f3c] text-white pb-24" dir="rtl">
+    // STEP 1: Changed bg-[#0a0f3c] to bg-transparent
+    <div className="min-h-screen bg-transparent text-white pb-24" dir="rtl">
       <Header />
       
       <main className="p-6 max-w-md mx-auto space-y-8">
@@ -57,7 +56,8 @@ export default function Index() {
             <div 
               key={court.id}
               onClick={() => handleCourtClick(court.id)}
-              className="group relative bg-[#14224d] rounded-[40px] overflow-hidden border border-white/5 cursor-pointer active:scale-[0.98] transition-all duration-300 shadow-2xl"
+              // STEP 2: Changed bg-[#14224d] to bg-white/5 + backdrop-blur-xl
+              className="group relative bg-white/5 backdrop-blur-xl rounded-[40px] overflow-hidden border border-white/10 cursor-pointer active:scale-[0.98] transition-all duration-300 shadow-2xl"
             >
               <div className="h-56 overflow-hidden relative">
                 <img 
@@ -65,7 +65,8 @@ export default function Index() {
                   alt={court.name} 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#14224d] via-transparent to-transparent" />
+                {/* Changed gradient to match the new glassy theme */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#05081d]/80 via-transparent to-transparent" />
                 
                 <div className="absolute top-4 right-4 bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[10px] font-black flex items-center gap-2 shadow-2xl border border-cyan-400">
                   <Zap size={12} className="fill-[#0a0f3c]" />
@@ -82,7 +83,7 @@ export default function Index() {
                       {court.location}
                     </div>
                   </div>
-                  <div className="bg-white/5 px-4 py-2 rounded-2xl border border-white/5 text-center">
+                  <div className="bg-white/10 px-4 py-2 rounded-2xl border border-white/10 text-center">
                     <span className="block text-[8px] text-gray-500 font-black uppercase">الساعة</span>
                     <span className="text-xl font-black text-white">{court.price}</span>
                   </div>
