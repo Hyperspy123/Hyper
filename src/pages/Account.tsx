@@ -3,7 +3,7 @@ import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useI18n } from '@/lib/i18n';
-import { User, Trophy, Calendar, Star, LogIn, Mail, Phone, Zap, ChevronLeft, ChevronRight, LogOut, Settings } from 'lucide-react';
+import { User, Trophy, Calendar, Star, LogIn, Mail, Phone, Zap, ChevronLeft, ChevronRight, LogOut, Settings, Award } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Account() {
@@ -11,6 +11,9 @@ export default function Account() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { t, dir } = useI18n();
+
+  // محاكاة بيانات النشاط (للتجربة)
+  const matchesPlayed = 24; 
 
   useEffect(() => {
     async function getProfile() {
@@ -35,7 +38,6 @@ export default function Account() {
 
   const Arrow = dir === 'rtl' ? ChevronLeft : ChevronRight;
 
-  // تعريف قائمة المنيو مع إضافة "شخصي"
   const menuItems = [
     { label: 'شخصي', icon: User, path: '/personal', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
     { label: t('myBookings'), icon: Calendar, path: '/my-bookings', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
@@ -78,7 +80,7 @@ export default function Account() {
       <Header />
 
       <div className="pt-24 max-w-lg mx-auto px-6">
-        {/* Header with Settings Icon */}
+        {/* Header with Settings */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">
             حسابي <span className="text-cyan-400">Account</span>
@@ -91,9 +93,11 @@ export default function Account() {
           </button>
         </div>
 
-        {/* Profile Card */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl">
-          <div className="flex items-center gap-5 mb-8">
+        {/* Profile Card - CLEAN VERSION */}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/10 blur-[50px] rounded-full -ml-16 -mt-16" />
+          
+          <div className="flex items-center gap-5 mb-8 relative z-10">
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
               <User size={36} className="text-[#0a0f3c]" />
             </div>
@@ -103,38 +107,26 @@ export default function Account() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-black/20 border border-white/5">
-              <Mail size={18} className="text-gray-500" />
-              <span className="text-gray-300 font-bold text-sm">{user.email || t('emailNotSet')}</span>
+          <div className="space-y-3 relative z-10">
+            <div className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-black/20 border border-white/5 overflow-hidden">
+              <Mail size={18} className="text-gray-500 flex-shrink-0" />
+              <span className="text-gray-300 font-bold text-sm truncate">{user.email}</span>
             </div>
-            {user.user_metadata?.phone_number && (
-              <div className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-black/20 border border-white/5">
-                <Phone size={18} className="text-gray-500" />
-                <span className="text-gray-300 font-bold text-sm">{user.user_metadata.phone_number}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Tournament Rankings */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 mb-6 shadow-xl">
-          <h3 className="text-xs font-black text-gray-400 mb-5 flex items-center gap-2 uppercase tracking-widest">
-            <Trophy size={16} className="text-yellow-400" />
-            {t('tournamentRanking')}
-          </h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-black/20 rounded-2xl p-4 text-center border border-white/5">
-              <div className="text-2xl font-black text-cyan-400">0</div>
-              <div className="text-[8px] text-gray-500 font-black uppercase mt-1 tracking-tighter">{t('tournamentsCount')}</div>
-            </div>
-            <div className="bg-black/20 rounded-2xl p-4 text-center border border-white/5">
-              <div className="text-2xl font-black text-yellow-400">-</div>
-              <div className="text-[8px] text-gray-500 font-black uppercase mt-1 tracking-tighter">{t('ranking')}</div>
-            </div>
-            <div className="bg-black/20 rounded-2xl p-4 text-center border border-white/5">
-              <div className="text-2xl font-black text-green-400">0</div>
-              <div className="text-[8px] text-gray-500 font-black uppercase mt-1 tracking-tighter">{t('wins')}</div>
+            <div className="flex gap-3">
+                <div className="flex-1 flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/20 border border-white/5">
+                    <Award size={18} className="text-gray-500" />
+                    <div>
+                        <span className="block text-[8px] font-black text-gray-600 uppercase">المباريات</span>
+                        <span className="text-lg font-black">{matchesPlayed}</span>
+                    </div>
+                </div>
+                <div className="flex-1 flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/20 border border-white/5">
+                    <Star size={18} className="text-gray-500" />
+                    <div>
+                        <span className="block text-[8px] font-black text-gray-600 uppercase">النقاط</span>
+                        <span className="text-lg font-black">1200</span>
+                    </div>
+                </div>
             </div>
           </div>
         </div>
@@ -157,7 +149,7 @@ export default function Account() {
             </button>
           ))}
           
-          {/* Logout Button */}
+          {/* Logout */}
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-5 py-5 mt-4 rounded-[24px] bg-red-500/10 border border-red-500/20 text-red-400 font-black text-sm uppercase hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]"
