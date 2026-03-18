@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../LLL'; // Corrected to use your Supabase client
+import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useI18n } from '@/lib/i18n';
-import { User, Trophy, Calendar, Star, LogIn, Mail, Phone, Zap, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { User, Trophy, Calendar, Star, LogIn, Mail, Phone, Zap, ChevronLeft, ChevronRight, LogOut, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Account() {
@@ -14,7 +14,6 @@ export default function Account() {
 
   useEffect(() => {
     async function getProfile() {
-      // Direct check with your Supabase instance
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
@@ -35,6 +34,15 @@ export default function Account() {
   };
 
   const Arrow = dir === 'rtl' ? ChevronLeft : ChevronRight;
+
+  // تعريف قائمة المنيو مع إضافة "شخصي"
+  const menuItems = [
+    { label: 'شخصي', icon: User, path: '/personal', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+    { label: t('myBookings'), icon: Calendar, path: '/my-bookings', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+    { label: t('myTournaments'), icon: Trophy, path: '/tournaments', color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+    { label: t('myRewards'), icon: Star, path: '/rewards', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+    { label: t('contactUs'), icon: Mail, path: '/contact', color: 'text-green-400', bg: 'bg-green-500/10' },
+  ];
 
   if (loading) {
     return (
@@ -65,18 +73,24 @@ export default function Account() {
     );
   }
 
-  const menuItems = [
-    { label: t('myBookings'), icon: Calendar, path: '/my-bookings', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
-    { label: t('myTournaments'), icon: Trophy, path: '/tournaments', color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-    { label: t('myRewards'), icon: Star, path: '/rewards', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-    { label: t('contactUs'), icon: Mail, path: '/contact', color: 'text-green-400', bg: 'bg-green-500/10' },
-  ];
-
   return (
     <div className="min-h-screen bg-transparent text-white pb-32" dir={dir}>
       <Header />
 
       <div className="pt-24 max-w-lg mx-auto px-6">
+        {/* Header with Settings Icon */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-black italic uppercase tracking-tighter">
+            حسابي <span className="text-cyan-400">Account</span>
+          </h1>
+          <button 
+            onClick={() => navigate('/settings')}
+            className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:text-cyan-400 transition-all active:scale-90"
+          >
+            <Settings size={20} />
+          </button>
+        </div>
+
         {/* Profile Card */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl">
           <div className="flex items-center gap-5 mb-8">
