@@ -15,8 +15,10 @@ export default function BookCourt() {
   const [selectedTime, setSelectedTime] = useState('');
   const [duration, setDuration] = useState(60);
 
-  // SANITIZE THE ID IMMEDIATELY
-  const cleanId = id?.replace(/['"]+/g, '');
+  // --- FORCE SANITIZER ---
+  // This removes EVERYTHING except alphanumeric characters and hyphens.
+  // It effectively kills the ""quotes"" error.
+  const cleanId = id ? id.replace(/[^a-zA-Z0-9-]/g, '') : '';
 
   const timeSlots = [
     { id: "16:00", label: "04:00 PM" },
@@ -56,7 +58,7 @@ export default function BookCourt() {
     const fetchCourt = async () => {
       if (!cleanId) return;
       setLoading(true);
-      // Use cleanId here
+      // Using cleanId to fetch court details from the DB
       const { data, error } = await supabase.from('courts').select('*').eq('id', cleanId).maybeSingle();
       if (data) {
         setCourt(data);
@@ -82,6 +84,7 @@ export default function BookCourt() {
       return; 
     }
 
+    // Format local time selection to ISO for Supabase
     const localDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
     const startTime = localDateTime.toISOString();
     const endTime = new Date(localDateTime.getTime() + duration * 60000).toISOString(); 
@@ -96,6 +99,7 @@ export default function BookCourt() {
     }]);
 
     if (!bookingError) {
+      // Success! Head to rewards to see progress
       navigate('/rewards');
     } else {
       console.error("Supabase Error:", bookingError);
@@ -107,7 +111,7 @@ export default function BookCourt() {
   if (loading) return (
     <div className="min-h-screen bg-[#0a0f3c] flex flex-col items-center justify-center text-cyan-400 font-black">
       <Loader2 className="animate-spin mb-4" size={40} />
-      <p>جاري تحميل الملعب...</p>
+      <p className="tracking-widest uppercase text-xs">جاري تحميل الملعب...</p>
     </div>
   );
 
@@ -124,7 +128,8 @@ export default function BookCourt() {
 
       <main className="px-6 max-w-md mx-auto space-y-8 text-right">
         
-        <div className="bg-[#14224d] rounded-[32px] p-5 border border-white/5 flex items-center gap-5 shadow-2xl transition-all">
+        {/* Court Card */}
+        <div className="bg-[#14224d] rounded-[32px] p-5 border border-white/5 flex items-center gap-5 shadow-2xl">
           <img 
             src={court?.image_url || court?.image} 
             className="w-20 h-20 rounded-2xl object-cover border border-cyan-400/20 shadow-lg" 
@@ -137,6 +142,7 @@ export default function BookCourt() {
           </div>
         </div>
 
+        {/* 1. Duration */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40">
             <span className="text-[10px] font-black uppercase tracking-widest">مدة اللعب</span>
@@ -157,6 +163,7 @@ export default function BookCourt() {
           </div>
         </section>
 
+        {/* 2. Date */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40">
             <span className="text-[10px] font-black uppercase tracking-widest">اختر التاريخ</span>
@@ -180,6 +187,7 @@ export default function BookCourt() {
           </div>
         </section>
 
+        {/* 3. Time */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40">
             <span className="text-[10px] font-black uppercase tracking-widest">اختر الوقت</span>
@@ -202,12 +210,13 @@ export default function BookCourt() {
           </div>
         </section>
 
+        {/* Confirm Button */}
         <button 
           onClick={handleConfirm}
           disabled={!selectedDate || !selectedTime || bookingInProgress}
           className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[28px] font-black text-xl shadow-[0_15px_30px_rgba(6,182,212,0.3)] flex items-center justify-center gap-3 active:scale-95 disabled:opacity-20 transition-all mt-6"
         >
-          {bookingInProgress ? "جاري الحجز..." : "تأكيد الحجز الآن"}
+          {bookingInProgress ? <Loader2 className="animate-spin" /> : "تأكيد الحجز الآن"}
           <Zap size={22} className="fill-[#0a0f3c]" />
         </button>
       </main>

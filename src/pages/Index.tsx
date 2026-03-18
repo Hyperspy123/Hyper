@@ -32,10 +32,10 @@ export default function Index() {
     }
   ];
 
-  // Helper function to navigate without extra quotes
+  // FORCE SANITIZER: Removes anything that isn't alphanumeric or a hyphen
   const handleCourtClick = (courtId: string) => {
-    const cleanId = courtId.replace(/['"]+/g, ''); 
-    navigate(`/book/${cleanId}`);
+    const forcedCleanId = courtId.replace(/[^a-zA-Z0-9-]/g, ''); 
+    navigate(`/book/${forcedCleanId}`);
   };
 
   return (
