@@ -3,7 +3,7 @@ import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useI18n } from '@/lib/i18n';
-import { User, Trophy, Calendar, Star, LogIn, Mail, Phone, Zap, ChevronLeft, ChevronRight, LogOut, Settings, Award } from 'lucide-react';
+import { User, Trophy, Calendar, Star, LogIn, Mail, Phone, Zap, ChevronLeft, ChevronRight, LogOut, Settings, Award, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Account() {
@@ -12,7 +12,7 @@ export default function Account() {
   const navigate = useNavigate();
   const { t, dir } = useI18n();
 
-  // محاكاة بيانات النشاط (للتجربة)
+  // محاكاة بيانات النشاط (سيتم ربطها بقاعدة البيانات لاحقاً)
   const matchesPlayed = 24; 
 
   useEffect(() => {
@@ -80,21 +80,35 @@ export default function Account() {
       <Header />
 
       <div className="pt-24 max-w-lg mx-auto px-6">
-        {/* Header with Settings */}
+        {/* Header with Notifications and Settings */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">
             حسابي <span className="text-cyan-400">Account</span>
           </h1>
-          <button 
-            onClick={() => navigate('/settings')}
-            className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:text-cyan-400 transition-all active:scale-90"
-          >
-            <Settings size={20} />
-          </button>
+          
+          <div className="flex gap-2">
+            {/* Notification Button */}
+            <button 
+              onClick={() => navigate('/notifications')}
+              className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:text-yellow-400 transition-all active:scale-90 relative"
+            >
+              <Bell size={20} />
+              {/* Notification Badge */}
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-[#05081d]"></span>
+            </button>
+
+            {/* Settings Button */}
+            <button 
+              onClick={() => navigate('/settings')}
+              className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:text-cyan-400 transition-all active:scale-90"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
         </div>
 
-        {/* Profile Card - CLEAN VERSION */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl overflow-hidden relative">
+        {/* Profile Card */}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl overflow-hidden relative border-b-cyan-500/20">
           <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/10 blur-[50px] rounded-full -ml-16 -mt-16" />
           
           <div className="flex items-center gap-5 mb-8 relative z-10">
@@ -116,14 +130,14 @@ export default function Account() {
                 <div className="flex-1 flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/20 border border-white/5">
                     <Award size={18} className="text-gray-500" />
                     <div>
-                        <span className="block text-[8px] font-black text-gray-600 uppercase">المباريات</span>
+                        <span className="block text-[8px] font-black text-gray-600 uppercase tracking-tighter">المباريات</span>
                         <span className="text-lg font-black">{matchesPlayed}</span>
                     </div>
                 </div>
                 <div className="flex-1 flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/20 border border-white/5">
                     <Star size={18} className="text-gray-500" />
                     <div>
-                        <span className="block text-[8px] font-black text-gray-600 uppercase">النقاط</span>
+                        <span className="block text-[8px] font-black text-gray-600 uppercase tracking-tighter">النقاط</span>
                         <span className="text-lg font-black">1200</span>
                     </div>
                 </div>
@@ -131,7 +145,7 @@ export default function Account() {
           </div>
         </div>
 
-        {/* Menu */}
+        {/* Menu Items */}
         <div className="space-y-3">
           {menuItems.map(item => (
             <button
@@ -149,7 +163,7 @@ export default function Account() {
             </button>
           ))}
           
-          {/* Logout */}
+          {/* Logout Button */}
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-5 py-5 mt-4 rounded-[24px] bg-red-500/10 border border-red-500/20 text-red-400 font-black text-sm uppercase hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]"
