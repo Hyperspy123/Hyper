@@ -29,14 +29,15 @@ export default function Header() {
   ];
 
   return (
-    // Changed: Added flex-row-reverse to force Logo Right and Menu Left
-    <header className="p-5 flex flex-row-reverse items-center justify-between bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl h-20">
+    <header 
+      className="p-5 flex items-center justify-between bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl h-20"
+      dir="rtl" // Forces the container to flow Right-to-Left
+    >
       
-      {/* 1. RIGHT SIDE: Logo (Now properly aligned in RTL flow) */}
+      {/* 1. RIGHT SIDE: Logo (First item in RTL code = Right) */}
       <div 
         className="flex items-center gap-2 cursor-pointer select-none" 
         onClick={() => navigate('/')}
-        dir="rtl"
       >
         <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(34,211,238,0.3)]">
           <Zap size={18} className="text-[#0a0f3c] fill-[#0a0f3c]" />
@@ -46,8 +47,8 @@ export default function Header() {
         </h1>
       </div>
 
-      {/* 2. LEFT SIDE: Menu Button + Dropdown */}
-      <div className="relative" dir="ltr">
+      {/* 2. LEFT SIDE: Menu Button + Dropdown (Second item in RTL code = Left) */}
+      <div className="relative" dir="ltr"> {/* dir="ltr" keeps the dropdown alignment logic consistent */}
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className={`p-2.5 rounded-xl border transition-all duration-300 active:scale-90 ${
@@ -66,7 +67,7 @@ export default function Header() {
             ? 'opacity-100 scale-100 translate-y-0 visible' 
             : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'
           }`}
-          style={{ transformOrigin: 'top left' }} // Ensures growth from the left button
+          style={{ transformOrigin: 'top left' }}
         >
           <div className="p-3 space-y-1" dir="rtl">
             {menuItems.map((item) => (
@@ -107,7 +108,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Dark Overlay for focus */}
+      {/* Dark Overlay */}
       {isMenuOpen && (
         <div 
           className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm transition-opacity" 
