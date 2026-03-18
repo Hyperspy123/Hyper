@@ -15,6 +15,7 @@ import MyBookings from './pages/MyBookings';
 import Rewards from './pages/Rewards';
 import Tournaments from './pages/Tournaments';
 import Account from './pages/Account';
+import Settings from './pages/Settings'; // <--- 1. ADD THIS IMPORT
 import Contact from './pages/Contact';
 import Faz3a from './pages/Faz3a';
 import Notifications from './pages/Notifications';
@@ -34,20 +35,15 @@ const App = () => (
           <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
             
             {/* 2. DYNAMIC MESH GRADIENTS (The Glows) */}
-            {/* Cyan Glow (Top Left) */}
             <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none z-0" />
-            
-            {/* Purple Glow (Middle Right) */}
             <div className="fixed top-[20%] right-[-10%] w-[400px] h-[400px] bg-purple-600/10 blur-[100px] rounded-full pointer-events-none z-0" />
-            
-            {/* Indigo Glow (Bottom Left) */}
             <div className="fixed bottom-[-5%] left-[-5%] w-[350px] h-[350px] bg-indigo-500/10 blur-[110px] rounded-full pointer-events-none z-0" />
 
-            {/* 3. NOISE & GRID TEXTURE (High-End Feel) */}
+            {/* 3. NOISE & GRID TEXTURE */}
             <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] pointer-events-none z-0" />
 
             {/* 4. CONTENT LAYER */}
-            <div className="relative z-10 pb-28"> {/* Extra padding for BottomNav safety */}
+            <div className="relative z-10 pb-28">
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -58,6 +54,7 @@ const App = () => (
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/faz3a" element={<Faz3a />} />
                 <Route path="/account" element={<Account />} />
+                <Route path="/settings" element={<Settings />} /> {/* <--- 2. ADD THIS ROUTE */}
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
