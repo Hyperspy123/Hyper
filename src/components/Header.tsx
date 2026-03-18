@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft } from 'lucide-react';
+import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft, LogIn } from 'lucide-react';
 
 export default function Header() {
   const [user, setUser] = useState<any>(null);
@@ -31,10 +31,9 @@ export default function Header() {
   return (
     <header 
       className="p-5 flex items-center justify-between bg-[#0a0f3c] border-b border-white/5 sticky top-0 z-[100] backdrop-blur-xl h-20"
-      dir="rtl" // Forces the container to flow Right-to-Left
+      dir="rtl"
     >
-      
-      {/* 1. RIGHT SIDE: Logo (First item in RTL code = Right) */}
+      {/* 1. RIGHT SIDE: Logo */}
       <div 
         className="flex items-center gap-2 cursor-pointer select-none" 
         onClick={() => navigate('/')}
@@ -47,68 +46,71 @@ export default function Header() {
         </h1>
       </div>
 
-      {/* 2. LEFT SIDE: Menu Button + Dropdown (Second item in RTL code = Left) */}
-      <div className="relative" dir="ltr"> {/* dir="ltr" keeps the dropdown alignment logic consistent */}
-        <button 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`p-2.5 rounded-xl border transition-all duration-300 active:scale-90 ${
-            isMenuOpen 
-            ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-[0_0_20px_rgba(34,211,238,0.4)]' 
-            : 'bg-white/5 border-white/10 text-cyan-400 hover:border-cyan-400/50'
-          }`}
-        >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+      {/* 2. LEFT SIDE: Auth Button + Menu Button */}
+      <div className="flex items-center gap-3" dir="ltr">
+        
+        {/* NEW: Sign In / Log Out Button Outside the menu */}
+        {user ? (
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all active:scale-95"
+          >
+            <LogOut size={16} />
+            <span className="hidden sm:inline">خروج</span>
+          </button>
+        ) : (
+          <button 
+            onClick={() => navigate('/auth')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 text-[#0a0f3c] text-xs font-black shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 transition-all active:scale-95"
+          >
+            <LogIn size={16} />
+            <span>دخول</span>
+          </button>
+        )}
 
-        {/* Dropdown - Anchored to the LEFT */}
-        <div 
-          className={`absolute top-14 left-0 w-[260px] bg-[#14224d] border border-white/10 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300 z-[110] overflow-hidden ${
-            isMenuOpen 
-            ? 'opacity-100 scale-100 translate-y-0 visible' 
-            : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'
-          }`}
-          style={{ transformOrigin: 'top left' }}
-        >
-          <div className="p-3 space-y-1" dir="rtl">
-            {menuItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); setIsMenuOpen(false); }}
-                className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-white/5 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-cyan-400/10 text-cyan-400 group-hover:bg-cyan-400 group-hover:text-[#0a0f3c] transition-colors">
-                    <item.icon size={18} />
+        {/* Menu Toggle Button */}
+        <div className="relative">
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={`p-2.5 rounded-xl border transition-all duration-300 active:scale-95 ${
+              isMenuOpen 
+              ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' 
+              : 'bg-white/5 border-white/10 text-cyan-400 hover:border-cyan-400/40'
+            }`}
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          {/* Dropdown Menu (Now only for Links) */}
+          <div 
+            className={`absolute top-14 left-0 w-[240px] bg-[#14224d] border border-white/10 rounded-[28px] shadow-2xl transition-all duration-300 z-[110] overflow-hidden ${
+              isMenuOpen 
+              ? 'opacity-100 scale-100 translate-y-0 visible' 
+              : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'
+            }`}
+            style={{ transformOrigin: 'top left' }}
+          >
+            <div className="p-3 space-y-1" dir="rtl">
+              {menuItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => { navigate(item.path); setIsMenuOpen(false); }}
+                  className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-white/5 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-cyan-400/10 text-cyan-400 group-hover:bg-cyan-400 group-hover:text-[#0a0f3c] transition-colors">
+                      <item.icon size={18} />
+                    </div>
+                    <span className="font-bold text-sm text-gray-200">{item.label}</span>
                   </div>
-                  <span className="font-bold text-sm text-gray-200">{item.label}</span>
-                </div>
-                <ChevronLeft size={16} className="text-gray-600 group-hover:text-cyan-400 transition-colors" />
-              </button>
-            ))}
-
-            <div className="pt-2 mt-2 border-t border-white/5">
-              {user ? (
-                <button 
-                  onClick={handleLogout} 
-                  className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-400/10 font-black text-sm transition-all"
-                >
-                  <LogOut size={18} /> 
-                  <span>تسجيل الخروج</span>
+                  <ChevronLeft size={16} className="text-gray-600 group-hover:text-cyan-400 transition-colors" />
                 </button>
-              ) : (
-                <button 
-                  onClick={() => { navigate('/auth'); setIsMenuOpen(false); }} 
-                  className="w-full p-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-sm shadow-lg shadow-cyan-500/20 active:scale-95 transition-all"
-                >
-                  تسجيل الدخول
-                </button>
-              )}
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Dark Overlay */}
       {isMenuOpen && (
         <div 
           className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm transition-opacity" 
