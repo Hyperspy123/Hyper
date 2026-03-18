@@ -7,7 +7,7 @@ export default function Index() {
 
   const COURTS_DATA = [
     {
-      id: "d1111111-1111-1111-1111-111111111111",
+      id: "d1111111-1111-1111-1111-111111111111", // Court 1
       name: "ملعب ١",
       location: "الدرعية",
       price: "250",
@@ -15,7 +15,8 @@ export default function Index() {
       description: "تحدي: احجز ٥ مرات واحصل على خصم ٢٠٪"
     },
     {
-      id: "m2222222-2222-2222-2222-222222222222",
+      // FIXED: Changed 'm' to 'b' to make it a valid Hex UUID
+      id: "b2222222-2222-2222-2222-222222222222", 
       name: "ملعب ٢",
       location: "الملقا",
       price: "250",
@@ -23,7 +24,7 @@ export default function Index() {
       description: "تحدي: احجز ٣ مرات واحصل على ساعة مجانية"
     },
     {
-      id: "33333333-3333-3333-3333-333333333333",
+      id: "33333333-3333-3333-3333-333333333333", // Court 3
       name: "ملعب ٣",
       location: "الصحافة",
       price: "250",
@@ -32,10 +33,9 @@ export default function Index() {
     }
   ];
 
-  // FORCE SANITIZER: Removes anything that isn't alphanumeric or a hyphen
   const handleCourtClick = (courtId: string) => {
-    const forcedCleanId = courtId.replace(/[^a-zA-Z0-9-]/g, ''); 
-    navigate(`/book/${forcedCleanId}`);
+    // Navigates using the clean, valid UUID
+    navigate(`/book/${courtId}`);
   };
 
   return (

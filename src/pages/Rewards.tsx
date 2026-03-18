@@ -18,17 +18,16 @@ export default function Rewards() {
   const [counts, setCounts] = useState<{ [key: string]: number }>({});
   const navigate = useNavigate();
 
-  // هذه الـ IDs هي "البصمة" لكل ملعب ولازم تطابق اللي في ملف Index.tsx والـ SQL
+  // FIXED: Changed 'm' to 'b' for COURT2 to match the new valid Hex UUID in SQL
   const COURT_IDS = {
     COURT1: "d1111111-1111-1111-1111-111111111111", 
-    COURT2: "m2222222-2222-2222-2222-222222222222",
+    COURT2: "b2222222-2222-2222-2222-222222222222",
     COURT3: "33333333-3333-3333-3333-333333333333"
   };
 
   useEffect(() => {
     async function fetchAllCounts() {
       try {
-        // نجلب عدد الحجوزات لكل ملعب على حدة لضمان استقلالية العدادات
         const results = await Promise.all(
           Object.values(COURT_IDS).map(id => 
             supabase.rpc('get_user_booking_count', { target_court_id: id })
@@ -49,7 +48,6 @@ export default function Rewards() {
     fetchAllCounts();
   }, []);
 
-  // مصفوفة الملاعب مع تحدياتها الخاصة
   const courtBrands = [
     {
       name: "ملعب ١",
@@ -99,7 +97,6 @@ export default function Rewards() {
         <div className="space-y-12">
           {courtBrands.map((brand, bIdx) => (
             <div key={bIdx} className="space-y-6">
-              {/* عنوان الملعب */}
               <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <div className="flex items-center gap-2">
                   <Flame size={18} className="text-orange-500 fill-orange-500" />
@@ -109,7 +106,6 @@ export default function Rewards() {
                 </div>
               </div>
 
-              {/* تحديات هذا الملعب فقط */}
               <div className="grid gap-4">
                 {brand.tasks.map((task, tIdx) => {
                   const currentProgress = counts[brand.id] || 0;
@@ -117,7 +113,7 @@ export default function Rewards() {
                   const progressPercent = Math.min((currentProgress / task.goal) * 100, 100);
 
                   return (
-                    <div key={tIdx} className="bg-[#14224d] rounded-[32px] p-6 border border-white/5 relative overflow-hidden">
+                    <div key={tIdx} className="bg-[#14224d] rounded-[32px] p-6 border border-white/5 relative overflow-hidden group">
                       <div className="flex justify-between items-start mb-4">
                         <div className="z-10">
                           <h3 className="font-bold text-lg leading-tight">{task.title}</h3>
@@ -151,7 +147,7 @@ export default function Rewards() {
                       </div>
 
                       {isDone && (
-                        <button className="w-full mt-5 py-3 bg-white text-[#0a0f3c] rounded-2xl font-black text-xs flex items-center justify-center gap-2 hover:bg-cyan-400 transition-all shadow-xl">
+                        <button className="w-full mt-5 py-3 bg-white text-[#0a0f3c] rounded-2xl font-black text-xs flex items-center justify-center gap-2 hover:bg-cyan-400 transition-all shadow-xl active:scale-95">
                           استلام كود الخصم <QrCode size={16} />
                         </button>
                       )}
