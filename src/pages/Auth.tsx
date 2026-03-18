@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Zap, User, Phone, ChevronLeft, Send, LogIn, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Zap, User, Phone, ChevronLeft, Send, LogIn, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AuthMode = 'signin' | 'signup' | 'reset';
@@ -16,13 +16,17 @@ export default function Auth() {
   const [mode, setMode] = useState<AuthMode>('signin');
   const navigate = useNavigate();
 
+  // Detect if user arrived from a Password Reset email
+  const isRecoveryMode = window.location.hash.includes('type=recovery');
+
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes('type=recovery')) {
+    if (isRecoveryMode) {
       setMode('reset');
-      toast.success("تم تأكيد الرابط. أدخل كلمة المرور الجديدة الآن");
+      toast.success("أهلاً بك مجدداً! أدخل كلمة المرور الجديدة الآن", {
+        icon: <ShieldCheck className="text-cyan-400" size={18} />
+      });
     }
-  }, []);
+  }, [isRecoveryMode]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,15 +54,15 @@ export default function Auth() {
         navigate('/');
       }
       else if (mode === 'reset') {
-        const isUpdating = window.location.hash.includes('type=recovery');
-
-        if (isUpdating) {
+        if (isRecoveryMode) {
+          // STEP 2: Actual Password Update
           const { error } = await supabase.auth.updateUser({ password });
           if (error) throw error;
-          toast.success("تم تحديث كلمة المرور بنجاح!");
+          toast.success("تم تحديث كلمة المرور بنجاح! يمكنك الدخول الآن");
+          window.location.hash = ""; // Clear the recovery token
           setMode('signin');
-          window.location.hash = "";
         } else {
+          // STEP 1: Requesting the Link
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}/auth`,
           });
@@ -74,16 +78,14 @@ export default function Auth() {
     }
   };
 
-  const isRecoveryMode = window.location.hash.includes('type=recovery');
-
   return (
     <div className="min-h-screen bg-transparent flex flex-col justify-center px-6 text-white font-sans" dir="rtl">
       <div className="max-w-md mx-auto w-full bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 shadow-2xl relative overflow-hidden">
         
-        {/* Navigation */}
+        {/* Navigation / Back Button */}
         <button 
           onClick={() => {
-            if (mode === 'reset' || mode === 'signup') {
+            if (isRecoveryMode || mode === 'reset' || mode === 'signup') {
               setMode('signin');
               window.location.hash = "";
             } else {
@@ -101,7 +103,7 @@ export default function Auth() {
           </div>
           <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none">هايب PADEL</h1>
           <p className="text-gray-400 mt-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-60">
-            {mode === 'signup' ? 'إنشاء حساب لاعب جديد' : mode === 'signin' ? 'أهلاً بك يا بطل' : 'استعادة الحساب'}
+            {mode === 'signup' ? 'إنشاء حساب لاعب جديد' : mode === 'signin' ? 'أهلاً بك يا بطل' : isRecoveryMode ? 'تعيين كلمة مرور جديدة' : 'استعادة الحساب'}
           </p>
         </div>
 
@@ -161,11 +163,13 @@ export default function Auth() {
           </button>
         </form>
 
-        <div className="text-center mt-8">
-          <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); window.location.hash = ""; }} className="text-xs font-black text-gray-500 hover:text-cyan-400 transition-colors uppercase tracking-widest">
-            {mode === 'signup' ? 'لديك حساب؟ سجل دخولك' : 'ليس لديك حساب؟ سجل الآن'}
-          </button>
-        </div>
+        {!isRecoveryMode && (
+          <div className="text-center mt-8">
+            <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); }} className="text-xs font-black text-gray-500 hover:text-cyan-400 transition-colors uppercase tracking-widest">
+              {mode === 'signup' ? 'لديك حساب؟ سجل دخولك' : 'ليس لديك حساب؟ سجل الآن'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
