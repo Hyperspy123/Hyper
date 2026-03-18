@@ -22,9 +22,6 @@ import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
 import NotFound from './pages/NotFound';
 
-// If you create a separate Settings page later, import it here
-// import Settings from './pages/Settings'; 
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -33,40 +30,48 @@ const App = () => (
       <I18nProvider>
         <Toaster />
         <BrowserRouter>
-          {/* Background wrapper to prevent white flashes between loads */}
-          <div className="min-h-screen bg-[#0a0f3c] text-white">
-            <div className="pb-24"> {/* Space for BottomNav */}
+          {/* 1. THE BEAUTY WRAPPER: Deep Midnight Base */}
+          <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
+            
+            {/* 2. DYNAMIC MESH GRADIENTS (The Glows) */}
+            {/* Cyan Glow (Top Left) */}
+            <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none z-0" />
+            
+            {/* Purple Glow (Middle Right) */}
+            <div className="fixed top-[20%] right-[-10%] w-[400px] h-[400px] bg-purple-600/10 blur-[100px] rounded-full pointer-events-none z-0" />
+            
+            {/* Indigo Glow (Bottom Left) */}
+            <div className="fixed bottom-[-5%] left-[-5%] w-[350px] h-[350px] bg-indigo-500/10 blur-[110px] rounded-full pointer-events-none z-0" />
+
+            {/* 3. NOISE & GRID TEXTURE (High-End Feel) */}
+            <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] pointer-events-none z-0" />
+
+            {/* 4. CONTENT LAYER */}
+            <div className="relative z-10 pb-28"> {/* Extra padding for BottomNav safety */}
               <Routes>
-                {/* Main App Routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/book/:id" element={<BookCourt />} />
                 <Route path="/my-bookings" element={<MyBookings />} />
-                
-                {/* Features & Social */}
                 <Route path="/rewards" element={<Rewards />} />
-                {/* Alias so both /rewards and /achievements work if needed */}
                 <Route path="/achievements" element={<Rewards />} /> 
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/faz3a" element={<Faz3a />} />
-                
-                {/* User & Settings (Links from Side Drawer) */}
                 <Route path="/account" element={<Account />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/contact" element={<Contact />} />
-                {/* <Route path="/settings" element={<Settings />} /> */}
-                
-                {/* Auth Internals */}
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/auth/error" element={<AuthError />} />
-                
-                {/* 404 Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
             
-            {/* Global Navigation Bar - Stays fixed at the bottom */}
-            <BottomNav />
+            {/* 5. NAVIGATION LAYER (Glass Effect) */}
+            <div className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pointer-events-none">
+              <div className="pointer-events-auto max-w-lg mx-auto">
+                <BottomNav />
+              </div>
+            </div>
           </div>
         </BrowserRouter>
       </I18nProvider>
