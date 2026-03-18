@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft, LogIn } from 'lucide-react';
+import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft, LogIn, Bell } from 'lucide-react';
 
 export default function Header() {
   const [user, setUser] = useState<any>(null);
@@ -35,7 +35,7 @@ export default function Header() {
     >
       {/* 1. RIGHT SIDE: Logo */}
       <div 
-        className="flex items-center gap-2 cursor-pointer select-none" 
+        className="flex items-center gap-2 cursor-pointer select-none active:scale-95 transition-all" 
         onClick={() => navigate('/')}
       >
         <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(34,211,238,0.3)]">
@@ -46,25 +46,35 @@ export default function Header() {
         </h1>
       </div>
 
-      {/* 2. LEFT SIDE: Auth Button + Menu Button */}
-      <div className="flex items-center gap-3" dir="ltr">
+      {/* 2. LEFT SIDE: Notifications + Auth + Menu */}
+      <div className="flex items-center gap-2" dir="ltr">
         
-        {/* NEW: Sign In / Log Out Button Outside the menu */}
+        {/* --- GLOBAL NOTIFICATION BELL --- */}
+        <button 
+          onClick={() => navigate('/notifications')}
+          className="relative p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:border-cyan-400/40 transition-all active:scale-90"
+        >
+          <Bell size={22} />
+          {/* Red Notification Badge */}
+          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-[#0a0f3c]" />
+        </button>
+
+        {/* Auth Button */}
         {user ? (
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all active:scale-95"
           >
             <LogOut size={16} />
-            <span className="hidden sm:inline">خروج</span>
+            <span className="hidden sm:inline font-black">خروج</span>
           </button>
         ) : (
           <button 
             onClick={() => navigate('/auth')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 text-[#0a0f3c] text-xs font-black shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 text-[#0a0f3c] text-xs font-black shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 transition-all active:scale-95"
           >
             <LogIn size={16} />
-            <span>دخول</span>
+            <span className="font-black">دخول</span>
           </button>
         )}
 
@@ -81,7 +91,7 @@ export default function Header() {
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
 
-          {/* Dropdown Menu (Now only for Links) */}
+          {/* Dropdown Menu */}
           <div 
             className={`absolute top-14 left-0 w-[240px] bg-[#14224d] border border-white/10 rounded-[28px] shadow-2xl transition-all duration-300 z-[110] overflow-hidden ${
               isMenuOpen 
@@ -101,7 +111,7 @@ export default function Header() {
                     <div className="p-2 rounded-lg bg-cyan-400/10 text-cyan-400 group-hover:bg-cyan-400 group-hover:text-[#0a0f3c] transition-colors">
                       <item.icon size={18} />
                     </div>
-                    <span className="font-bold text-sm text-gray-200">{item.label}</span>
+                    <span className="font-black text-sm text-gray-200">{item.label}</span>
                   </div>
                   <ChevronLeft size={16} className="text-gray-600 group-hover:text-cyan-400 transition-colors" />
                 </button>
