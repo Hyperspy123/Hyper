@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Zap, User, Phone, ChevronLeft, Send, LogIn } from 'lucide-react';
@@ -15,6 +15,15 @@ export default function Auth() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [mode, setMode] = useState<AuthMode>('signin');
   const navigate = useNavigate();
+
+  // Handle Recovery Link from Email
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      setMode('reset');
+      toast.success("تم تأكيد الرابط. أدخل كلمة المرور الجديدة الآن");
+    }
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,12 +51,25 @@ export default function Auth() {
         navigate('/');
       }
       else if (mode === 'reset') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth`,
-        });
-        if (error) throw error;
-        toast.success("تم إرسال رابط استعادة كلمة المرور لبريدك!");
-        setMode('signin');
+        // Check if we are UPDATING (coming from email) or REQUESTING (first step)
+        const isUpdating = window.location.hash.includes('type=recovery');
+
+        if (isUpdating) {
+          // STEP 2: Actually update the password
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) throw error;
+          toast.success("تم تحديث كلمة المرور بنجاح! يمكنك الدخول الآن");
+          setMode('signin');
+          window.location.hash = ""; // Clear the hash
+        } else {
+          // STEP 1: Request the reset email
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/auth`,
+          });
+          if (error) throw error;
+          toast.success("تم إرسال رابط استعادة كلمة المرور لبريدك!");
+          setMode('signin');
+        }
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -121,24 +143,29 @@ export default function Auth() {
             </>
           )}
 
-          <div className="relative">
-            <Mail className="absolute right-4 top-4 text-gray-500" size={18} />
-            <input 
-              type="email" 
-              placeholder="البريد الإلكتروني"
-              className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+          {/* Email: Hidden if updating password to keep it simple */}
+          {(!window.location.hash.includes('type=recovery')) && (
+            <div className="relative">
+              <Mail className="absolute right-4 top-4 text-gray-500" size={18} />
+              <input 
+                type="email" 
+                placeholder="البريد الإلكتروني"
+                className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
-          {mode !== 'reset' && (
+          {/* Password: Shown in all modes EXCEPT "Reset Request" step */}
+          {(mode !== 'reset' || window.location.hash.includes('type=recovery')) && (
             <div className="space-y-2">
               <div className="flex justify-between items-center px-2">
-                <label className="text-[10px] font-black text-gray-500 uppercase mr-2">كلمة المرور</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase mr-2">
+                  {window.location.hash.includes('type=recovery') ? 'كلمة المرور الجديدة' : 'كلمة المرور'}
+                </label>
                 
-                {/* Forgot Password logic - Only in signin mode */}
                 {mode === 'signin' && (
                   <button 
                     type="button" 
@@ -169,7 +196,7 @@ export default function Auth() {
           >
             {loading ? <div className="w-6 h-6 border-2 border-[#0a0f3c] border-t-transparent animate-spin rounded-full" /> : (
               <>
-                {mode === 'signin' ? 'تسجيل الدخول' : mode === 'signup' ? 'إنشاء حساب' : 'إرسال الرابط'}
+                {mode === 'signin' ? 'تسجيل الدخول' : mode === 'signup' ? 'إنشاء حساب' : window.location.hash.includes('type=recovery') ? 'تحديث كلمة المرور' : 'إرسال الرابط'}
                 {mode === 'reset' ? <Send size={20} /> : <LogIn size={20} />}
               </>
             )}
@@ -178,7 +205,10 @@ export default function Auth() {
 
         <div className="text-center mt-8">
           <button 
-            onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}
+            onClick={() => {
+              setMode(mode === 'signup' ? 'signin' : 'signup');
+              window.location.hash = ""; // Clear hash if switching
+            }}
             className="text-xs font-black text-gray-500 hover:text-cyan-400 transition-colors uppercase tracking-widest"
           >
             {mode === 'signup' ? 'لديك حساب؟ سجل دخولك' : 'ليس لديك حساب؟ سجل الآن'}
