@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { ChevronRight, Clock, Zap, CalendarDays, Timer, Loader2, Lock } from 'lucide-react';
+import { ChevronRight, Clock, Zap, CalendarDays, Timer, Loader2, Lock, Users } from 'lucide-react';
 
 export default function BookCourt() {
   const { id } = useParams();
@@ -10,7 +10,8 @@ export default function BookCourt() {
   const [court, setCourt] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bookingInProgress, setBookingInProgress] = useState(false);
-  const [bookedSlots, setBookedSlots] = useState<string[]>([]); // New: Stores IDs of taken slots
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [viewerCount, setViewerCount] = useState(1); // Live counter state
   
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
@@ -29,10 +30,8 @@ export default function BookCourt() {
 
   const durations = [{ label: "60 Min", value: 60 }, { label: "90 Min", value: 90 }, { label: "120 Min", value: 120 }];
 
-  // --- NEW: Fetch Booked Slots Logic ---
   const fetchBookedSlots = async (date: string) => {
     if (!cleanId || !date) return;
-    
     const { data } = await supabase
       .from('bookings')
       .select('start_time')
@@ -61,24 +60,47 @@ export default function BookCourt() {
     fetchCourt();
   }, [cleanId]);
 
-  // Handle date changes and Real-time updates
+  useEffect(() => {
+    if (!cleanId) return;
+
+    // --- REALTIME PRESENCE (Live Counter) ---
+    const presenceChannel = supabase.channel(`presence-${cleanId}`, {
+      config: { presence: { key: 'user' } }
+    });
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const newState = presenceChannel.presenceState();
+        const totalViewers = Object.keys(newState).length;
+        setViewerCount(totalViewers > 0 ? totalViewers : 1);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({ online_at: new Date().toISOString() });
+        }
+      });
+
+    // --- REALTIME BOOKINGS ---
+    const bookingChannel = supabase
+      .channel('booking-updates')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'bookings', filter: `court_id=eq.${cleanId}` }, 
+        () => { if (selectedDate) fetchBookedSlots(selectedDate); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(presenceChannel);
+      supabase.removeChannel(bookingChannel);
+    };
+  }, [cleanId, selectedDate]);
+
   useEffect(() => {
     if (selectedDate) {
       fetchBookedSlots(selectedDate);
-      setSelectedTime(''); // Reset selection when date changes
-
-      // REAL-TIME: Listen for new bookings and update UI instantly
-      const channel = supabase
-        .channel('booking-updates')
-        .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'bookings', filter: `court_id=eq.${cleanId}` }, 
-          () => fetchBookedSlots(selectedDate)
-        )
-        .subscribe();
-
-      return () => { supabase.removeChannel(channel); };
+      setSelectedTime('');
     }
-  }, [selectedDate, cleanId]);
+  }, [selectedDate]);
 
   const handleConfirm = async () => {
     if (!selectedDate || !selectedTime) { alert("الرجاء اختيار التاريخ والوقت"); return; }
@@ -116,17 +138,30 @@ export default function BookCourt() {
     return dates;
   };
 
-  if (loading) return <div className="min-h-screen bg-[#0a0f3c] flex items-center justify-center text-cyan-400 font-black italic">HYPE LOADING...</div>;
+  if (loading) return <div className="min-h-screen bg-[#0a0f3c] flex items-center justify-center text-cyan-400 font-black italic uppercase">HYPE LOADING...</div>;
 
   return (
     <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-24" dir="rtl">
       <Header />
+      
+      {/* 🚀 LIVE VIEWER COUNTER BADGE */}
+      <div className="px-6 mt-4 flex justify-end">
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${viewerCount > 1 ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-white/5 border-white/10 opacity-60'}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${viewerCount > 1 ? 'bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-gray-500'}`} />
+          <span className="text-[10px] font-black uppercase tracking-tighter text-cyan-400">
+            {viewerCount} أشخاص يشاهدون الملعب الآن
+          </span>
+          <Users size={12} className="text-cyan-400" />
+        </div>
+      </div>
+
       <div className="p-4 flex items-center justify-between">
         <h1 className="text-xl font-black italic tracking-tighter uppercase">تأكيد الحجز</h1>
         <button onClick={() => navigate(-1)} className="p-2 bg-white/5 rounded-xl border border-white/10 rotate-180 text-cyan-400"><ChevronRight size={22} /></button>
       </div>
 
       <main className="px-6 max-w-md mx-auto space-y-8 text-right">
+        {/* Court Card */}
         <div className="bg-[#14224d] rounded-[32px] p-5 border border-white/5 flex items-center gap-5 shadow-2xl">
           <img src={court?.image_url || court?.image} className="w-20 h-20 rounded-2xl object-cover border border-cyan-400/20 shadow-lg" />
           <div className="text-right">
@@ -158,7 +193,7 @@ export default function BookCourt() {
           </div>
         </section>
 
-        {/* 3. Time Slots with Unclickable logic */}
+        {/* 3. Time Slots */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest"><span>اختر الوقت</span><Clock size={14} /></div>
           <div className="grid grid-cols-3 gap-3">
