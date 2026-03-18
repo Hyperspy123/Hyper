@@ -10,13 +10,13 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState(''); // Added for confirmation
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [mode, setMode] = useState<AuthMode>('signin');
   const navigate = useNavigate();
 
-  // Detect if user arrived from a Password Reset email
   const isRecoveryMode = window.location.hash.includes('type=recovery');
 
   useEffect(() => {
@@ -55,14 +55,16 @@ export default function Auth() {
       }
       else if (mode === 'reset') {
         if (isRecoveryMode) {
-          // STEP 2: Actual Password Update
+          // Check if passwords match
+          if (password !== confirmPassword) {
+            throw new Error("كلمات المرور غير متطابقة");
+          }
           const { error } = await supabase.auth.updateUser({ password });
           if (error) throw error;
           toast.success("تم تحديث كلمة المرور بنجاح! يمكنك الدخول الآن");
-          window.location.hash = ""; // Clear the recovery token
+          window.location.hash = ""; 
           setMode('signin');
         } else {
-          // STEP 1: Requesting the Link
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}/auth`,
           });
@@ -82,7 +84,7 @@ export default function Auth() {
     <div className="min-h-screen bg-transparent flex flex-col justify-center px-6 text-white font-sans" dir="rtl">
       <div className="max-w-md mx-auto w-full bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 shadow-2xl relative overflow-hidden">
         
-        {/* Navigation / Back Button */}
+        {/* Navigation */}
         <button 
           onClick={() => {
             if (isRecoveryMode || mode === 'reset' || mode === 'signup') {
@@ -134,22 +136,43 @@ export default function Auth() {
             </div>
           )}
 
+          {/* Password Logic: Shows for signin, signup, and recovery. In recovery, it's the NEW password. */}
           {(mode !== 'reset' || isRecoveryMode) && (
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-2">
-                <label className="text-[10px] font-black text-gray-500 uppercase mr-2">
-                  {isRecoveryMode ? 'كلمة المرور الجديدة' : 'كلمة المرور'}
-                </label>
-                {mode === 'signin' && (
-                  <button type="button" onClick={() => setMode('reset')} className="text-[10px] font-black text-cyan-400 hover:text-white transition-colors uppercase tracking-tighter">
-                    نسيت كلمة المرور؟
-                  </button>
-                )}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center px-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase mr-2">
+                    {isRecoveryMode ? 'كلمة المرور الجديدة' : 'كلمة المرور'}
+                  </label>
+                  {mode === 'signin' && (
+                    <button type="button" onClick={() => setMode('reset')} className="text-[10px] font-black text-cyan-400 hover:text-white transition-colors uppercase tracking-tighter">
+                      نسيت كلمة المرور؟
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute right-4 top-4 text-gray-500" size={18} />
+                  <input type="password" placeholder="••••••••" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                </div>
               </div>
-              <div className="relative">
-                <Lock className="absolute right-4 top-4 text-gray-500" size={18} />
-                <input type="password" placeholder="كلمة المرور" className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
+
+              {/* Confirm Password Field: Only shows during recovery */}
+              {isRecoveryMode && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase mr-4">تأكيد كلمة المرور</label>
+                  <div className="relative">
+                    <ShieldCheck className="absolute right-4 top-4 text-gray-500" size={18} />
+                    <input 
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="w-full bg-black/20 border border-white/10 p-4 pr-12 rounded-2xl text-sm font-bold outline-none focus:border-cyan-500 transition-all" 
+                      value={confirmPassword} 
+                      onChange={(e) => setConfirmPassword(e.target.value)} 
+                      required 
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
