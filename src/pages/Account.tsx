@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../LLL'; // Corrected to use your Supabase client
 import { useNavigate } from 'react-router-dom';
-import { createClient } from '@metagptx/web-sdk';
 import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
 import { useI18n } from '@/lib/i18n';
-import { User, Trophy, Calendar, Star, LogIn, Mail, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
-
-const client = createClient();
+import { User, Trophy, Calendar, Star, LogIn, Mail, Phone, Zap, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function Account() {
   const [user, setUser] = useState<any>(null);
@@ -15,52 +13,54 @@ export default function Account() {
   const { t, dir } = useI18n();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await client.auth.me();
-        if (res?.data) setUser(res.data);
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
+    async function getProfile() {
+      // Direct check with your Supabase instance
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        setUser(session.user);
+      } else {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) setUser(currentUser);
       }
-    };
-    checkAuth();
+      setLoading(false);
+    }
+    getProfile();
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+    toast.success("تم تسجيل الخروج بنجاح");
+  };
 
   const Arrow = dir === 'rtl' ? ChevronLeft : ChevronRight;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0a0f3c] to-[#1a1f4e] pb-20" dir={dir}>
-        <Header />
-        <div className="pt-20 flex items-center justify-center min-h-[60vh]">
-          <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-        </div>
-        <BottomNav />
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <Zap className="text-cyan-400 animate-pulse" size={48} />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0a0f3c] to-[#1a1f4e] pb-20" dir={dir}>
-        <Header />
-        <div className="pt-24 flex flex-col items-center justify-center min-h-[60vh] px-4">
-          <div className="bg-[#14224d] border border-white/5 rounded-2xl p-10 text-center max-w-md">
-            <User size={48} className="text-cyan-400 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-white mb-2">{t('loginRequiredTitle')}</h2>
-            <p className="text-gray-400 mb-6">{t('loginRequiredDesc')}</p>
-            <button
-              onClick={() => client.auth.toLogin()}
-              className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white font-medium transition-all mx-auto"
-            >
-              <LogIn size={18} />
-              <span>{t('login')}</span>
-            </button>
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-6" dir={dir}>
+        <div className="w-full max-w-md bg-white/5 backdrop-blur-xl p-10 rounded-[40px] border border-white/10 text-center shadow-2xl">
+          <div className="w-20 h-20 bg-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-cyan-500/30">
+            <User className="text-cyan-400" size={40} />
           </div>
+          <h2 className="text-2xl font-black mb-2 text-white italic tracking-tighter uppercase">{t('loginRequiredTitle')}</h2>
+          <p className="text-gray-400 text-sm mb-8 font-bold opacity-70">{t('loginRequiredDesc')}</p>
+          <button
+            onClick={() => navigate('/auth')}
+            className="w-full py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-lg shadow-lg shadow-cyan-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <LogIn size={20} />
+            <span>{t('login')}</span>
+          </button>
         </div>
-        <BottomNav />
       </div>
     );
   }
@@ -73,77 +73,86 @@ export default function Account() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0f3c] to-[#1a1f4e] pb-20" dir={dir}>
+    <div className="min-h-screen bg-transparent text-white pb-32" dir={dir}>
       <Header />
 
-      <div className="pt-18 max-w-lg mx-auto px-4" style={{ paddingTop: '4.5rem' }}>
+      <div className="pt-24 max-w-lg mx-auto px-6">
         {/* Profile Card */}
-        <div className="bg-[#14224d] border border-white/5 rounded-2xl p-6 mb-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
-              <User size={28} className="text-white" />
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl">
+          <div className="flex items-center gap-5 mb-8">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+              <User size={36} className="text-[#0a0f3c]" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">{t('welcomeBack')}</h2>
-              <p className="text-gray-400 text-sm mt-0.5">{t('hyperMember')}</p>
+              <h2 className="text-2xl font-black italic tracking-tighter uppercase">{t('welcomeBack')}</h2>
+              <p className="text-cyan-400 text-[10px] font-black uppercase tracking-[0.2em] opacity-80">{t('hyperMember')}</p>
             </div>
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
-              <Mail size={16} className="text-gray-400" />
-              <span className="text-gray-300 text-sm">{user.email || t('emailNotSet')}</span>
+            <div className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-black/20 border border-white/5">
+              <Mail size={18} className="text-gray-500" />
+              <span className="text-gray-300 font-bold text-sm">{user.email || t('emailNotSet')}</span>
             </div>
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
-              <Phone size={16} className="text-gray-400" />
-              <span className="text-gray-300 text-sm">{user.phone || t('phoneNotSet')}</span>
-            </div>
+            {user.user_metadata?.phone_number && (
+              <div className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-black/20 border border-white/5">
+                <Phone size={18} className="text-gray-500" />
+                <span className="text-gray-300 font-bold text-sm">{user.user_metadata.phone_number}</span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Tournament Rankings */}
-        <div className="bg-[#14224d] border border-white/5 rounded-2xl p-5 mb-6">
-          <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-            <Trophy size={18} className="text-yellow-400" />
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 mb-6 shadow-xl">
+          <h3 className="text-xs font-black text-gray-400 mb-5 flex items-center gap-2 uppercase tracking-widest">
+            <Trophy size={16} className="text-yellow-400" />
             {t('tournamentRanking')}
           </h3>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/5 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-cyan-400">0</div>
-              <div className="text-xs text-gray-400 mt-1">{t('tournamentsCount')}</div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-black/20 rounded-2xl p-4 text-center border border-white/5">
+              <div className="text-2xl font-black text-cyan-400">0</div>
+              <div className="text-[8px] text-gray-500 font-black uppercase mt-1 tracking-tighter">{t('tournamentsCount')}</div>
             </div>
-            <div className="bg-white/5 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-yellow-400">-</div>
-              <div className="text-xs text-gray-400 mt-1">{t('ranking')}</div>
+            <div className="bg-black/20 rounded-2xl p-4 text-center border border-white/5">
+              <div className="text-2xl font-black text-yellow-400">-</div>
+              <div className="text-[8px] text-gray-500 font-black uppercase mt-1 tracking-tighter">{t('ranking')}</div>
             </div>
-            <div className="bg-white/5 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-green-400">0</div>
-              <div className="text-xs text-gray-400 mt-1">{t('wins')}</div>
+            <div className="bg-black/20 rounded-2xl p-4 text-center border border-white/5">
+              <div className="text-2xl font-black text-green-400">0</div>
+              <div className="text-[8px] text-gray-500 font-black uppercase mt-1 tracking-tighter">{t('wins')}</div>
             </div>
           </div>
         </div>
 
         {/* Menu */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {menuItems.map(item => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="w-full flex items-center justify-between px-4 py-4 rounded-xl bg-[#14224d] border border-white/5 hover:border-cyan-500/20 transition-all"
+              className="w-full flex items-center justify-between px-5 py-5 rounded-[24px] bg-white/5 border border-white/10 hover:border-cyan-500/40 hover:bg-white/10 transition-all group active:scale-[0.98]"
             >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center`}>
-                  <item.icon size={18} className={item.color} />
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-2xl ${item.bg} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                  <item.icon size={20} className={item.color} />
                 </div>
-                <span className="text-white text-sm font-medium">{item.label}</span>
+                <span className="text-white text-sm font-black uppercase tracking-tight">{item.label}</span>
               </div>
-              <Arrow size={16} className="text-gray-500" />
+              <Arrow size={18} className="text-gray-600 group-hover:text-cyan-400 transition-colors" />
             </button>
           ))}
+          
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-5 py-5 mt-4 rounded-[24px] bg-red-500/10 border border-red-500/20 text-red-400 font-black text-sm uppercase hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]"
+          >
+            <LogOut size={18} />
+            <span>تسجيل الخروج</span>
+          </button>
         </div>
       </div>
-
-      <BottomNav />
     </div>
   );
 }
