@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { MapPin, ChevronRight, Star, Zap } from 'lucide-react';
 
-// تأكد أن السطر يبدأ بـ export default لإنهاء مشكلة الـ Build
 export default function Index() {
   const navigate = useNavigate();
 
@@ -33,6 +32,12 @@ export default function Index() {
     }
   ];
 
+  // Helper function to navigate without extra quotes
+  const handleCourtClick = (courtId: string) => {
+    const cleanId = courtId.replace(/['"]+/g, ''); 
+    navigate(`/book/${cleanId}`);
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0f3c] text-white pb-24" dir="rtl">
       <Header />
@@ -51,10 +56,9 @@ export default function Index() {
           {COURTS_DATA.map((court) => (
             <div 
               key={court.id}
-              onClick={() => navigate(`/book/${court.id}`)}
+              onClick={() => handleCourtClick(court.id)}
               className="group relative bg-[#14224d] rounded-[40px] overflow-hidden border border-white/5 cursor-pointer active:scale-[0.98] transition-all duration-300 shadow-2xl"
             >
-              {/* Image Section */}
               <div className="h-56 overflow-hidden relative">
                 <img 
                   src={court.image} 
@@ -63,14 +67,12 @@ export default function Index() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#14224d] via-transparent to-transparent" />
                 
-                {/* Challenge Badge */}
                 <div className="absolute top-4 right-4 bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[10px] font-black flex items-center gap-2 shadow-2xl border border-cyan-400">
                   <Zap size={12} className="fill-[#0a0f3c]" />
                   {court.description}
                 </div>
               </div>
 
-              {/* Info Section */}
               <div className="p-8 pt-2">
                 <div className="flex justify-between items-center">
                   <div>
@@ -80,8 +82,8 @@ export default function Index() {
                       {court.location}
                     </div>
                   </div>
-                  <div className="bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-                    <span className="block text-[8px] text-gray-500 font-black uppercase text-center">الساعة</span>
+                  <div className="bg-white/5 px-4 py-2 rounded-2xl border border-white/5 text-center">
+                    <span className="block text-[8px] text-gray-500 font-black uppercase">الساعة</span>
                     <span className="text-xl font-black text-white">{court.price}</span>
                   </div>
                 </div>

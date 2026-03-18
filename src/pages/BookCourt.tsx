@@ -13,7 +13,10 @@ export default function BookCourt() {
   
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
-  const [duration, setDuration] = useState(60); // Default to 60 for simpler rewards testing
+  const [duration, setDuration] = useState(60);
+
+  // SANITIZE THE ID IMMEDIATELY
+  const cleanId = id?.replace(/['"]+/g, '');
 
   const timeSlots = [
     { id: "16:00", label: "04:00 PM" },
@@ -51,10 +54,10 @@ export default function BookCourt() {
 
   useEffect(() => {
     const fetchCourt = async () => {
-      if (!id) return;
+      if (!cleanId) return;
       setLoading(true);
-      // Fixed: matches your SQL column names (id)
-      const { data, error } = await supabase.from('courts').select('*').eq('id', id).maybeSingle();
+      // Use cleanId here
+      const { data, error } = await supabase.from('courts').select('*').eq('id', cleanId).maybeSingle();
       if (data) {
         setCourt(data);
       } else {
@@ -63,7 +66,7 @@ export default function BookCourt() {
       setLoading(false);
     };
     fetchCourt();
-  }, [id]);
+  }, [cleanId]);
 
   const handleConfirm = async () => {
     if (!selectedDate || !selectedTime) {
@@ -79,22 +82,20 @@ export default function BookCourt() {
       return; 
     }
 
-    // Format times correctly for Postgres Timestamptz
     const localDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
     const startTime = localDateTime.toISOString();
     const endTime = new Date(localDateTime.getTime() + duration * 60000).toISOString(); 
 
-    // Insert booking
+    // Insert booking using the cleanId
     const { error: bookingError } = await supabase.from('bookings').insert([{ 
-      court_id: id, 
+      court_id: cleanId, 
       user_id: user.id, 
       start_time: startTime, 
       end_time: endTime, 
-      status: 'confirmed' // CRITICAL: This must be 'confirmed' for your Rewards RPC to count it!
+      status: 'confirmed' 
     }]);
 
     if (!bookingError) {
-      // Direct redirect to Rewards so they see the progress bar move immediately
       navigate('/rewards');
     } else {
       console.error("Supabase Error:", bookingError);
@@ -123,7 +124,6 @@ export default function BookCourt() {
 
       <main className="px-6 max-w-md mx-auto space-y-8 text-right">
         
-        {/* Court Summary */}
         <div className="bg-[#14224d] rounded-[32px] p-5 border border-white/5 flex items-center gap-5 shadow-2xl transition-all">
           <img 
             src={court?.image_url || court?.image} 
@@ -137,7 +137,6 @@ export default function BookCourt() {
           </div>
         </div>
 
-        {/* Duration Selection */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40">
             <span className="text-[10px] font-black uppercase tracking-widest">مدة اللعب</span>
@@ -158,7 +157,6 @@ export default function BookCourt() {
           </div>
         </section>
 
-        {/* Date Selection */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40">
             <span className="text-[10px] font-black uppercase tracking-widest">اختر التاريخ</span>
@@ -182,7 +180,6 @@ export default function BookCourt() {
           </div>
         </section>
 
-        {/* Time Selection */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40">
             <span className="text-[10px] font-black uppercase tracking-widest">اختر الوقت</span>
@@ -205,7 +202,6 @@ export default function BookCourt() {
           </div>
         </section>
 
-        {/* CTA Button */}
         <button 
           onClick={handleConfirm}
           disabled={!selectedDate || !selectedTime || bookingInProgress}
