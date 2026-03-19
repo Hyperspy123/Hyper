@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import { supabase } from '../LLL'; // تأكد من مسار ملف السوبابيس
+import { supabase } from '../LLL';
 import { ChevronLeft, Zap, BellOff, Check, X, Loader2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -10,40 +10,59 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. جلب الإشعارات الخاصة بالمستخدم الحالي فقط
-  const fetchNotifications = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+  // 1. دالة جلب الإشعارات (محسنة لضمان جلب البيانات الصحيحة)
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (user) {
+      if (!user) return;
+
       const { data, error } = await supabase
         .from('faz3a_invites')
         .select(`
           id,
           status,
           created_at,
-          sender:sender_id (
+          sender_id,
+          profiles!sender_id (
             first_name,
-            last_name,
-            matches_count
+            last_name
           )
         `)
-        .eq('receiver_id', user.id) // 👈 أهم سطر: يجلب فقط ما يخص المستخدم الحالي
-        .eq('status', 'pending')    // عرض الطلبات المعلقة فقط
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        setNotifications(data);
-      }
+      if (error) throw error;
+      setNotifications(data || []);
+    } catch (error: any) {
+      console.error("Fetch error:", error.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchNotifications();
   }, []);
 
-  // 2. دالة التعامل مع قبول أو رفض الطلب
+  // 2. تفعيل الاستماع الفوري (Real-time) - السطر اللي بيخلي الإشعار يوصل فوراً
+  useEffect(() => {
+    fetchNotifications();
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'faz3a_invites' },
+        () => {
+          fetchNotifications(); // تحديث القائمة فور حدوث أي إضافة جديدة
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchNotifications]);
+
+  // 3. دالة التعامل مع قبول أو رفض الطلب
   const handleAction = async (inviteId: string, newStatus: 'accepted' | 'declined') => {
     const { error } = await supabase
       .from('faz3a_invites')
@@ -51,15 +70,18 @@ export default function Notifications() {
       .eq('id', inviteId);
 
     if (!error) {
-      toast.success(newStatus === 'accepted' ? "تم قبول الفزعة! كفو 🔥" : "تم رفض الطلب");
-      fetchNotifications(); // تحديث القائمة
+      toast.success(newStatus === 'accepted' ? "تم قبول الفزعة! 🔥" : "تم رفض الطلب");
+      // التحديث المحلي السريع لتحسين تجربة المستخدم
+      setNotifications(prev => prev.filter(n => n.id !== inviteId));
+    } else {
+      toast.error("حدث خطأ أثناء معالجة الطلب");
     }
   };
 
   return (
     <div className="min-h-screen bg-[#05081d] text-white pb-32 relative overflow-hidden" dir="rtl">
       
-      {/* الخلفية السينمائية (نفس ثيم الصفحة الرئيسية) */}
+      {/* الخلفية السينمائية */}
       <div className="fixed inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] bg-cyan-500/5 blur-[120px] rounded-full" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#05081d]/80 via-transparent to-[#05081d]" />
@@ -81,8 +103,9 @@ export default function Notifications() {
 
         <div className="space-y-4">
           {loading ? (
-            <div className="flex justify-center py-20">
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="animate-spin text-cyan-400" size={32} />
+              <p className="text-[10px] font-black text-gray-400 animate-pulse">جاري جلب الفزعات...</p>
             </div>
           ) : notifications.length > 0 ? (
             notifications.map((n) => (
@@ -101,7 +124,9 @@ export default function Notifications() {
                     </div>
                     
                     <p className="text-sm text-gray-400 font-bold leading-relaxed mb-6">
-                      اللاعب <span className="text-white">{n.sender?.first_name} {n.sender?.last_name}</span> يطلب انضمامك لمباراة قادمة. هل أنت جاهز؟
+                      اللاعب <span className="text-white">
+                        {n.profiles?.first_name || 'لاعب'} {n.profiles?.last_name || ''}
+                      </span> يطلب انضمامك لمباراة قادمة. هل أنت جاهز؟
                     </p>
                     
                     <div className="flex gap-3">
