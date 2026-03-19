@@ -10,21 +10,25 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. دالة جلب الإشعارات (محسنة لضمان جلب البيانات الصحيحة)
   const fetchNotifications = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) {
+        console.log("No user logged in");
+        return;
+      }
 
+      console.log("Fetching notifications for user ID:", user.id);
+
+      // تعديل الاستعلام ليكون أكثر دقة في جلب بيانات المرسل
       const { data, error } = await supabase
         .from('faz3a_invites')
         .select(`
           id,
           status,
           created_at,
-          sender_id,
-          profiles!sender_id (
+          sender:profiles!sender_id (
             first_name,
             last_name
           )
@@ -33,26 +37,32 @@ export default function Notifications() {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase Error:", error.message);
+        throw error;
+      }
+
+      console.log("Notifications received:", data);
       setNotifications(data || []);
     } catch (error: any) {
-      console.error("Fetch error:", error.message);
+      toast.error("فشل في تحديث التنبيهات");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // 2. تفعيل الاستماع الفوري (Real-time) - السطر اللي بيخلي الإشعار يوصل فوراً
   useEffect(() => {
     fetchNotifications();
 
+    // الاستماع الفوري للتغييرات
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('realtime-invites')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'faz3a_invites' },
-        () => {
-          fetchNotifications(); // تحديث القائمة فور حدوث أي إضافة جديدة
+        { event: '*', schema: 'public', table: 'faz3a_invites' },
+        (payload) => {
+          console.log("Realtime update received!", payload);
+          fetchNotifications();
         }
       )
       .subscribe();
@@ -62,29 +72,28 @@ export default function Notifications() {
     };
   }, [fetchNotifications]);
 
-  // 3. دالة التعامل مع قبول أو رفض الطلب
   const handleAction = async (inviteId: string, newStatus: 'accepted' | 'declined') => {
-    const { error } = await supabase
-      .from('faz3a_invites')
-      .update({ status: newStatus })
-      .eq('id', inviteId);
+    try {
+      const { error } = await supabase
+        .from('faz3a_invites')
+        .update({ status: newStatus })
+        .eq('id', inviteId);
 
-    if (!error) {
-      toast.success(newStatus === 'accepted' ? "تم قبول الفزعة! 🔥" : "تم رفض الطلب");
-      // التحديث المحلي السريع لتحسين تجربة المستخدم
+      if (error) throw error;
+
+      toast.success(newStatus === 'accepted' ? "كفو! تم قبول الفزعة 🔥" : "تم الرفض");
       setNotifications(prev => prev.filter(n => n.id !== inviteId));
-    } else {
-      toast.error("حدث خطأ أثناء معالجة الطلب");
+    } catch (error: any) {
+      toast.error("عذراً، تعذر تحديث الحالة");
     }
   };
 
   return (
     <div className="min-h-screen bg-[#05081d] text-white pb-32 relative overflow-hidden" dir="rtl">
       
-      {/* الخلفية السينمائية */}
-      <div className="fixed inset-0 z-0">
+      {/* الديكور الخلفي */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] bg-cyan-500/5 blur-[120px] rounded-full" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#05081d]/80 via-transparent to-[#05081d]" />
       </div>
 
       <Header />
@@ -97,48 +106,47 @@ export default function Notifications() {
             </button>
             <div>
               <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">التنبيهات</h1>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Faz3a Alerts & Activity</p>
             </div>
         </div>
 
         <div className="space-y-4">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="animate-spin text-cyan-400" size={32} />
-              <p className="text-[10px] font-black text-gray-400 animate-pulse">جاري جلب الفزعات...</p>
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="animate-spin text-cyan-400 mb-4" size={32} />
+              <p className="text-[10px] font-black text-gray-500 uppercase">جاري التزامن...</p>
             </div>
           ) : notifications.length > 0 ? (
             notifications.map((n) => (
-              <div key={n.id} className="p-8 rounded-[40px] bg-white/5 border border-white/10 backdrop-blur-2xl relative overflow-hidden group hover:border-cyan-500/30 transition-all shadow-2xl">
+              <div key={n.id} className="p-8 rounded-[40px] bg-white/5 border border-white/10 backdrop-blur-2xl relative group hover:border-cyan-500/30 transition-all">
                 <div className="flex items-start gap-5">
-                  <div className="p-4 rounded-[22px] bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-500/20">
+                  <div className="p-4 rounded-[22px] bg-cyan-500 text-[#0a0f3c]">
                     <Zap size={24} className="fill-[#0a0f3c]" />
                   </div>
                   
-                  <div className="flex-1">
+                  <div className="flex-1 text-right">
                     <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-[1000] text-lg italic tracking-tight uppercase">طلب فزعة جديد!</h4>
+                      <h4 className="font-[1000] text-lg italic tracking-tight uppercase">طلب فزعة!</h4>
                       <div className="flex items-center gap-1 text-[9px] text-gray-500 font-black">
                         <Clock size={10} /> {new Date(n.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                     
                     <p className="text-sm text-gray-400 font-bold leading-relaxed mb-6">
-                      اللاعب <span className="text-white">
-                        {n.profiles?.first_name || 'لاعب'} {n.profiles?.last_name || ''}
-                      </span> يطلب انضمامك لمباراة قادمة. هل أنت جاهز؟
+                      اللاعب <span className="text-cyan-400">
+                        {n.sender?.first_name || 'لاعب'} {n.sender?.last_name || ''}
+                      </span> يبيك فزعة معه بمباراة. وش رايك؟
                     </p>
                     
                     <div className="flex gap-3">
                       <button 
                         onClick={() => handleAction(n.id, 'accepted')}
-                        className="flex-1 py-4 bg-cyan-500 text-[#0a0f3c] rounded-[22px] text-xs font-[1000] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-cyan-500/10 hover:bg-white"
+                        className="flex-1 py-4 bg-cyan-500 text-[#0a0f3c] rounded-[22px] text-xs font-[1000] uppercase shadow-lg shadow-cyan-500/20 active:scale-95 transition-all"
                       >
-                        <Check size={16} /> أبشر بالفزعة
+                        أبشر بالفزعة
                       </button>
                       <button 
                         onClick={() => handleAction(n.id, 'declined')}
-                        className="p-4 bg-white/5 border border-white/10 rounded-[22px] text-gray-500 hover:text-red-400 hover:border-red-400/30 transition-all active:scale-95"
+                        className="px-6 py-4 bg-white/5 border border-white/10 rounded-[22px] text-gray-500 hover:text-red-400 transition-all active:scale-95"
                       >
                         <X size={20} />
                       </button>
@@ -148,9 +156,9 @@ export default function Notifications() {
               </div>
             ))
           ) : (
-            <div className="text-center py-32 bg-white/5 rounded-[50px] border border-dashed border-white/10 backdrop-blur-md">
-              <BellOff size={60} className="mx-auto mb-6 text-gray-700 animate-pulse" />
-              <p className="font-[1000] uppercase tracking-[0.4em] text-[10px] text-gray-600">لا توجد تنبيهات حالياً</p>
+            <div className="text-center py-32 bg-white/5 rounded-[50px] border border-dashed border-white/10 opacity-50">
+              <BellOff size={60} className="mx-auto mb-6 text-gray-700" />
+              <p className="font-black text-[10px] uppercase tracking-widest text-gray-600">لا توجد تنبيهات جديدة</p>
             </div>
           )}
         </div>

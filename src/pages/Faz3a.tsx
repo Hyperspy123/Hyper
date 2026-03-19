@@ -16,8 +16,7 @@ const getRankInfo = (matches: number) => {
 export default function Faz3a() {
   const [userName, setUserName] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  // التبويبات الثلاثة المطلوبة
-  const [activeTab, setActiveTab] = useState<'others_requests' | 'my_requests' | 'community'>('others_requests');
+  const [activeTab, setActiveTab] = useState<'others_requests' | 'my_requests' | 'community'>('community');
   
   const [communityPlayers, setCommunityPlayers] = useState<any[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
@@ -29,7 +28,7 @@ export default function Faz3a() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  // 1. جلب بيانات المستخدم الحالي
+  // 1. جلب بيانات المستخدم الحالي عند التشغيل
   useEffect(() => {
     async function getUserData() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -49,17 +48,15 @@ export default function Faz3a() {
       setLoading(true);
       try {
         if (activeTab === 'community') {
-          // جلب كل اللاعبين (بمن فيهم أخوك) ما عدا أنت
           const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('is_public', true)
-            .neq('id', currentUserId); // استثناء حسابك لترى الآخرين فقط
+            .neq('id', currentUserId); // جلب الجميع ما عدا "أنا" (هنا سيظهر أخوك)
           if (error) throw error;
           setCommunityPlayers(data || []);
         } 
         else if (activeTab === 'my_requests') {
-          // فزعاتي أنا فقط
           const { data, error } = await supabase
             .from('faz3a_posts')
             .select('*')
@@ -69,16 +66,16 @@ export default function Faz3a() {
           setMyRequests(data || []);
         } 
         else if (activeTab === 'others_requests') {
-          // فزعات الناس الآخرين
           const { data, error } = await supabase
             .from('faz3a_posts')
             .select('*, profiles(first_name, last_name, skill_level)')
-            .neq('creator_id', currentUserId) // جلب طلبات الآخرين فقط
+            .neq('creator_id', currentUserId)
             .order('created_at', { ascending: false });
           if (error) throw error;
           setOthersRequests(data || []);
         }
       } catch (error: any) {
+        console.error("Fetch Error:", error.message);
         toast.error("فشل في تحديث البيانات");
       } finally {
         setLoading(false);
@@ -87,20 +84,27 @@ export default function Faz3a() {
     fetchData();
   }, [activeTab, currentUserId]);
 
-  // 3. دالة إرسال دعوة خاصة (للمجتمع)
+  // 3. دالة إرسال دعوة خاصة (Direct Invite)
   const sendDirectInvite = async (receiverId: string, receiverName: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return toast.error("سجل دخولك أولاً");
 
+      console.log("إرسال دعوة إلى:", receiverId); // للتحقق من الـ ID في الـ Console
+
       const { error } = await supabase.from('faz3a_invites').insert([
-        { sender_id: user.id, receiver_id: receiverId, status: 'pending' }
+        { 
+          sender_id: user.id, 
+          receiver_id: receiverId, 
+          status: 'pending' 
+        }
       ]);
 
       if (error) throw error;
-      toast.success(`تم إرسال دعوة لـ ${receiverName}`, { icon: <CheckCircle2 className="text-cyan-400" /> });
+      toast.success(`تم إرسال دعوة لـ ${receiverName} 🔥`, { icon: <CheckCircle2 className="text-cyan-400" /> });
     } catch (error: any) {
-      toast.error("فشل إرسال الدعوة");
+      console.error("Invite Error:", error.message);
+      toast.error("فشل الإرسال: تأكد من تشغيل الـ SQL الأخير");
     }
   };
 
@@ -109,16 +113,25 @@ export default function Faz3a() {
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("يجب تسجيل الدخول");
+
       const { error } = await supabase.from('faz3a_posts').insert([
-        { creator_id: user?.id, missing_players: missingPlayers, location: 'الصحافة', court_name: 'ملعب هايب', match_time: '10:00 PM' }
+        { 
+          creator_id: user.id, 
+          missing_players: missingPlayers, 
+          location: 'الصحافة', 
+          court_name: 'ملعب هايب', 
+          match_time: '10:00 PM' 
+        }
       ]);
 
       if (error) throw error;
 
       toast.success("تم نشر طلب الفزعة! 🔥");
       setIsModalOpen(false);
-      setActiveTab('my_requests'); // الانتقال لتبويب طلباتي لرؤية المنشور
+      setActiveTab('my_requests'); 
     } catch (error: any) {
+      console.error("Post Error:", error.message);
       toast.error("فشل النشر");
     } finally {
       setIsSubmitting(false);
@@ -135,14 +148,14 @@ export default function Faz3a() {
 
       <Header />
 
-      <main className="p-6 max-w-md mx-auto space-y-8 relative z-10 pt-24">
-        <div className="mt-4 text-right">
+      <main className="p-6 max-w-md mx-auto space-y-8 relative z-10 pt-24 text-right">
+        <div className="mt-4">
           <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
             يا هلا، <span className="text-cyan-400">{userName}</span>
           </h1>
         </div>
 
-        {/* --- نظام التبويبات الثلاثي الجديد --- */}
+        {/* --- نظام التبويبات الثلاثي --- */}
         <div className="flex bg-white/5 p-1 rounded-[22px] border border-white/10 backdrop-blur-md overflow-x-auto no-scrollbar gap-1">
             {[
               { id: 'others_requests', label: 'فزعات عامة' },
@@ -183,14 +196,14 @@ export default function Faz3a() {
                   </div>
                   <button 
                     onClick={() => sendDirectInvite(player.id, player.first_name)} 
-                    className="px-4 py-2 bg-white/5 border border-white/10 text-cyan-400 hover:bg-cyan-500 hover:text-[#0a0f3c] rounded-xl text-[10px] font-black transition-all active:scale-95"
+                    className="px-4 py-2 bg-white/5 border border-white/10 text-cyan-400 hover:bg-cyan-500 hover:text-[#0a0f3c] rounded-xl text-[10px] font-black transition-all active:scale-95 shadow-lg"
                   >
                     إرسال دعوة
                   </button>
                 </div>
               ))
             ) : (
-              <div className="text-center py-20 opacity-30 text-[10px] font-black uppercase italic">المجمع فارغ حالياً</div>
+              <div className="text-center py-20 opacity-30 text-[10px] font-black uppercase italic">لا يوجد لاعبين متاحين حالياً</div>
             )
           ) : activeTab === 'my_requests' ? (
             myRequests.length > 0 ? myRequests.map(post => (
@@ -208,7 +221,7 @@ export default function Faz3a() {
                     </div>
                   </div>
               </div>
-            )) : <div className="text-center py-20 opacity-20 text-[10px] font-black uppercase">لم تنشئ أي فزعة بعد</div>
+            )) : <div className="text-center py-20 opacity-20 text-[10px] font-black uppercase tracking-widest">لم تنشئ أي فزعة بعد</div>
           ) : (
             othersRequests.length > 0 ? othersRequests.map(post => (
               <div key={post.id} className="bg-white/5 border border-white/10 rounded-[35px] p-6 space-y-4 backdrop-blur-xl">
@@ -224,7 +237,7 @@ export default function Faz3a() {
                   </div>
                   <button className="w-full py-4 bg-white text-[#05081d] rounded-2xl font-[1000] text-[10px] uppercase shadow-lg active:scale-95 transition-all">فزعتكم عندي ✋</button>
               </div>
-            )) : <div className="text-center py-20 opacity-20 text-[10px] font-black uppercase italic">لا توجد طلبات فزعة حالياً</div>
+            )) : <div className="text-center py-20 opacity-20 text-[10px] font-black uppercase italic tracking-widest">لا توجد طلبات فزعة حالياً</div>
           )}
         </div>
 
@@ -242,11 +255,11 @@ export default function Faz3a() {
                 <button onClick={() => setIsModalOpen(false)}><X className="text-gray-500" /></button>
               </div>
               
-              <div className="space-y-4" dir="rtl">
+              <div className="space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2">كم لاعب ناقصك؟</label>
                 <div className="flex gap-4">
                   {[1, 2, 3].map(num => (
-                    <button key={num} onClick={() => setMissingPlayers(num)} className={`flex-1 py-4 rounded-2xl font-black border transition-all ${missingPlayers === num ? 'bg-cyan-400 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-400'}`}>{num}</button>
+                    <button key={num} onClick={() => setMissingPlayers(num)} className={`flex-1 py-4 rounded-2xl font-black border transition-all ${missingPlayers === num ? 'bg-cyan-400 border-cyan-400 text-[#0a0f3c] shadow-lg' : 'bg-white/5 border-white/10 text-gray-400'}`}>{num}</button>
                   ))}
                 </div>
               </div>
