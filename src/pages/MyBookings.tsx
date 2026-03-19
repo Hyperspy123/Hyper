@@ -89,7 +89,7 @@ export default function MyBookings() {
     }
   };
 
-  // --- التعديل هنا: دالة الإلغاء المحدثة ---
+  // --- تحديث دالة الإلغاء لضمان التحديث اللحظي ---
   const handleCancel = async (bookingId: string) => {
     if (!confirm("هل أنت متأكد من إلغاء الحجز؟")) return;
     
@@ -103,29 +103,39 @@ export default function MyBookings() {
 
       toast.success("تم إلغاء الحجز بنجاح");
       
-      // تحديث البيانات في الصفحة
-      await fetchBookings(); 
+      // تحديث الحالة محلياً فوراً لضمان السرعة قبل إعادة الجلب
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
       
-      // الانتقال تلقائياً لتبويب الملغاة لرؤية الحجز هناك
+      // الانتقال لتبويب الملغاة
       setActiveTab('cancelled');
+      
+      // إعادة جلب البيانات للتأكد من المزامنة مع السيرفر
+      fetchBookings();
       
     } catch (error: any) {
       toast.error("فشل في إلغاء الحجز");
     }
   };
 
+  // --- تحسين منطق الفلترة ليكون صارماً ---
   const filteredBookings = bookings.filter(b => {
     const now = new Date();
     const bookingDate = new Date(b.start_time);
     
-    // إذا كنت في تبويب الملغاة، اعرض فقط الملغي
-    if (activeTab === 'cancelled') return b.status === 'cancelled';
+    // 1. إذا كانت الحالة ملغاة -> يظهر فقط في تبويب الملغاة
+    if (b.status === 'cancelled') {
+      return activeTab === 'cancelled';
+    }
+
+    // 2. إذا لم يكن ملغى (يعني confirmed)، نقسمه حسب الوقت
+    if (activeTab === 'current') {
+      return bookingDate >= now && b.status === 'confirmed';
+    }
     
-    // في التبويبات الأخرى، لا تعرض أي حجز ملغي
-    if (b.status === 'cancelled') return false; 
-    
-    if (activeTab === 'current') return bookingDate >= now && b.status === 'confirmed';
-    if (activeTab === 'previous') return bookingDate < now && b.status === 'confirmed';
+    if (activeTab === 'previous') {
+      return bookingDate < now && b.status === 'confirmed';
+    }
+
     return false;
   });
 
@@ -135,7 +145,7 @@ export default function MyBookings() {
       
       <div className="p-6 max-w-md mx-auto relative z-10 pt-24">
         <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-cyan-500/20 transition-all">
+          <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400">
             <ChevronLeft size={20} className="rotate-180" />
           </button>
           <h1 className="text-3xl font-[1000] italic tracking-tighter uppercase">حجوزاتي</h1>
@@ -149,8 +159,8 @@ export default function MyBookings() {
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-3 rounded-[18px] font-black text-[10px] uppercase transition-all duration-300 ${
                 activeTab === tab 
-                ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-400/20 scale-100' 
-                : 'text-gray-500 hover:text-white'
+                ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-400/20' 
+                : 'text-gray-500'
               }`}
             >
               {tab === 'current' ? 'القادمة' : tab === 'previous' ? 'السابقة' : 'الملغاة'}
@@ -161,19 +171,18 @@ export default function MyBookings() {
         {loading ? (
           <div className="flex flex-col justify-center items-center py-20 gap-3">
             <Loader2 className="animate-spin text-cyan-400" size={32} />
-            <span className="text-[10px] font-black text-cyan-500 uppercase italic animate-pulse">جاري جلب حجوزاتك...</span>
           </div>
         ) : filteredBookings.length === 0 ? (
           <div className="text-center py-20 bg-white/5 rounded-[40px] border border-dashed border-white/10 opacity-40 font-black text-[10px] uppercase tracking-widest italic">
-            لا توجد حجوزات نشطة
+            لا توجد حجوزات في هذا القسم
           </div>
         ) : (
           <div className="grid gap-6">
             {filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-white/5 backdrop-blur-xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5 transition-all hover:border-white/20">
+              <div key={booking.id} className="bg-white/5 backdrop-blur-xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5 transition-all">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10">
                       <img src={booking.courts?.image_url} className="w-full h-full object-cover" alt="Court" />
                     </div>
                     <div>
@@ -207,13 +216,13 @@ export default function MyBookings() {
                   <div className="flex gap-2.5 pt-2">
                     <button 
                       onClick={() => openConversionModal(booking)}
-                      className="flex-[2] py-4 bg-cyan-500 text-[#0a0f3c] rounded-[20px] font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-cyan-400"
+                      className="flex-[2] py-4 bg-cyan-500 text-[#0a0f3c] rounded-[20px] font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
                     >
                       <Zap size={14} className="fill-[#0a0f3c]" /> تحويل لفزعة عامة
                     </button>
                     <button 
                       onClick={() => handleCancel(booking.id)}
-                      className="flex-1 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-[20px] font-black text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-red-500/10"
+                      className="flex-1 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-[20px] font-black text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
                     >
                       <Trash2 size={14} /> إلغاء
                     </button>
@@ -225,61 +234,30 @@ export default function MyBookings() {
         )}
       </div>
 
-      {/* مودال تخصيص الفزعة (Popup) */}
+      {/* Modal - نفس الكود السابق */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-2xl relative overflow-hidden ring-1 ring-white/10">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-xl animate-in fade-in">
+          <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-2xl relative overflow-hidden">
             <div className="absolute top-[-20%] left-[-20%] w-48 h-48 bg-cyan-500/10 blur-[80px] rounded-full" />
-            
             <div className="text-center relative">
               <h3 className="text-3xl font-[1000] italic text-cyan-400 uppercase tracking-tighter mb-2 italic">تخصيص الفزعة</h3>
               <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest opacity-60">حدد اللاعبين الناقصين قبل النشر</p>
             </div>
-
             <div className="space-y-4 relative">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 block italic">كم لاعب ناقصك؟</label>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map(num => (
-                  <button 
-                    key={num} 
-                    onClick={() => setMissingCount(num)}
-                    className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border duration-300 ${
-                      missingCount === num 
-                      ? 'bg-cyan-500 border-cyan-500 text-[#0a0f3c] scale-110 shadow-xl shadow-cyan-500/40' 
-                      : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/30'
-                    }`}
-                  >
-                    {num}
-                  </button>
+                  <button key={num} onClick={() => setMissingCount(num)} className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-110 shadow-xl shadow-cyan-500/40' : 'bg-white/5 border-white/10 text-gray-500'}`}>{num}</button>
                 ))}
               </div>
             </div>
-
-            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-3 relative backdrop-blur-md">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase">
-                <span className="text-gray-500 tracking-tighter italic">الملعب المختار:</span>
-                <span className="text-white italic text-cyan-400">{selectedBooking?.courts?.name}</span>
-              </div>
-              <div className="h-[1px] w-full bg-white/5" />
-              <div className="text-[9px] font-black text-red-400/80 text-center uppercase tracking-widest leading-relaxed">
-                سيتم حذف الحجز وتحويله لمنشور عام فور التأكيد
-              </div>
+            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-3 relative">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase"><span className="text-gray-500 italic">الملعب:</span><span className="text-white italic text-cyan-400">{selectedBooking?.courts?.name}</span></div>
+              <div className="h-[1px] w-full bg-white/5" /><div className="text-[9px] font-black text-red-400/80 text-center uppercase tracking-widest">سيتم حذف الحجز وتحويله لمنشور عام</div>
             </div>
-
             <div className="flex gap-3 relative">
-              <button 
-                onClick={handleFinalConversion}
-                disabled={isConverting}
-                className="flex-[2] py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 shadow-cyan-500/20"
-              >
-                {isConverting ? <Loader2 className="animate-spin" size={18} /> : "تأكيد ونشر"}
-              </button>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="flex-1 py-5 bg-white/5 text-gray-500 rounded-[24px] font-black uppercase text-[10px] active:scale-95 border border-white/5"
-              >
-                رجوع
-              </button>
+              <button onClick={handleFinalConversion} disabled={isConverting} className="flex-[2] py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">{isConverting ? <Loader2 className="animate-spin" size={18} /> : "تأكيد ونشر"}</button>
+              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 bg-white/5 text-gray-500 rounded-[24px] font-black uppercase text-[10px] active:scale-95">رجوع</button>
             </div>
           </div>
         </div>
