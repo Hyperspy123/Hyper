@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Calendar, Clock, ChevronLeft, Hash, Loader2, Zap, Trash2 } from 'lucide-react';
+import { Calendar, Clock, ChevronLeft, Hash, Loader2, Zap, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -9,6 +9,13 @@ export default function MyBookings() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'current' | 'previous' | 'cancelled'>('current');
+  
+  // حالات المودال (Popup)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [missingCount, setMissingCount] = useState(1);
+  const [isConverting, setIsConverting] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,41 +46,57 @@ export default function MyBookings() {
     setLoading(false);
   };
 
-  // --- ميزة التحويل لفزعة ---
-  const convertToFaz3a = async (booking: any) => {
+  // 1. فتح المودال لتجهيز البيانات
+  const openConversionModal = (booking: any) => {
+    setSelectedBooking(booking);
+    setIsModalOpen(true);
+  };
+
+  // 2. الدالة النهائية: التحويل (إضافة للفزعة + حذف من الحجوزات)
+  const handleFinalConversion = async () => {
+    if (!selectedBooking) return;
+    setIsConverting(true);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // إدراج البيانات في جدول الفزعة العامة
-      const { error } = await supabase
+      // أ: إرسال البيانات لجدول الفزعة العامة
+      const { error: insertError } = await supabase
         .from('faz3a_posts')
         .insert([{
           creator_id: user.id,
-          location: 'الصحافة', // يمكنك تغييرها لتكون ديناميكية
-          court_name: booking.courts?.name,
-          match_time: new Date(booking.start_time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-          missing_players: 1, // القيمة الافتراضية
+          location: 'الصحافة', 
+          court_name: selectedBooking.courts?.name,
+          match_time: new Date(selectedBooking.start_time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+          missing_players: missingCount, // العدد الذي اختاره المستخدم من المودال
           is_from_booking: true
         }]);
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
-      toast.success("تم إدراج حجزك في الفزعة العامة بنجاح! 🔥");
-      navigate('/faz3a'); // توجيهه لصفحة الفزعة ليرى طلبه هناك
+      // ب: حذف الحجز من قائمة "حجوزاتي"
+      const { error: deleteError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', selectedBooking.id);
+
+      if (deleteError) throw deleteError;
+
+      toast.success("كفو! تحول حجزك لفزعة عامة واختفى من حجوزاتك 🔥");
+      setIsModalOpen(false);
+      fetchBookings(); // تحديث القائمة لإخفاء الحجز المحول
+      navigate('/faz3a'); // الانتقال لصفحة الفزعة لرؤية المنشور
     } catch (error: any) {
       toast.error("فشل التحويل: " + error.message);
+    } finally {
+      setIsConverting(false);
     }
   };
 
   const handleCancel = async (bookingId: string) => {
     if (!confirm("هل أنت متأكد من إلغاء الحجز؟")) return;
-
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled' })
-      .eq('id', bookingId);
-
+    const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', bookingId);
     if (!error) {
       toast.success("تم إلغاء الحجز");
       fetchBookings();
@@ -102,7 +125,6 @@ export default function MyBookings() {
           <h1 className="text-3xl font-[1000] italic tracking-tighter uppercase">حجوزاتي</h1>
         </div>
 
-        {/* Tabs */}
         <div className="flex bg-white/5 backdrop-blur-md p-1.5 rounded-[24px] mb-8 border border-white/10">
           {(['current', 'previous', 'cancelled'] as const).map((tab) => (
             <button
@@ -125,7 +147,6 @@ export default function MyBookings() {
           <div className="grid gap-6">
             {filteredBookings.map((booking) => (
               <div key={booking.id} className="bg-white/5 backdrop-blur-xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5">
-                
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10">
@@ -144,21 +165,18 @@ export default function MyBookings() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/5 p-3 rounded-2xl flex items-center gap-3 border border-white/5">
-                    <Calendar size={14} className="text-cyan-400" />
-                    <span className="text-[10px] font-black">{new Date(booking.start_time).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                  <div className="bg-white/5 p-3 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black">
+                    <Calendar size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'short' })}
                   </div>
-                  <div className="bg-white/5 p-3 rounded-2xl flex items-center gap-3 border border-white/5">
-                    <Clock size={14} className="text-cyan-400" />
-                    <span className="text-[10px] font-black">{new Date(booking.start_time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <div className="bg-white/5 p-3 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black">
+                    <Clock size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
 
-                {/* Actions: تحويل لفزعة + إلغاء */}
                 {activeTab === 'current' && booking.status === 'confirmed' && (
                   <div className="flex gap-2 pt-2">
                     <button 
-                      onClick={() => convertToFaz3a(booking)}
+                      onClick={() => openConversionModal(booking)}
                       className="flex-[2] py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
                     >
                       <Zap size={14} className="fill-[#0a0f3c]" /> تحويل لفزعة عامة
@@ -176,6 +194,66 @@ export default function MyBookings() {
           </div>
         )}
       </div>
+
+      {/* مودال تخصيص الفزعة (Popup) */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-xl animate-in fade-in">
+          <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-[-10%] left-[-10%] w-32 h-32 bg-cyan-500/10 blur-3xl rounded-full" />
+            
+            <div className="text-center relative">
+              <h3 className="text-2xl font-[1000] italic text-cyan-400 uppercase tracking-tighter mb-2">تخصيص الفزعة</h3>
+              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">حدد عدد اللاعبين الناقصين قبل النشر</p>
+            </div>
+
+            <div className="space-y-4 relative">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 block">كم لاعب ناقصك؟</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(num => (
+                  <button 
+                    key={num} 
+                    onClick={() => setMissingCount(num)}
+                    className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${
+                      missingCount === num 
+                      ? 'bg-cyan-500 border-cyan-500 text-[#0a0f3c] scale-105 shadow-lg shadow-cyan-500/30' 
+                      : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-3 relative">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase">
+                <span className="text-gray-500 tracking-tighter">سيتم نقل حجز ملعب:</span>
+                <span className="text-white italic">{selectedBooking?.courts?.name}</span>
+              </div>
+              <div className="h-[1px] w-full bg-white/5" />
+              <div className="text-[9px] font-black text-gray-400 text-center uppercase tracking-widest">
+                ملاحظة: سيتم حذف الحجز من هذه القائمة وتحويله لإعلان عام
+              </div>
+            </div>
+
+            <div className="flex gap-3 relative">
+              <button 
+                onClick={handleFinalConversion}
+                disabled={isConverting}
+                className="flex-[2] py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                {isConverting ? <Loader2 className="animate-spin" size={18} /> : "تأكيد ونشر"}
+              </button>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 py-5 bg-white/5 text-gray-500 rounded-[24px] font-black uppercase text-[10px] active:scale-95"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
