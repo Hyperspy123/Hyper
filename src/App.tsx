@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from './LLL'; // تأكد من المسار الصحيح لملف سوبابيس
+import { supabase } from './LLL';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,7 +22,6 @@ import Contact from './pages/Contact';
 import Faz3a from './pages/Faz3a';
 import Notifications from './pages/Notifications';
 import AuthCallback from './pages/AuthCallback';
-import AuthError from './pages/AuthError';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -32,13 +31,11 @@ const App = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. تحقق من الجلسة عند تشغيل التطبيق
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // 2. مراقبة حالة الدخول/الخروج لحظياً
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
@@ -46,12 +43,30 @@ const App = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // شاشة انتظار سينمائية أثناء التحقق من الهوية
+  // المكون المسؤول عن الخلفية الموحدة (Glows + Stars)
+  const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
+    <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
+      {/* 1. DYNAMIC MESH GRADIENTS (النور المموج) */}
+      <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none z-0" />
+      <div className="fixed bottom-[-5%] left-[-5%] w-[350px] h-[350px] bg-indigo-500/10 blur-[110px] rounded-full pointer-events-none z-0" />
+      
+      {/* 2. STARDUST TEXTURE (النقط البيضاء الصغيرة) */}
+      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] pointer-events-none z-0" />
+      
+      {/* 3. CONTENT */}
+      <div className="relative z-10">
+        {children}
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#05081d] flex items-center justify-center">
-        <Loader2 className="animate-spin text-cyan-400" size={40} />
-      </div>
+      <BackgroundWrapper>
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="animate-spin text-cyan-400" size={40} />
+        </div>
+      </BackgroundWrapper>
     );
   }
 
@@ -61,24 +76,17 @@ const App = () => {
         <I18nProvider>
           <Toaster />
           <BrowserRouter>
-            {/* إذا لم يسجل دخوله، لا يرى إلا صفحة Auth */}
             {!session ? (
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="*" element={<Navigate to="/auth" replace />} />
-              </Routes>
+              /* خلفية موحدة حتى في صفحة تسجيل الدخول */
+              <BackgroundWrapper>
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="*" element={<Navigate to="/auth" replace />} />
+                </Routes>
+              </BackgroundWrapper>
             ) : (
-              /* إذا سجل دخوله، يفتح التطبيق بالكامل بالزخارف والـ BottomNav */
-              <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
-                
-                {/* DYNAMIC MESH GRADIENTS */}
-                <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none z-0" />
-                <div className="fixed bottom-[-5%] left-[-5%] w-[350px] h-[350px] bg-indigo-500/10 blur-[110px] rounded-full pointer-events-none z-0" />
-
-                <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] pointer-events-none z-0" />
-
-                {/* CONTENT LAYER */}
-                <div className="relative z-10 pb-28">
+              <BackgroundWrapper>
+                <div className="pb-28">
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/book/:id" element={<BookCourt />} />
@@ -102,7 +110,7 @@ const App = () => {
                     <BottomNav />
                   </div>
                 </div>
-              </div>
+              </BackgroundWrapper>
             )}
           </BrowserRouter>
         </I18nProvider>
