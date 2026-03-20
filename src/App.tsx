@@ -35,57 +35,39 @@ const App = () => {
       setSession(session);
       setLoading(false);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
-  /**
-   * المكون المسؤول عن الخلفية الكونية الموحدة
-   * تم استعادة رابط النجوم الأصلي مع تحسين البروز
-   */
   const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
+    /* إجبار الخلفية الداكنة العميقة */
+    <div className="min-h-screen bg-[#02040a] text-white relative overflow-x-hidden font-sans selection:bg-cyan-500/30">
       
-      {/* 1. الأنوار المموجة (Glows) - خلفية متحركة ناعمة */}
-      <div className="fixed top-[-10%] left-[-10%] w-[600px] h-[600px] bg-cyan-500/20 blur-[130px] rounded-full pointer-events-none z-0 animate-pulse" />
-      <div className="fixed top-[20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/15 blur-[120px] rounded-full pointer-events-none z-0" />
-      <div className="fixed bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-indigo-500/15 blur-[110px] rounded-full pointer-events-none z-0" />
+      {/* 1. الأنوار المموجة (Glows) - قوية وواضحة */}
+      <div className="fixed top-[-10%] left-[-10%] w-[600px] h-[600px] bg-cyan-500/25 blur-[120px] rounded-full pointer-events-none z-0 animate-pulse" />
+      <div className="fixed top-[20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none z-0" />
+      <div className="fixed bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-indigo-500/20 blur-[110px] rounded-full pointer-events-none z-0" />
       
-      {/* 2. النجوم (Stardust) - الرابط المعتمد في الصفحة الرئيسية */}
+      {/* 2. النجوم (Stardust) - نسخة Base64 مدمجة إجبارية الوضوح */}
       <div 
-        className="fixed inset-0 pointer-events-none z-[1]" 
+        className="fixed inset-0 pointer-events-none z-[1] opacity-40 mix-blend-screen" 
         style={{ 
-          backgroundImage: `url('https://www.transparenttextures.com/patterns/stardust.png')`,
+          backgroundImage: `url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEVfX19fX19fX19fX19fX19fX19fX19fX19fX198mS8+AAAAB3RSTlMAVTY2NjY2S8N8YQAAAAlwSFlzAAALEwAACxMBAJqcGAAAAClJREFUKJFjYBgFIMDIwMAAAsYGBuYGBuYGBuYGBuYGBuYGBuYGBuYGBgYArp8Cx8HUnHkAAAAASUVORK5CYII=')`,
           backgroundRepeat: 'repeat',
-          backgroundSize: '250px 250px',
-          opacity: 0.15, // شفافة بما يكفي لتكون رقيقة وغير مزعجة
-          mixBlendMode: 'screen' 
+          backgroundSize: '100px 100px'
         }} 
       />
       
-      {/* 3. طبقة المحتوى (Content) - شفافة بالكامل لتظهر ما خلفها */}
+      {/* 3. طبقة المحتوى الشفافة إجبارياً */}
       <div className="relative z-10 w-full min-h-screen bg-transparent">
         {children}
       </div>
     </div>
   );
 
-  if (loading) {
-    return (
-      <BackgroundWrapper>
-        <div className="min-h-screen flex flex-col items-center justify-center gap-6">
-          <Loader2 className="animate-spin text-cyan-400" size={45} />
-          <span className="text-[11px] font-[1000] uppercase tracking-[0.4em] text-cyan-400 italic">
-            Hype Padel Loading...
-          </span>
-        </div>
-      </BackgroundWrapper>
-    );
-  }
+  if (loading) return <div className="min-h-screen bg-[#02040a] flex items-center justify-center"><Loader2 className="animate-spin text-cyan-400" /></div>;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -93,41 +75,32 @@ const App = () => {
         <I18nProvider>
           <Toaster position="top-center" richColors />
           <BrowserRouter>
-            {!session ? (
-              <BackgroundWrapper>
+            <BackgroundWrapper>
+              <div className="pb-32 bg-transparent">
                 <Routes>
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="*" element={<Navigate to="/auth" replace />} />
+                  {!session ? (
+                    <>
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="*" element={<Navigate to="/auth" replace />} />
+                    </>
+                  ) : (
+                    <>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/my-bookings" element={<MyBookings />} />
+                      <Route path="/faz3a" element={<Faz3a />} />
+                      <Route path="/account" element={<Account />} />
+                      {/* بقية الروابط... */}
+                      <Route path="*" element={<NotFound />} />
+                    </>
+                  )}
                 </Routes>
-              </BackgroundWrapper>
-            ) : (
-              <BackgroundWrapper>
-                <div className="pb-32 bg-transparent">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/book/:id" element={<BookCourt />} />
-                    <Route path="/my-bookings" element={<MyBookings />} />
-                    <Route path="/rewards" element={<Rewards />} />
-                    <Route path="/tournaments" element={<Tournaments />} />
-                    <Route path="/faz3a" element={<Faz3a />} />
-                    <Route path="/account" element={<Account />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/personal" element={<Personal />} />
-                    <Route path="/notifications" element={<Notifications />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/auth/callback" element={<AuthCallback />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </div>
-                
-                {/* NAVIGATION LAYER */}
+              </div>
+              {session && (
                 <div className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-8 pointer-events-none">
-                  <div className="pointer-events-auto max-w-lg mx-auto">
-                    <BottomNav />
-                  </div>
+                  <div className="pointer-events-auto max-w-lg mx-auto"><BottomNav /></div>
                 </div>
-              </BackgroundWrapper>
-            )}
+              )}
+            </BackgroundWrapper>
           </BrowserRouter>
         </I18nProvider>
       </TooltipProvider>

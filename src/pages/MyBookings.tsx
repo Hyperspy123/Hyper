@@ -93,12 +93,8 @@ export default function MyBookings() {
   });
 
   return (
-    /* الاختبار: أضفنا خلفية حمراء شفافة جداً للتأكد من أن الملف يحدث فعلياً */
-    <div 
-      className="min-h-screen text-white font-sans pb-32 relative overflow-x-hidden" 
-      style={{ backgroundColor: 'rgba(255, 0, 0, 0.05)' }} 
-      dir="rtl"
-    >
+    /* 🌌 الشفافية المطلقة: تم إزالة أي لون خلفية لضمان ظهور نجوم App.tsx */
+    <div className="min-h-screen bg-transparent text-white font-sans pb-32 relative overflow-x-hidden" dir="rtl">
       <Header />
       
       <main className="p-6 max-w-md mx-auto relative z-10 pt-24">
@@ -109,6 +105,7 @@ export default function MyBookings() {
           <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">حجوزاتي</h1>
         </div>
 
+        {/* التبويبات الزجاجية */}
         <div className="flex bg-white/5 backdrop-blur-3xl p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-2xl">
           {(['current', 'previous', 'cancelled'] as const).map((tab) => (
             <button
@@ -124,38 +121,55 @@ export default function MyBookings() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col justify-center items-center py-20"><Loader2 className="animate-spin text-cyan-400" size={32} /></div>
+          <div className="flex flex-col justify-center items-center py-20">
+            <Loader2 className="animate-spin text-cyan-400" size={32} />
+          </div>
         ) : filteredBookings.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-[40px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase tracking-widest italic">لا توجد حجوزات</div>
+          <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-[40px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase tracking-widest italic">
+            لا توجد حجوزات
+          </div>
         ) : (
           <div className="grid gap-6">
             {filteredBookings.map((booking) => (
               <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10">
                         <img src={booking.courts?.image_url} className="w-full h-full object-cover" alt="Court" />
                     </div>
                     <div>
                       <h3 className="font-black text-xl italic tracking-tight uppercase leading-none">{booking.courts?.name}</h3>
-                      <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">ID: {booking.id.slice(0,8)}</div>
+                      <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">
+                        <Hash size={10} className="inline mb-0.5" /> {booking.id.slice(0,8).toUpperCase()}
+                      </div>
                     </div>
+                  </div>
+                  <div className={`px-4 py-1.5 rounded-full text-[9px] font-[1000] uppercase tracking-tighter border ${
+                    booking.status === 'confirmed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                  }`}>
+                    {booking.status === 'confirmed' ? 'مؤكد' : 'ملغي'}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black">
-                    <Calendar size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleDateString('ar-EG')}
+                  <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic">
+                    <Calendar size={14} className="text-cyan-400" /> 
+                    {new Date(booking.start_time).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'short' })}
                   </div>
-                  <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black">
-                    <Clock size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}
+                  <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic">
+                    <Clock size={14} className="text-cyan-400" /> 
+                    {new Date(booking.start_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}
                   </div>
                 </div>
 
-                {activeTab === 'current' && (
+                {activeTab === 'current' && booking.status === 'confirmed' && (
                   <div className="flex gap-2.5 pt-2">
-                    <button onClick={() => openConversionModal(booking)} className="flex-[2] py-4 bg-cyan-500 text-[#0a0f3c] rounded-[20px] font-[1000] text-[10px] uppercase shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95"><Zap size={14} /> تحويل لفزعة</button>
-                    <button onClick={() => handleCancel(booking.id)} className="flex-1 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-[20px] font-black text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"><Trash2 size={14} /></button>
+                    <button onClick={() => openConversionModal(booking)} className="flex-[2] py-4 bg-cyan-500 text-[#0a0f3c] rounded-[20px] font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all">
+                      <Zap size={14} className="fill-[#0a0f3c]" /> تحويل لفزعة
+                    </button>
+                    <button onClick={() => handleCancel(booking.id)} className="flex-1 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-[20px] font-black text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -164,17 +178,33 @@ export default function MyBookings() {
         )}
       </main>
 
+      {/* مودال التخصيص */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl">
           <div className="bg-[#0a0f3c]/90 border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-2xl relative">
             <h3 className="text-3xl font-[1000] italic text-cyan-400 text-center uppercase tracking-tighter leading-none">تخصيص الفزعة</h3>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map(num => (
-                <button key={num} onClick={() => setMissingCount(num)} className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/10 text-gray-400'}`}>{num}</button>
+                <button 
+                  key={num} 
+                  onClick={() => setMissingCount(num)} 
+                  className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${
+                    missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-105' : 'bg-white/10 border-white/10 text-gray-400'
+                  }`}
+                >
+                  {num}
+                </button>
               ))}
             </div>
-            <button onClick={handleFinalConversion} disabled={isConverting} className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg">{isConverting ? "جاري التحويل..." : "تأكيد ونشر"}</button>
-            <button onClick={() => setIsModalOpen(false)} className="w-full py-2 text-gray-500 font-black uppercase text-[10px]">رجوع</button>
+            <div className="bg-red-500/5 p-4 rounded-2xl border border-red-500/10">
+                <p className="text-[8px] text-gray-400 leading-tight font-bold italic uppercase text-center">بمجرد التأكيد سيتم نشر الحجز للعامة ولا يمكن التراجع.</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button onClick={handleFinalConversion} disabled={isConverting} className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg active:scale-95 transition-all">
+                {isConverting ? <Loader2 className="animate-spin" /> : "تأكيد ونشر"}
+              </button>
+              <button onClick={() => setIsModalOpen(false)} className="w-full py-3 text-gray-500 font-black uppercase text-[10px] tracking-widest">رجوع</button>
+            </div>
           </div>
         </div>
       )}
