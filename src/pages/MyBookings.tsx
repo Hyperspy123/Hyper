@@ -126,7 +126,7 @@ export default function MyBookings() {
   });
 
   return (
-    // تم التأكد من وجود bg-transparent للسماح ببروز النجوم
+    // 🌌 خلفية شفافة بالكامل لتكشف النجوم من App.tsx
     <div className="min-h-screen bg-transparent text-white font-sans pb-32 relative overflow-x-hidden" dir="rtl">
       <Header />
       
@@ -135,17 +135,17 @@ export default function MyBookings() {
           <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 backdrop-blur-md">
             <ChevronLeft size={20} className="rotate-180" />
           </button>
-          <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase">حجوزاتي</h1>
+          <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">حجوزاتي</h1>
         </div>
 
-        {/* أزرار التبويبات الزجاجية */}
+        {/* التبويبات الزجاجية */}
         <div className="flex bg-white/5 backdrop-blur-3xl p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-2xl">
           {(['current', 'previous', 'cancelled'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-3 rounded-[18px] font-black text-[10px] uppercase transition-all duration-300 ${
-                activeTab === tab ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-400/20' : 'text-gray-500'
+                activeTab === tab ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-400/20' : 'text-gray-400'
               }`}
             >
               {tab === 'current' ? 'القادمة' : tab === 'previous' ? 'السابقة' : 'الملغاة'}
@@ -164,7 +164,7 @@ export default function MyBookings() {
         ) : (
           <div className="grid gap-6">
             {filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5 transition-all active:scale-[0.98]">
+              <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5 transition-all">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
@@ -209,9 +209,9 @@ export default function MyBookings() {
         )}
       </main>
 
-      {/* مودال التخصيص الزجاجي الفخم */}
+      {/* مودال التخصيص الزجاجي */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="bg-[#0a0f3c]/90 border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-[0_0_50px_rgba(34,211,238,0.15)] relative overflow-hidden">
             <div className="absolute top-[-20%] left-[-20%] w-48 h-48 bg-cyan-500/10 blur-[80px] rounded-full" />
             
