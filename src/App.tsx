@@ -45,26 +45,29 @@ const App = () => {
 
   /**
    * المكون المسؤول عن الخلفية الكونية الموحدة
+   * تم استبدال روابط الصور بنجوم SVG برمجية تظهر فوراً وبدون إنترنت
    */
   const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
       
-      {/* 1. الأنوار المموجة (Glows) - خلفية متحركة ناعمة */}
+      {/* 1. الأنوار المموجة (Glows) */}
       <div className="fixed top-[-10%] left-[-10%] w-[600px] h-[600px] bg-cyan-500/20 blur-[130px] rounded-full pointer-events-none z-0 animate-pulse" />
       <div className="fixed top-[20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/15 blur-[120px] rounded-full pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-indigo-500/15 blur-[110px] rounded-full pointer-events-none z-0" />
       
-      {/* 2. النجوم (Stardust) - تم تحسين الوضوح والبروز هنا */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-[1]" 
-        style={{ 
-          backgroundImage: `url('https://www.transparenttextures.com/patterns/stardust.png')`,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '200px 200px',
-          opacity: 0.28, // رفعنا الوضوح لضمان رؤية النقاط البيضاء بوضوح
-          mixBlendMode: 'screen' // تضمن بروز النجوم فوق الخلفية الزرقاء
-        }} 
-      />
+      {/* 2. النجوم البرمجية المضمونة (SVG Starfield) */}
+      <div className="fixed inset-0 pointer-events-none z-[1] opacity-60">
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+          <filter id="noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch" />
+            <feColorMatrix type="matrix" values="0 0 0 9 -4
+                                               0 0 0 9 -4
+                                               0 0 0 9 -4
+                                               0 0 0 0 1" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#noise)" opacity="0.4" />
+        </svg>
+      </div>
       
       {/* 3. طبقة المحتوى (Content) */}
       <div className="relative z-10 w-full min-h-screen bg-transparent">
