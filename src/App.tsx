@@ -43,17 +43,19 @@ const App = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // المكون المسؤول عن الخلفية الموحدة (Glows + Stars)
+  // المكون المسؤول عن الخلفية الموحدة الاحترافية
   const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
-      {/* 1. DYNAMIC MESH GRADIENTS (النور المموج) */}
+      
+      {/* 1. DYNAMIC MESH GRADIENTS (الأنوار المموجة الثلاثية) */}
       <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none z-0" />
+      <div className="fixed top-[30%] right-[-5%] w-[400px] h-[400px] bg-purple-600/10 blur-[100px] rounded-full pointer-events-none z-0" />
       <div className="fixed bottom-[-5%] left-[-5%] w-[350px] h-[350px] bg-indigo-500/10 blur-[110px] rounded-full pointer-events-none z-0" />
       
-      {/* 2. STARDUST TEXTURE (النقط البيضاء الصغيرة) */}
-      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] pointer-events-none z-0" />
+      {/* 2. STARDUST TEXTURE (النقاط البيضاء مع التكرار لضمان التغطية) */}
+      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-repeat opacity-[0.04] pointer-events-none z-0" />
       
-      {/* 3. CONTENT */}
+      {/* 3. CONTENT LAYER */}
       <div className="relative z-10">
         {children}
       </div>
@@ -63,8 +65,11 @@ const App = () => {
   if (loading) {
     return (
       <BackgroundWrapper>
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="animate-spin text-cyan-400" size={40} />
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+          <div className="p-4 bg-cyan-500/10 rounded-full border border-cyan-500/20 animate-pulse">
+            <Loader2 className="animate-spin text-cyan-400" size={40} />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400/50 italic">Hype Padel Loading...</span>
         </div>
       </BackgroundWrapper>
     );
@@ -77,7 +82,6 @@ const App = () => {
           <Toaster />
           <BrowserRouter>
             {!session ? (
-              /* خلفية موحدة حتى في صفحة تسجيل الدخول */
               <BackgroundWrapper>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
@@ -105,8 +109,8 @@ const App = () => {
                 </div>
                 
                 {/* NAVIGATION LAYER */}
-                <div className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pointer-events-auto">
-                  <div className="max-w-lg mx-auto">
+                <div className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pointer-events-none">
+                  <div className="pointer-events-auto max-w-lg mx-auto">
                     <BottomNav />
                   </div>
                 </div>
