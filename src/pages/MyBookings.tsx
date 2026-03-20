@@ -53,9 +53,8 @@ export default function MyBookings() {
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
 
-    // --- إضافة التنبيه الصارم ---
     const isConfirmed = window.confirm(
-      "⚠️ تنبيه هامج: بمجرد تحويل هذا الحجز إلى فزعة عامة، سيتم إلغاء خصوصيته ولا يمكنك إعادته لحجوزاتك الشخصية. هل أنت متأكد؟"
+      "⚠️ تنبيه هام: بمجرد تحويل هذا الحجز إلى فزعة عامة، سيتم إلغاء خصوصيته ولا يمكنك إعادته لحجوزاتك الشخصية. هل أنت متأكد؟"
     );
     
     if (!isConfirmed) return;
@@ -66,7 +65,6 @@ export default function MyBookings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. إضافة للفزعة العامة
       const { error: insertError } = await supabase
         .from('faz3a_posts')
         .insert([{
@@ -80,7 +78,6 @@ export default function MyBookings() {
 
       if (insertError) throw insertError;
 
-      // 2. الحذف الفوري من قائمة الحجوزات
       const { error: deleteError } = await supabase
         .from('bookings')
         .delete()
@@ -129,7 +126,8 @@ export default function MyBookings() {
   });
 
   return (
-    <div className="min-h-screen bg-transparent text-white font-sans pb-32" dir="rtl">
+    /* التغيير لـ bg-transparent لضمان ظهور النجوم */
+    <div className="min-h-screen bg-transparent text-white font-sans pb-32 relative" dir="rtl">
       <Header />
       
       <div className="p-6 max-w-md mx-auto relative z-10 pt-24">
@@ -140,7 +138,8 @@ export default function MyBookings() {
           <h1 className="text-3xl font-[1000] italic tracking-tighter uppercase">حجوزاتي</h1>
         </div>
 
-        <div className="flex bg-white/5 backdrop-blur-md p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-2xl">
+        {/* التبويبات بستايل زجاجي شفاف */}
+        <div className="flex bg-white/5 backdrop-blur-3xl p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-2xl">
           {(['current', 'previous', 'cancelled'] as const).map((tab) => (
             <button
               key={tab}
@@ -159,18 +158,20 @@ export default function MyBookings() {
             <Loader2 className="animate-spin text-cyan-400" size={32} />
           </div>
         ) : filteredBookings.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 rounded-[40px] border border-dashed border-white/10 opacity-40 font-black text-[10px] uppercase tracking-widest italic">لا توجد حجوزات</div>
+          <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-[40px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase tracking-widest italic">
+            لا توجد حجوزات
+          </div>
         ) : (
           <div className="grid gap-6">
             {filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-white/5 backdrop-blur-xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5 transition-all">
+              <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5 transition-all">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10">
-                      <img src={booking.courts?.image_url} className="w-full h-full object-cover" alt="Court" />
+                      <img src={booking.courts?.image_url} className="w-full h-full object-cover shadow-inner" alt="Court" />
                     </div>
                     <div>
-                      <h3 className="font-black text-xl italic tracking-tight">{booking.courts?.name}</h3>
+                      <h3 className="font-black text-xl italic tracking-tight uppercase">{booking.courts?.name}</h3>
                       <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-1 opacity-70">
                         <Hash size={10}/> {booking.id.slice(0,8).toUpperCase()}
                       </div>
@@ -208,27 +209,30 @@ export default function MyBookings() {
         )}
       </div>
 
-      {/* Modal تخصيص الفزعة */}
+      {/* Modal - بستايل زجاجي داكن */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-xl animate-in fade-in">
-          <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-2xl relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#05081d]/80 backdrop-blur-xl animate-in fade-in">
+          <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-[0_0_50px_rgba(34,211,238,0.15)] relative overflow-hidden">
             <div className="absolute top-[-20%] left-[-20%] w-48 h-48 bg-cyan-500/10 blur-[80px] rounded-full" />
             <div className="text-center relative">
               <h3 className="text-3xl font-[1000] italic text-cyan-400 uppercase tracking-tighter mb-2">تخصيص الفزعة</h3>
               <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest opacity-60">حدد اللاعبين الناقصين قبل النشر</p>
             </div>
+            
             <div className="space-y-4 relative">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 block italic">كم لاعب ناقصك؟</label>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map(num => (
-                  <button key={num} onClick={() => setMissingCount(num)} className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-110 shadow-xl shadow-cyan-500/40' : 'bg-white/5 border-white/10 text-gray-500'}`}>{num}</button>
+                  <button key={num} onClick={() => setMissingCount(num)} className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-105 shadow-xl shadow-cyan-500/40' : 'bg-white/5 border-white/10 text-gray-500'}`}>{num}</button>
                 ))}
               </div>
             </div>
+
             <div className="bg-red-500/5 p-5 rounded-3xl border border-red-500/10 space-y-3 relative">
               <div className="flex items-center gap-2 text-red-400 font-black text-[9px] uppercase"><AlertTriangle size={12}/> تنبيه نهائي</div>
               <p className="text-[8px] text-gray-400 leading-relaxed font-bold italic uppercase tracking-tighter">بمجرد الضغط على تأكيد، سيختفي الحجز من قائمتك الخاصة ويُفتح للجميع للمشاركة.</p>
             </div>
+
             <div className="flex gap-3 relative">
               <button onClick={handleFinalConversion} disabled={isConverting} className="flex-[2] py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
                 {isConverting ? <Loader2 className="animate-spin" size={18} /> : "تأكيد ونشر"}

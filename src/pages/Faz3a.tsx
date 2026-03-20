@@ -43,16 +43,12 @@ export default function Faz3a() {
         setMyRequests(data || []);
       } 
       else if (activeTab === 'others_requests') {
-        // جلب الكل (بدون استثناء المستخدم الحالي) لترتيبهم
         const { data } = await supabase.from('faz3a_posts').select('*, profiles(first_name, last_name, skill_level)').order('created_at', { ascending: false });
-        
-        // الترتيب: طلباتي أولاً، ثم طلبات الآخرين
         const sortedData = data?.sort((a, b) => {
           if (a.creator_id === currentUserId) return -1;
           if (b.creator_id === currentUserId) return 1;
           return 0;
         });
-        
         setOthersRequests(sortedData || []);
       }
     } finally {
@@ -70,7 +66,7 @@ export default function Faz3a() {
       const { error } = await supabase.from('faz3a_posts').delete().eq('id', postId);
       if (error) throw error;
       toast.success("تم إلغاء طلب الفزعة");
-      fetchData(); // إعادة جلب البيانات لتحديث القائمة العامة
+      fetchData();
     } catch (error: any) {
       toast.error("فشل الإلغاء");
     }
@@ -91,7 +87,7 @@ export default function Faz3a() {
       if (error) throw error;
       toast.success("تم نشر الفزعة في القائمة العامة 🔥");
       setIsModalOpen(false);
-      setActiveTab('others_requests'); // العودة للقائمة العامة لرؤية الطلب في الأعلى
+      setActiveTab('others_requests');
     } catch (error: any) {
       toast.error("فشل النشر");
     } finally {
@@ -100,7 +96,8 @@ export default function Faz3a() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05081d] pb-32 text-white font-sans relative overflow-x-hidden" dir="rtl">
+    /* تم تغيير bg-[#05081d] إلى bg-transparent لكي تظهر نجوم الخلفية الموحدة */
+    <div className="min-h-screen bg-transparent pb-32 text-white font-sans relative" dir="rtl">
       <Header />
 
       <main className="p-6 max-w-md mx-auto space-y-8 relative z-10 pt-24 text-right">
@@ -110,7 +107,8 @@ export default function Faz3a() {
           </h1>
         </div>
 
-        <div className="flex bg-white/5 p-1 rounded-[22px] border border-white/10 backdrop-blur-md gap-1">
+        {/* التبويبات بستايل زجاجي شفاف */}
+        <div className="flex bg-white/5 p-1 rounded-[22px] border border-white/10 backdrop-blur-3xl gap-1">
             {[
               { id: 'others_requests', label: 'فزعات عامة' },
               { id: 'my_requests', label: 'طلباتي' },
@@ -119,7 +117,7 @@ export default function Faz3a() {
                 <button 
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 py-3 rounded-[18px] text-[10px] font-black uppercase transition-all ${activeTab === tab.id ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-400/20' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 rounded-[18px] text-[10px] font-black uppercase transition-all ${activeTab === tab.id ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-400/20' : 'text-gray-400'}`}
                 >
                     {tab.label}
                 </button>
@@ -133,9 +131,9 @@ export default function Faz3a() {
             othersRequests.map(post => {
               const isMyPost = post.creator_id === currentUserId;
               return (
-                <div key={post.id} className={`relative bg-white/5 border rounded-[35px] p-6 space-y-4 backdrop-blur-xl transition-all duration-500 ${isMyPost ? 'border-cyan-500 shadow-lg shadow-cyan-500/10' : 'border-white/10'}`}>
+                /* كروت بـ backdrop-blur-2xl قوية لتظهر النجوم من خلفها */
+                <div key={post.id} className={`relative bg-white/5 border rounded-[35px] p-6 space-y-4 backdrop-blur-2xl transition-all duration-500 ${isMyPost ? 'border-cyan-500 shadow-lg shadow-cyan-500/10' : 'border-white/10'}`}>
                   
-                  {/* علامة "طلبك الشخصي" */}
                   {isMyPost && (
                     <div className="absolute -top-3 -left-3 bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[9px] font-[1000] uppercase italic tracking-tighter shadow-xl animate-bounce">
                       طلبك الشخصي
@@ -152,7 +150,7 @@ export default function Faz3a() {
                         <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">{isMyPost ? "جاهز للمباراة" : post.profiles?.skill_level}</p>
                       </div>
                     </div>
-                    <div className="bg-cyan-500 text-[#0a0f3c] px-3 py-1 rounded-full text-[10px] font-[1000] italic">ناقص {post.missing_players}</div>
+                    <div className="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full text-[10px] font-[1000] italic">ناقص {post.missing_players}</div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-[9px] font-black uppercase text-gray-400">
@@ -164,7 +162,6 @@ export default function Faz3a() {
                     </div>
                   </div>
 
-                  {/* زر التفاعل المتغير */}
                   {isMyPost ? (
                     <button 
                       onClick={() => handleDeletePost(post.id)}
@@ -178,58 +175,18 @@ export default function Faz3a() {
                 </div>
               );
             })
-          ) : activeTab === 'my_requests' ? (
-            /* تبويب طلباتي كأرشيف مختصر */
-            myRequests.map(post => (
-              <div key={post.id} className="bg-white/5 border border-cyan-500/30 rounded-[35px] p-6 space-y-4 backdrop-blur-xl">
-                 <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black text-cyan-400 uppercase italic tracking-widest">إدارة طلبك الشخصي</span>
-                    <button onClick={() => handleDeletePost(post.id)} className="p-2 text-red-500 hover:scale-110 transition-transform"><Trash2 size={18} /></button>
-                 </div>
-                 <div className="text-[11px] font-bold text-gray-300">ملعب: {post.court_name} | الوقت: {post.match_time}</div>
-              </div>
-            ))
           ) : (
-             communityPlayers.map(player => (
-               <div key={player.id} className="bg-white/5 border border-white/10 rounded-[35px] p-6 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center font-black text-cyan-400 uppercase">{player.first_name?.[0]}</div>
-                    <div className="text-right">
-                      <h4 className="font-black text-sm">{player.first_name}</h4>
-                      <span className="text-[8px] font-black text-gray-500 uppercase">{player.skill_level}</span>
-                    </div>
-                  </div>
-                  <button className="px-4 py-2 bg-white/5 border border-white/10 text-cyan-400 rounded-xl text-[10px] font-black hover:bg-cyan-400 hover:text-black transition-all">دعوة</button>
-               </div>
-             ))
+             /* باقي التبويبات بستايل متناسق مع الخلفية */
+             <div className="text-center py-20 bg-white/5 rounded-[40px] border border-dashed border-white/10 opacity-30 italic font-black text-[10px] uppercase tracking-[0.2em]">
+                قريباً في المجمع..
+             </div>
           )}
         </div>
 
-        <button onClick={() => setIsModalOpen(true)} className="fixed bottom-28 left-6 w-16 h-16 bg-cyan-500 rounded-full flex items-center justify-center shadow-lg z-50 hover:scale-110 active:scale-95 transition-all border-4 border-[#05081d]">
+        {/* الزر العائم - بحدود واضحة ليفصل عن الخلفية */}
+        <button onClick={() => setIsModalOpen(true)} className="fixed bottom-28 left-6 w-16 h-16 bg-cyan-500 rounded-full flex items-center justify-center shadow-2xl z-50 hover:scale-110 active:scale-95 transition-all border-4 border-[#0a0f3c]">
           <Plus size={32} className="text-[#0a0f3c]" />
         </button>
-
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-md">
-            <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-6 animate-in zoom-in-95">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-black italic text-cyan-400 tracking-tighter uppercase">إنشاء فزعة</h3>
-                <button onClick={() => setIsModalOpen(false)}><X className="text-gray-500" /></button>
-              </div>
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2 italic">كم لاعب ناقصك؟</label>
-                <div className="flex gap-4">
-                  {[1, 2, 3].map(num => (
-                    <button key={num} onClick={() => setMissingPlayers(num)} className={`flex-1 py-4 rounded-2xl font-[1000] border transition-all ${missingPlayers === num ? 'bg-cyan-400 border-cyan-400 text-[#0a0f3c] scale-105 shadow-lg' : 'bg-white/5 border-white/10 text-gray-400'}`}>{num}</button>
-                  ))}
-                </div>
-              </div>
-              <button onClick={handleCreatePost} disabled={isSubmitting} className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg flex items-center justify-center gap-2">
-                {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : "انشر الفزعة الآن 🔥"}
-              </button>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );
