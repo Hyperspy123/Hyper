@@ -45,23 +45,28 @@ const App = () => {
 
   /**
    * المكون المسؤول عن الخلفية الكونية الموحدة
-   * تم تحسين الشفافية وترتيب الـ z-index لضمان ظهور النجوم
    */
   const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
       
-      {/* 1. الأنوار المموجة (Glows) - z-0 */}
+      {/* 1. الأنوار المموجة (Glows) - خلفية متحركة ناعمة */}
       <div className="fixed top-[-10%] left-[-10%] w-[600px] h-[600px] bg-cyan-500/20 blur-[130px] rounded-full pointer-events-none z-0 animate-pulse" />
       <div className="fixed top-[20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/15 blur-[120px] rounded-full pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-indigo-500/15 blur-[110px] rounded-full pointer-events-none z-0" />
       
-      {/* 2. النجوم (Stardust) - z-1 لضمان بقائها تحت المحتوى وفوق ألوان الخلفية */}
+      {/* 2. النجوم (Stardust) - تم تحسين الوضوح والبروز هنا */}
       <div 
-        className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-repeat opacity-[0.12] pointer-events-none z-[1]" 
-        style={{ backgroundSize: '250px 250px' }} 
+        className="fixed inset-0 pointer-events-none z-[1]" 
+        style={{ 
+          backgroundImage: `url('https://www.transparenttextures.com/patterns/stardust.png')`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '200px 200px',
+          opacity: 0.28, // رفعنا الوضوح لضمان رؤية النقاط البيضاء بوضوح
+          mixBlendMode: 'screen' // تضمن بروز النجوم فوق الخلفية الزرقاء
+        }} 
       />
       
-      {/* 3. طبقة المحتوى (Content) - z-10 */}
+      {/* 3. طبقة المحتوى (Content) */}
       <div className="relative z-10 w-full min-h-screen bg-transparent">
         {children}
       </div>
@@ -77,7 +82,7 @@ const App = () => {
             <Loader2 className="animate-spin text-cyan-400 relative z-10" size={45} />
           </div>
           <span className="text-[11px] font-[1000] uppercase tracking-[0.4em] text-cyan-400 italic animate-pulse">
-            Hype Padel...
+            Hype Padel Loading...
           </span>
         </div>
       </BackgroundWrapper>
@@ -117,7 +122,7 @@ const App = () => {
                   </Routes>
                 </div>
                 
-                {/* شريط التنقل السفلي - يظهر فوق كل شيء */}
+                {/* NAVIGATION LAYER */}
                 <div className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-8 pointer-events-none">
                   <div className="pointer-events-auto max-w-lg mx-auto">
                     <BottomNav />
