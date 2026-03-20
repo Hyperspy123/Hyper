@@ -126,11 +126,11 @@ export default function MyBookings() {
   });
 
   return (
-    <div className="min-h-screen bg-transparent text-white font-sans pb-32 relative" dir="rtl">
+    // تم التأكد من وجود bg-transparent للسماح ببروز النجوم
+    <div className="min-h-screen bg-transparent text-white font-sans pb-32 relative overflow-x-hidden" dir="rtl">
       <Header />
       
       <main className="p-6 max-w-md mx-auto relative z-10 pt-24">
-        {/* العنوان */}
         <div className="flex items-center gap-4 mb-8">
           <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 backdrop-blur-md">
             <ChevronLeft size={20} className="rotate-180" />
@@ -138,7 +138,7 @@ export default function MyBookings() {
           <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase">حجوزاتي</h1>
         </div>
 
-        {/* التبويبات الزجاجية الموحدة */}
+        {/* أزرار التبويبات الزجاجية */}
         <div className="flex bg-white/5 backdrop-blur-3xl p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-2xl">
           {(['current', 'previous', 'cancelled'] as const).map((tab) => (
             <button
@@ -158,11 +158,13 @@ export default function MyBookings() {
             <Loader2 className="animate-spin text-cyan-400" size={32} />
           </div>
         ) : filteredBookings.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-[40px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase tracking-widest italic">لا توجد حجوزات</div>
+          <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-[40px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase tracking-widest italic">
+            لا توجد حجوزات
+          </div>
         ) : (
           <div className="grid gap-6">
             {filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5 transition-all">
+              <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5 transition-all active:scale-[0.98]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
@@ -207,22 +209,22 @@ export default function MyBookings() {
         )}
       </main>
 
-      {/* Modal تخصيص الفزعة الزجاجي */}
+      {/* مودال التخصيص الزجاجي الفخم */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#05081d]/80 backdrop-blur-xl animate-in fade-in">
-          <div className="bg-[#0a0f3c]/90 border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-[0_0_50px_rgba(34,211,238,0.1)] relative overflow-hidden">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-[#0a0f3c]/90 border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-[0_0_50px_rgba(34,211,238,0.15)] relative overflow-hidden">
             <div className="absolute top-[-20%] left-[-20%] w-48 h-48 bg-cyan-500/10 blur-[80px] rounded-full" />
             
             <div className="text-center relative">
               <h3 className="text-3xl font-[1000] italic text-cyan-400 uppercase tracking-tighter mb-2 leading-none">تخصيص الفزعة</h3>
-              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest opacity-60 italic">حدد اللاعبين الناقصين قبل النشر</p>
+              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest opacity-60 italic leading-none">حدد اللاعبين الناقصين قبل النشر</p>
             </div>
 
             <div className="space-y-4 relative">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 block italic">كم لاعب ناقصك؟</label>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map(num => (
-                  <button key={num} onClick={() => setMissingCount(num)} className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-105 shadow-xl shadow-cyan-500/40' : 'bg-white/5 border-white/10 text-gray-500'}`}>{num}</button>
+                  <button key={num} onClick={() => setMissingCount(num)} className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-105 shadow-xl shadow-cyan-500/40' : 'bg-white/10 border-white/10 text-gray-400'}`}>{num}</button>
                 ))}
               </div>
             </div>
@@ -236,7 +238,7 @@ export default function MyBookings() {
               <button onClick={handleFinalConversion} disabled={isConverting} className="flex-[2] py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
                 {isConverting ? <Loader2 className="animate-spin" size={18} /> : "تأكيد ونشر"}
               </button>
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 bg-white/5 text-gray-500 rounded-[24px] font-black uppercase text-[10px] active:scale-95 border border-white/5">رجوع</button>
+              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 bg-white/5 text-gray-400 rounded-[24px] font-black uppercase text-[10px] active:scale-95 border border-white/5">رجوع</button>
             </div>
           </div>
         </div>
