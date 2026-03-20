@@ -45,31 +45,29 @@ const App = () => {
 
   /**
    * المكون المسؤول عن الخلفية الكونية الموحدة
-   * تم استبدال روابط الصور بنجوم SVG برمجية تظهر فوراً وبدون إنترنت
+   * تم استعادة رابط النجوم الأصلي مع تحسين البروز
    */
   const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-[#05081d] text-white relative overflow-x-hidden font-sans">
       
-      {/* 1. الأنوار المموجة (Glows) */}
+      {/* 1. الأنوار المموجة (Glows) - خلفية متحركة ناعمة */}
       <div className="fixed top-[-10%] left-[-10%] w-[600px] h-[600px] bg-cyan-500/20 blur-[130px] rounded-full pointer-events-none z-0 animate-pulse" />
       <div className="fixed top-[20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/15 blur-[120px] rounded-full pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-indigo-500/15 blur-[110px] rounded-full pointer-events-none z-0" />
       
-      {/* 2. النجوم البرمجية المضمونة (SVG Starfield) */}
-      <div className="fixed inset-0 pointer-events-none z-[1] opacity-60">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <filter id="noise">
-            <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch" />
-            <feColorMatrix type="matrix" values="0 0 0 9 -4
-                                               0 0 0 9 -4
-                                               0 0 0 9 -4
-                                               0 0 0 0 1" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#noise)" opacity="0.4" />
-        </svg>
-      </div>
+      {/* 2. النجوم (Stardust) - الرابط المعتمد في الصفحة الرئيسية */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-[1]" 
+        style={{ 
+          backgroundImage: `url('https://www.transparenttextures.com/patterns/stardust.png')`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '250px 250px',
+          opacity: 0.15, // شفافة بما يكفي لتكون رقيقة وغير مزعجة
+          mixBlendMode: 'screen' 
+        }} 
+      />
       
-      {/* 3. طبقة المحتوى (Content) */}
+      {/* 3. طبقة المحتوى (Content) - شفافة بالكامل لتظهر ما خلفها */}
       <div className="relative z-10 w-full min-h-screen bg-transparent">
         {children}
       </div>
@@ -80,11 +78,8 @@ const App = () => {
     return (
       <BackgroundWrapper>
         <div className="min-h-screen flex flex-col items-center justify-center gap-6">
-          <div className="relative">
-            <div className="absolute inset-0 bg-cyan-500 blur-2xl opacity-20 animate-pulse" />
-            <Loader2 className="animate-spin text-cyan-400 relative z-10" size={45} />
-          </div>
-          <span className="text-[11px] font-[1000] uppercase tracking-[0.4em] text-cyan-400 italic animate-pulse">
+          <Loader2 className="animate-spin text-cyan-400" size={45} />
+          <span className="text-[11px] font-[1000] uppercase tracking-[0.4em] text-cyan-400 italic">
             Hype Padel Loading...
           </span>
         </div>
@@ -107,7 +102,7 @@ const App = () => {
               </BackgroundWrapper>
             ) : (
               <BackgroundWrapper>
-                <div className="pb-32">
+                <div className="pb-32 bg-transparent">
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/book/:id" element={<BookCourt />} />
