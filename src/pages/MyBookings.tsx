@@ -31,13 +31,7 @@ export default function MyBookings() {
 
     const { data, error } = await supabase
       .from('bookings')
-      .select(`
-        *,
-        courts (
-          name,
-          image_url
-        )
-      `)
+      .select(`*, courts (name, image_url)`)
       .eq('user_id', user.id)
       .order('start_time', { ascending: true });
 
@@ -99,10 +93,10 @@ export default function MyBookings() {
   });
 
   return (
-    /* إجبار الشفافية بـ style مباشر لضمان ظهور النجوم */
+    /* الاختبار: أضفنا خلفية حمراء شفافة جداً للتأكد من أن الملف يحدث فعلياً */
     <div 
       className="min-h-screen text-white font-sans pb-32 relative overflow-x-hidden" 
-      style={{ backgroundColor: 'transparent' }} 
+      style={{ backgroundColor: 'rgba(255, 0, 0, 0.05)' }} 
       dir="rtl"
     >
       <Header />
@@ -139,7 +133,9 @@ export default function MyBookings() {
               <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10"><img src={booking.courts?.image_url} className="w-full h-full object-cover" /></div>
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
+                        <img src={booking.courts?.image_url} className="w-full h-full object-cover" alt="Court" />
+                    </div>
                     <div>
                       <h3 className="font-black text-xl italic tracking-tight uppercase leading-none">{booking.courts?.name}</h3>
                       <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">ID: {booking.id.slice(0,8)}</div>
@@ -158,8 +154,8 @@ export default function MyBookings() {
 
                 {activeTab === 'current' && (
                   <div className="flex gap-2.5 pt-2">
-                    <button onClick={() => openConversionModal(booking)} className="flex-[2] py-4 bg-cyan-500 text-[#0a0f3c] rounded-[20px] font-[1000] text-[10px] uppercase shadow-lg flex items-center justify-center gap-2"><Zap size={14} /> تحويل لفزعة</button>
-                    <button onClick={() => handleCancel(booking.id)} className="flex-1 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-[20px] font-black text-[10px] uppercase flex items-center justify-center gap-2"><Trash2 size={14} /></button>
+                    <button onClick={() => openConversionModal(booking)} className="flex-[2] py-4 bg-cyan-500 text-[#0a0f3c] rounded-[20px] font-[1000] text-[10px] uppercase shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95"><Zap size={14} /> تحويل لفزعة</button>
+                    <button onClick={() => handleCancel(booking.id)} className="flex-1 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-[20px] font-black text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"><Trash2 size={14} /></button>
                   </div>
                 )}
               </div>
@@ -168,7 +164,6 @@ export default function MyBookings() {
         )}
       </main>
 
-      {/* المودال - تأكدت أنه شفاف من الأطراف لضمان بقاء النجوم خلفه */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-xl">
           <div className="bg-[#0a0f3c]/90 border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-2xl relative">
