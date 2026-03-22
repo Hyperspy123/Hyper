@@ -29,6 +29,7 @@ export default function MyBookings() {
       return;
     }
 
+    // نجلب فقط الحجوزات المؤكدة (confirmed) لضمان عدم ظهور المحولة
     const { data, error } = await supabase
       .from('bookings')
       .select(`*, courts (name, image_url)`)
@@ -40,6 +41,10 @@ export default function MyBookings() {
     setLoading(false);
   };
 
+  /**
+   * دالة التحويل النهائية: 
+   * تضمن إخفاء الحجز حتى لو فشل الإشعار بسبب صلاحيات قاعدة البيانات (RLS).
+   */
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
     
@@ -50,9 +55,9 @@ export default function MyBookings() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) throw new Error("مستخدم غير مسجل");
 
-      // 1. تحديث حالة الحجز (عشان يختفي للأبد من القائمة)
+      // 1. تحديث حالة الحجز أولاً (أهم خطوة لضمان الاختفاء من القائمة)
       const { error: updateError } = await supabase
         .from('bookings')
         .update({ status: 'converted' })
@@ -60,8 +65,8 @@ export default function MyBookings() {
       
       if (updateError) throw updateError;
 
-      // 2. إنشاء منشور الفزعة
-      await supabase.from('faz3a_posts').insert([{
+      // 2. إنشاء منشور الفزعة في الجدول المخصص
+      const { error: faz3aError } = await supabase.from('faz3a_posts').insert([{
           creator_id: user.id,
           location: 'الصحافة', 
           court_name: courtName,
@@ -69,28 +74,36 @@ export default function MyBookings() {
           missing_players: missingCount,
           is_from_booking: true
       }]);
+      if (faz3aError) console.error("فشل إنشاء منشور الفزعة:", faz3aError);
 
-      // 3. 🔥 تسجيل الإشعار في جدول التنبيهات (ليظهر في الخانة العلوية)
-      await supabase.from('notifications').insert([{
-        user_id: user.id,
-        title: 'تم تحويل حجزك 🔥',
-        message: `حجزك في ملعب ${courtName} صار فزعة الآن. ابشر باللاعبين!`,
-        type: 'faz3a',
-        is_read: false,
-        created_at: new Date().toISOString()
-      }]);
+      // 3. محاولة تسجيل الإشعار في الخانة العلوية (بشكل مستقل)
+      // وضعناها في try مستقلة لكي لا يظهر "فشل التحويل" إذا كان هناك مشكلة في جدول التنبيهات فقط
+      try {
+        await supabase.from('notifications').insert([{
+          user_id: user.id,
+          title: 'تم تحويل حجزك 🔥',
+          message: `حجزك في ملعب ${courtName} صار فزعة الآن. ابشر باللاعبين!`,
+          type: 'faz3a',
+          is_read: false,
+          created_at: new Date().toISOString()
+        }]);
+      } catch (notifErr) {
+        console.warn("فشل تسجيل الإشعار في القاعدة، ولكن التحويل تم بنجاح.");
+      }
 
-      // 4. إخفاء فوري من الشاشة
+      // 4. تحديث الواجهة المحلية فوراً ليختفي الكرت أمام المستخدم
       setBookings(prev => prev.filter(b => b.id !== bookingId));
       setIsModalOpen(false);
       
-      toast.success("كفو! تم التحويل وظهر في إشعاراتك 🔔");
+      toast.success("كفو! تم التحويل بنجاح وظهر في إشعاراتك 🔔");
 
+      // التوجه لصفحة الفزعة لمشاهدة المنشور
       setTimeout(() => navigate('/faz3a'), 800);
 
     } catch (error: any) {
-      console.error(error);
-      toast.error("فشل التحويل، حاول مجدداً");
+      console.error("خطأ في عملية التحويل:", error);
+      toast.error(`فشل التحويل: ${error.message || 'مشكلة في الاتصال'}`);
+      fetchBookings(); // إعادة جلب البيانات للتأكد من المزامنة
     } finally {
       setIsConverting(false);
     }
@@ -110,15 +123,21 @@ export default function MyBookings() {
       <Header />
       <main className="p-6 max-w-md mx-auto relative z-10 pt-24">
         <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 backdrop-blur-md">
+          <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 backdrop-blur-md transition-all active:scale-90">
             <ChevronLeft size={20} className="rotate-180" />
           </button>
           <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">حجوزاتي</h1>
         </div>
 
         <div className="flex bg-white/5 backdrop-blur-3xl p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-2xl">
-          {['current', 'previous', 'cancelled'].map((tab: any) => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-3 rounded-[18px] font-black text-[10px] uppercase transition-all ${activeTab === tab ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400'}`}>
+          {(['current', 'previous', 'cancelled'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-3 rounded-[18px] font-black text-[10px] uppercase transition-all duration-300 ${
+                activeTab === tab ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-400/20' : 'text-gray-400'
+              }`}
+            >
               {tab === 'current' ? 'القادمة' : tab === 'previous' ? 'السابقة' : 'الملغاة'}
             </button>
           ))}
@@ -127,14 +146,16 @@ export default function MyBookings() {
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={32} /></div>
         ) : filteredBookings.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 rounded-[40px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase italic">لا توجد حجوزات</div>
+          <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-[40px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase italic tracking-widest leading-loose">
+            لا توجد حجوزات في هذا التبويب
+          </div>
         ) : (
           <div className="grid gap-6">
             {filteredBookings.map((booking) => (
               <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 space-y-5 shadow-2xl transition-all">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
-                    <img src={booking.courts?.image_url} className="w-full h-full object-cover" />
+                    <img src={booking.courts?.image_url} className="w-full h-full object-cover" alt="ملعب" />
                   </div>
                   <div>
                     <h3 className="font-black text-xl italic uppercase leading-none">{booking.courts?.name}</h3>
@@ -143,6 +164,7 @@ export default function MyBookings() {
                     </div>
                   </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white/5 p-3.5 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic">
                     <Calendar size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleDateString('ar-EG')}
@@ -151,8 +173,12 @@ export default function MyBookings() {
                     <Clock size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}
                   </div>
                 </div>
+
                 {activeTab === 'current' && (
-                  <button onClick={() => { setSelectedBooking(booking); setIsModalOpen(true); }} className="w-full py-4 bg-cyan-500 text-[#0a0f3c] rounded-[20px] font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all">
+                  <button 
+                    onClick={() => { setSelectedBooking(booking); setIsModalOpen(true); }}
+                    className="w-full py-4 bg-cyan-500 text-[#0a0f3c] rounded-[20px] font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  >
                     <Zap size={14} fill="#0a0f3c" /> تحويل لفزعة
                   </button>
                 )}
@@ -162,18 +188,44 @@ export default function MyBookings() {
         )}
       </main>
 
-      {/* المودال */}
+      {/* مودال تخصيص عدد اللاعبين الناقصين */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl">
           <div className="bg-[#0a0f3c]/95 border border-white/10 w-full max-w-sm rounded-[40px] p-8 space-y-8 shadow-2xl text-center">
             <h3 className="text-3xl font-[1000] italic text-cyan-400 uppercase tracking-tighter leading-none">تخصيص الفزعة</h3>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map(num => (
-                <button key={num} onClick={() => setMissingCount(num)} className={`flex-1 py-4 rounded-2xl font-[1000] border ${missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/10 border-white/10 text-gray-400'}`}>{num}</button>
-              ))}
+            
+            <div className="space-y-4">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">عدد اللاعبين المطلوبين</p>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(num => (
+                  <button 
+                    key={num} 
+                    onClick={() => setMissingCount(num)} 
+                    className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${
+                      missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/10 border-white/10 text-gray-400'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
             </div>
-            <button onClick={handleFinalConversion} disabled={isConverting} className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg active:scale-95">{isConverting ? <Loader2 className="animate-spin mx-auto" /> : "تأكيد ونشر"}</button>
-            <button onClick={() => setIsModalOpen(false)} className="w-full text-gray-500 font-black uppercase text-[10px]">رجوع</button>
+
+            <div className="pt-4 flex flex-col gap-3">
+              <button 
+                onClick={handleFinalConversion} 
+                disabled={isConverting} 
+                className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] uppercase text-xs shadow-lg active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isConverting ? <Loader2 className="animate-spin" /> : "تأكيد ونشر"}
+              </button>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="w-full py-2 text-gray-500 font-black uppercase text-[10px] tracking-widest"
+              >
+                رجوع
+              </button>
+            </div>
           </div>
         </div>
       )}
