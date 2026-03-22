@@ -15,7 +15,6 @@ export default function Notifications() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // جلب جميع التنبيهات (النظام، الرانك، ودعوات الفزعة المدمجة)
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -36,7 +35,6 @@ export default function Notifications() {
   useEffect(() => {
     fetchAllNotifications();
     
-    // الاشتراك في التغييرات اللحظية (Realtime)
     const channel = supabase
       .channel('notif-changes')
       .on('postgres_changes', 
@@ -48,7 +46,6 @@ export default function Notifications() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchAllNotifications]);
 
-  // تحديث حالة التنبيه كـ "مقروء"
   const markAsRead = async (id: string) => {
     const { error } = await supabase
       .from('notifications')
@@ -60,17 +57,19 @@ export default function Notifications() {
     }
   };
 
-  // التعامل مع دعوة الفزعة (قبول)
+  // 🔥 التعديل هنا لحل مشكلة الـ 404
   const handleInviteAction = async (notifId: string, postId: string, action: 'accept' | 'decline') => {
     if (action === 'accept') {
-      toast.success("أبشر بالفزعة! 🔥 جاري توجيهك للملعب...");
-      // هنا يمكنك إضافة منطق تسجيل اللاعب في الفزعة بجدول الـ bookings إذا أردت
-      navigate(`/faz3a/${postId}`); 
+      toast.success("أبشر بالفزعة! 🔥 جاري توجيهك لطلبات الفزعة...");
+      
+      // توجيه لصفحة الفزعة العامة بدلاً من رابط postId غير الموجود
+      // هذا يضمن عدم ظهور صفحة 404
+      navigate('/faz3a'); 
     } else {
       toast.info("تم رفض الدعوة");
     }
     
-    // في كلتا الحالتين، نحذف التنبيه من القائمة (بجعله مقروءاً)
+    // تحديث التنبيه كمقروء في الحالتين
     await markAsRead(notifId);
   };
 
@@ -93,7 +92,6 @@ export default function Notifications() {
             notifications.map((n) => (
               <div key={n.id} className="p-6 rounded-[35px] bg-white/5 border border-white/10 backdrop-blur-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                 
-                {/* 1. شكل تنبيه دعوة الفزعة */}
                 {n.type === 'invite' ? (
                   <div className="flex items-start gap-5">
                     <div className="p-4 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
@@ -124,7 +122,6 @@ export default function Notifications() {
                     </div>
                   </div>
                 ) : (
-                  /* 2. شكل تنبيهات النظام (ترقية رانك، إلغاء حجز، إلخ) */
                   <div className="flex items-start gap-5">
                     <div className={`p-4 rounded-2xl border ${n.type === 'rank_up' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
                       {n.type === 'rank_up' ? <CalendarCheck size={24} /> : <Check size={24} />}
@@ -151,7 +148,6 @@ export default function Notifications() {
               </div>
             ))
           ) : (
-            /* حالة لا توجد تنبيهات */
             <div className="text-center py-32 bg-white/5 rounded-[50px] border border-dashed border-white/10 opacity-30">
               <BellOff size={60} className="mx-auto mb-6 text-gray-800" />
               <p className="font-black text-[10px] uppercase tracking-[0.3em] text-gray-600 italic">لا توجد تنبيهات جديدة</p>
