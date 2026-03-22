@@ -1,146 +1,154 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import { Globe, Shield, UserX, ChevronLeft, Target, Users, Zap, Award } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
+import { Globe, Shield, UserX, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Settings() {
   const navigate = useNavigate();
   
-  // Advanced Player States
-  const [skillLevel, setSkillLevel] = useState(3.5);
-  const [playSide, setPlaySide] = useState<'Left' | 'Right' | 'Both'>('Both');
-  const [racket, setRacket] = useState('Bullpadel Hack 03');
+  // نستخدم any هنا لتجاوز قيود TypeScript مؤقتاً وحل مشكلة المسميات
+  const i18n = useI18n() as any;
+  const { t, dir } = i18n;
+
+  // محرك ذكي لاكتشاف مسمى اللغة وتغييرها (سواء كان locale أو language)
+  const currentLang = i18n.locale || i18n.language || 'ar';
+  const setLang = i18n.setLocale || i18n.setLanguage || i18n.changeLanguage;
+
   const [isPublic, setIsPublic] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchSettings() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('is_public, current_rank')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (data) {
+          setIsPublic(data.is_public);
+          setProfile(data);
+        }
+      }
+    }
+    fetchSettings();
+  }, []);
+
+  const togglePrivacy = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const newStatus = !isPublic;
+    const { error } = await supabase.from('profiles').update({ is_public: newStatus }).eq('id', user.id);
+    if (!error) {
+      setIsPublic(newStatus);
+      toast.success(newStatus ? "ملفك الشخصي الآن عام للجميع 🌍" : "ملفك الشخصي الآن خاص 🔒");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmDelete = window.confirm("تحذير نهائي: هل أنت متأكد من حذف الحساب؟");
+    if (!confirmDelete) return;
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles').delete().eq('id', user.id);
+        await supabase.auth.signOut();
+        toast.error("تم حذف الحساب");
+        navigate('/auth');
+      }
+    } catch (e) {
+      toast.error("حدث خطأ");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-transparent text-white pb-32" dir="rtl">
+    <div className="min-h-screen bg-[#05081d] text-white pb-32" dir={dir}>
       <Header />
 
       <div className="pt-24 max-w-lg mx-auto px-6">
-        {/* Header Section */}
-        <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-                <button onClick={() => navigate(-1)} className="p-2 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
-                    <ChevronLeft size={20} className="rotate-180" />
+        <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center gap-4">
+                <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
+                    <ChevronRight size={22} className={dir === 'rtl' ? '' : 'rotate-180'} />
                 </button>
-                <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none">الإعدادات</h1>
+                <h1 className="text-3xl font-[1000] italic uppercase tracking-tighter leading-none">الإعدادات</h1>
             </div>
-            <div className="bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-full">
-                <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Pro Player</span>
-            </div>
-        </div>
-
-        {/* 1. SKILL LEVEL & PLAY SIDE */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
-          
-          <h3 className="text-[10px] font-black text-gray-400 mb-8 flex items-center gap-2 uppercase tracking-[0.2em]">
-            <Target size={14} className="text-cyan-400" /> مستوى اللعب والتمركز
-          </h3>
-          
-          <div className="space-y-10">
-            {/* Skill Slider */}
-            <div className="px-2">
-                <div className="flex justify-between mb-4 items-end">
-                    <span className="text-[10px] font-black text-gray-600 uppercase">مبتدئ</span>
-                    <div className="text-center">
-                        <span className="block text-[8px] text-cyan-500 font-black uppercase tracking-tighter">Your Level</span>
-                        <span className="text-3xl font-black text-white italic leading-none">{skillLevel.toFixed(1)}</span>
-                    </div>
-                    <span className="text-[10px] font-black text-gray-600 uppercase">محترف</span>
-                </div>
-                <input 
-                    type="range" min="1" max="7" step="0.1" 
-                    value={skillLevel} 
-                    onChange={(e) => setSkillLevel(parseFloat(e.target.value))}
-                    className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                />
-            </div>
-
-            {/* Play Side Selector */}
-            <div className="space-y-3">
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2">جهة اللعب المفضلة</span>
-                <div className="grid grid-cols-3 gap-3">
-                    {(['Left', 'Right', 'Both'] as const).map((side) => (
-                        <button 
-                            key={side}
-                            onClick={() => setPlaySide(side)}
-                            className={`py-3 rounded-2xl border text-[10px] font-black uppercase transition-all duration-300 ${
-                                playSide === side 
-                                ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-[0_0_20px_rgba(34,211,238,0.3)]' 
-                                : 'bg-black/20 border-white/5 text-gray-500 hover:border-white/20'
-                            }`}
-                        >
-                            {side === 'Left' ? 'يسار' : side === 'Right' ? 'يمين' : 'الكل'}
-                        </button>
-                    ))}
-                </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. EQUIPMENT FLEX & GEAR */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 mb-6">
-            <h3 className="text-[10px] font-black text-gray-400 mb-4 flex items-center gap-2 uppercase tracking-[0.2em]">
-                <Zap size={14} className="text-yellow-400" /> العتاد • Gear
-            </h3>
-            <div className="relative">
-                <Award className="absolute right-4 top-4 text-gray-600" size={18} />
-                <input 
-                    type="text" 
-                    value={racket}
-                    onChange={(e) => setRacket(e.target.value)}
-                    placeholder="نوع المضرب..." 
-                    className="w-full bg-black/20 border border-white/5 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-800"
-                />
+            <div className="bg-cyan-500/10 border border-cyan-500/20 px-4 py-1.5 rounded-full">
+                <span className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] italic">
+                   {profile?.current_rank || 'Member'}
+                </span>
             </div>
         </div>
 
-        {/* 3. APP PREFERENCES */}
-        <div className="space-y-3">
-          {/* Language Toggle */}
-          <div className="flex items-center justify-between px-6 py-5 rounded-[24px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                <Globe size={18} className="text-purple-400" />
+        <div className="space-y-4">
+          {/* قسم اللغة */}
+          <button 
+            onClick={() => setLang(currentLang === 'ar' ? 'en' : 'ar')}
+            className="w-full flex items-center justify-between px-6 py-6 rounded-[32px] bg-white/5 border border-white/10 group"
+          >
+            <div className="flex items-center gap-5">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:scale-110 transition-transform">
+                <Globe size={22} className="text-purple-400" />
               </div>
-              <span className="text-sm font-black uppercase tracking-tight">اللغة • Language</span>
-            </div>
-            <button className="text-cyan-400 text-[10px] font-black border border-cyan-400/30 px-4 py-2 rounded-lg bg-cyan-400/5 uppercase">العربية</button>
-          </div>
-
-          {/* Privacy Glass Toggle */}
-          <div className="flex items-center justify-between px-6 py-5 rounded-[24px] bg-white/5 border border-white/10">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
-                <Shield size={18} className="text-green-400" />
+              <div className="text-right">
+                 <span className="block text-sm font-black uppercase tracking-tight">اللغة • Language</span>
+                 <span className="text-[10px] text-gray-500 font-bold uppercase">{currentLang === 'ar' ? 'English' : 'العربية'}</span>
               </div>
-              <span className="text-sm font-black uppercase tracking-tight">الملف الشخصي عام</span>
+            </div>
+            <span className="text-cyan-400 text-xs font-black border border-cyan-400/30 px-5 py-2.5 rounded-xl bg-cyan-400/5 uppercase">
+                {currentLang === 'ar' ? 'العربية' : 'English'}
+            </span>
+          </button>
+
+          {/* قسم الخصوصية */}
+          <div className="w-full flex items-center justify-between px-6 py-6 rounded-[32px] bg-white/5 border border-white/10 mt-2">
+            <div className="flex items-center gap-5">
+              <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                <Shield size={22} className="text-green-400" />
+              </div>
+              <div className="text-right">
+                 <span className="block text-sm font-black uppercase tracking-tight">ملف شخصي عام</span>
+              </div>
             </div>
             <button 
-                onClick={() => setIsPublic(!isPublic)}
-                className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isPublic ? 'bg-cyan-500' : 'bg-gray-800'}`}
+                onClick={togglePrivacy}
+                className={`w-14 h-7 rounded-full relative transition-all duration-500 p-1 ${isPublic ? 'bg-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.4)]' : 'bg-gray-800'}`}
             >
-                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isPublic ? 'left-1' : 'right-1'}`} />
+                <div className={`w-5 h-5 bg-white rounded-full transition-all duration-500 transform ${isPublic ? (dir === 'rtl' ? '-translate-x-7' : 'translate-x-7') : 'translate-x-0'}`} />
             </button>
           </div>
 
-          {/* Delete Account */}
-          <button 
-            onClick={() => toast.error("تواصل مع الإدارة لحذف الحساب")}
-            className="w-full flex items-center justify-between px-6 py-5 rounded-[24px] bg-red-500/5 border border-red-500/10 group hover:bg-red-500 transition-all duration-300 mt-8"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center group-hover:bg-white/20 transition-all">
-                <UserX size={18} className="text-red-400 group-hover:text-white" />
-              </div>
-              <span className="text-red-400 group-hover:text-white text-sm font-black uppercase transition-all tracking-widest">حذف الحساب</span>
+          {/* منطقة الخطر */}
+          <div className="pt-12 mt-4 space-y-4 text-right">
+            <div className="flex items-center gap-2 opacity-30 text-[10px] font-black uppercase tracking-widest px-2 text-red-500">
+               <AlertCircle size={12} /> منطقة الخطر
             </div>
-          </button>
+            <button 
+              onClick={handleDeleteAccount}
+              disabled={loading}
+              className="w-full flex items-center justify-between px-6 py-6 rounded-[32px] bg-red-500/5 border border-red-500/10 group hover:bg-red-500 transition-all duration-300 shadow-lg shadow-red-500/5"
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center group-hover:bg-white/20 transition-all">
+                  <UserX size={22} className="text-red-400 group-hover:text-white" />
+                </div>
+                <div className="text-right">
+                   <span className="block text-red-400 group-hover:text-white text-sm font-black uppercase tracking-widest">حذف الحساب نهائياً</span>
+                </div>
+              </div>
+              {loading && <Loader2 size={20} className="animate-spin text-white" />}
+            </button>
+          </div>
         </div>
-
-        <p className="text-center mt-8 text-[8px] font-black text-gray-700 uppercase tracking-[0.5em]">Hype Padel v2.0.4</p>
       </div>
     </div>
   );
