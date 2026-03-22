@@ -45,7 +45,10 @@ export default function MyBookings() {
   };
 
   /**
-   * دالة التحويل المعدلة لضمان ظهور الإشعار واختفاء العنصر
+   * دالة التحويل المعدلة:
+   * 1. تنشئ منشور فزعة.
+   * 2. 🔥 ترسل إشعاراً لجدول التنبيهات ليظهر في "الخانة العلوية".
+   * 3. تحذف الحجز وتحدث الواجهة.
    */
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
@@ -64,25 +67,30 @@ export default function MyBookings() {
           missing_players: missingCount,
           is_from_booking: true
       }]);
-
       if (insertError) throw insertError;
 
-      // 2. حذف الحجز الأصلي من قاعدة البيانات
+      // 2. 🔥 إضافة الإشعار لجدول التنبيهات ليظهر في خانة التنبيهات
+      await supabase.from('notifications').insert([{
+        user_id: user.id,
+        title: 'تم تحويل طلبك لفزعة',
+        message: `تم تحويل حجزك في ${selectedBooking.courts?.name} بنجاح. فزعتك منشورة الآن! 🔥`,
+        type: 'faz3a',
+        is_read: false,
+        created_at: new Date().toISOString()
+      }]);
+
+      // 3. حذف الحجز الأصلي
       const { error: deleteError } = await supabase.from('bookings').delete().eq('id', selectedBooking.id);
       if (deleteError) throw deleteError;
 
-      // 3. إظهار إشعار النجاح (يجب أن يكون قبل الـ navigate)
-      toast.success(`كفو! تم تحويل طلبك لفزعة في ${selectedBooking.courts?.name} 🔥`, {
-        duration: 4000,
-      });
+      // 4. إظهار Toast سريع للتأكيد اللحظي
+      toast.success(`تم التحويل! راجع خانة التنبيهات 🔔`);
 
-      // 4. إخفاء الحجز من القائمة المحلية فوراً لضمان تجربة سريعة
+      // 5. تحديث الواجهة المحلية (حذف الكرت فوراً)
       setBookings(prev => prev.filter(b => b.id !== selectedBooking.id));
       
-      // 5. إغلاق المودال
+      // 6. إغلاق المودال والتوجه لصفحة الفزعة
       setIsModalOpen(false);
-
-      // 6. تأخير بسيط جداً للانتقال لضمان بقاء الإشعار ثابتاً على الشاشة
       setTimeout(() => {
         navigate('/faz3a');
       }, 800);
@@ -155,7 +163,7 @@ export default function MyBookings() {
               <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 shadow-2xl space-y-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner">
                         <img src={booking.courts?.image_url} className="w-full h-full object-cover" alt="Court" />
                     </div>
                     <div>
@@ -205,7 +213,7 @@ export default function MyBookings() {
                   key={num} 
                   onClick={() => setMissingCount(num)} 
                   className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${
-                    missingCount === num ? 'bg-cyan-400 border-cyan-400 text-[#0a0f3c] scale-105' : 'bg-white/10 border-white/10 text-gray-400'
+                    missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-105' : 'bg-white/10 border-white/10 text-gray-400'
                   }`}
                 >
                   {num}
