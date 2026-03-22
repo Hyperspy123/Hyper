@@ -45,14 +45,18 @@ export default function MyBookings() {
   };
 
   /**
-   * دالة التحويل المعدلة:
-   * 1. تنشئ منشور فزعة.
-   * 2. 🔥 ترسل إشعاراً لجدول التنبيهات ليظهر في "الخانة العلوية".
-   * 3. تحذف الحجز وتحدث الواجهة.
+   * دالة التحويل الاحترافية:
+   * 1. تخفي الحجز من الواجهة فوراً (Optimistic UI).
+   * 2. تنشئ منشور الفزعة.
+   * 3. تضيف إشعاراً لجدول التنبيهات ليظهر في الخانة العلوية.
    */
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
     
+    // حفظ المعرف محلياً قبل إغلاق المودال
+    const bookingIdToHide = selectedBooking.id;
+    const courtName = selectedBooking.courts?.name;
+
     setIsConverting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -62,38 +66,38 @@ export default function MyBookings() {
       const { error: insertError } = await supabase.from('faz3a_posts').insert([{
           creator_id: user.id,
           location: 'الصحافة', 
-          court_name: selectedBooking.courts?.name,
+          court_name: courtName,
           match_time: new Date(selectedBooking.start_time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
           missing_players: missingCount,
           is_from_booking: true
       }]);
       if (insertError) throw insertError;
 
-      // 2. 🔥 إضافة الإشعار لجدول التنبيهات ليظهر في خانة التنبيهات
+      // 2. 🔥 إضافة الإشعار لجدول التنبيهات (ليظهر في الخانة العلوية بشكل دائم)
       await supabase.from('notifications').insert([{
         user_id: user.id,
         title: 'تم تحويل طلبك لفزعة',
-        message: `تم تحويل حجزك في ${selectedBooking.courts?.name} بنجاح. فزعتك منشورة الآن! 🔥`,
+        message: `حجزك في ${courtName} صار فزعة عامة الآن. كفو! 🔥`,
         type: 'faz3a',
         is_read: false,
         created_at: new Date().toISOString()
       }]);
 
-      // 3. حذف الحجز الأصلي
-      const { error: deleteError } = await supabase.from('bookings').delete().eq('id', selectedBooking.id);
+      // 3. حذف الحجز الأصلي من قاعدة البيانات
+      const { error: deleteError } = await supabase.from('bookings').delete().eq('id', bookingIdToHide);
       if (deleteError) throw deleteError;
 
-      // 4. إظهار Toast سريع للتأكيد اللحظي
+      // 4. 🔥 تحديث الواجهة فوراً (إزالة الكرت من القائمة دون انتظار التحميل)
+      setBookings(prev => prev.filter(b => b.id !== bookingIdToHide));
+      
+      // 5. إظهار Toast سريع
       toast.success(`تم التحويل! راجع خانة التنبيهات 🔔`);
 
-      // 5. تحديث الواجهة المحلية (حذف الكرت فوراً)
-      setBookings(prev => prev.filter(b => b.id !== selectedBooking.id));
-      
       // 6. إغلاق المودال والتوجه لصفحة الفزعة
       setIsModalOpen(false);
       setTimeout(() => {
         navigate('/faz3a');
-      }, 800);
+      }, 600);
 
     } catch (error: any) {
       console.error("Conversion error:", error);
