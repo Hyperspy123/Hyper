@@ -42,15 +42,14 @@ const App = () => {
   }, []);
 
   const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
-    /* إجبار الخلفية الداكنة العميقة */
     <div className="min-h-screen bg-[#02040a] text-white relative overflow-x-hidden font-sans selection:bg-cyan-500/30">
       
-      {/* 1. الأنوار المموجة (Glows) - قوية وواضحة */}
+      {/* 1. الأنوار المموجة (Glows) */}
       <div className="fixed top-[-10%] left-[-10%] w-[600px] h-[600px] bg-cyan-500/25 blur-[120px] rounded-full pointer-events-none z-0 animate-pulse" />
       <div className="fixed top-[20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-indigo-500/20 blur-[110px] rounded-full pointer-events-none z-0" />
       
-      {/* 2. النجوم (Stardust) - نسخة Base64 مدمجة إجبارية الوضوح */}
+      {/* 2. النجوم (Stardust) - نسخة مدمجة */}
       <div 
         className="fixed inset-0 pointer-events-none z-[1] opacity-40 mix-blend-screen" 
         style={{ 
@@ -60,14 +59,19 @@ const App = () => {
         }} 
       />
       
-      {/* 3. طبقة المحتوى الشفافة إجبارياً */}
+      {/* 3. طبقة المحتوى */}
       <div className="relative z-10 w-full min-h-screen bg-transparent">
         {children}
       </div>
     </div>
   );
 
-  if (loading) return <div className="min-h-screen bg-[#02040a] flex items-center justify-center"><Loader2 className="animate-spin text-cyan-400" /></div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#02040a] flex flex-col items-center justify-center gap-4">
+      <Loader2 className="animate-spin text-cyan-400" size={40} />
+      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400 animate-pulse">جاري تحميل المجرة...</span>
+    </div>
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -85,19 +89,33 @@ const App = () => {
                     </>
                   ) : (
                     <>
+                      {/* المسارات الأساسية */}
                       <Route path="/" element={<Index />} />
+                      <Route path="/book/:id" element={<BookCourt />} />
                       <Route path="/my-bookings" element={<MyBookings />} />
+                      <Route path="/rewards" element={<Rewards />} />
+                      <Route path="/tournaments" element={<Tournaments />} />
                       <Route path="/faz3a" element={<Faz3a />} />
+                      
+                      {/* الإعدادات والحساب */}
                       <Route path="/account" element={<Account />} />
-                      {/* بقية الروابط... */}
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/personal" element={<Personal />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/auth/callback" element={<AuthCallback />} />
+                      
                       <Route path="*" element={<NotFound />} />
                     </>
                   )}
                 </Routes>
               </div>
+              
               {session && (
                 <div className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-8 pointer-events-none">
-                  <div className="pointer-events-auto max-w-lg mx-auto"><BottomNav /></div>
+                  <div className="pointer-events-auto max-w-lg mx-auto">
+                    <BottomNav />
+                  </div>
                 </div>
               )}
             </BackgroundWrapper>
