@@ -251,7 +251,7 @@ export default function BookCourt() {
               );
             })}
           </div>
-        </section>
+        </section> 
 
         <button 
           onClick={handleConfirm} 
