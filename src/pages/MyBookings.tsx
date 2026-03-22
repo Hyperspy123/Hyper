@@ -44,29 +44,49 @@ export default function MyBookings() {
     setIsModalOpen(true);
   };
 
+  // --- الدالة المحدثة ---
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
-    const isConfirmed = window.confirm("⚠️ تنبيه هام: بمجرد تحويل هذا الحجز إلى فزعة عامة، سيتم إلغاء خصوصيته. هل أنت متأكد؟");
-    if (!isConfirmed) return;
+    
     setIsConverting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      await supabase.from('faz3a_posts').insert([{
+
+      // 1. إضافة الطلب لجدول الفزعات
+      const { error: insertError } = await supabase.from('faz3a_posts').insert([{
           creator_id: user.id,
           location: 'الصحافة', 
           court_name: selectedBooking.courts?.name,
           match_time: new Date(selectedBooking.start_time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
           missing_players: missingCount,
           is_from_booking: true
-        }]);
-      await supabase.from('bookings').delete().eq('id', selectedBooking.id);
-      toast.success("كفو! حجزك صار فزعة عامة الآن 🔥");
+      }]);
+
+      if (insertError) throw insertError;
+
+      // 2. حذف الحجز الأصلي (أو تحديث حالته لكي لا يظهر)
+      const { error: deleteError } = await supabase.from('bookings').delete().eq('id', selectedBooking.id);
+      
+      if (deleteError) throw deleteError;
+
+      // 3. إخفاء الحجز من القائمة المحلية فوراً
+      setBookings(prev => prev.filter(b => b.id !== selectedBooking.id));
+      
+      // 4. إغلاق المودال
       setIsModalOpen(false);
-      await fetchBookings(); 
-      navigate('/faz3a');
+
+      // 5. إظهار إشعار النجاح
+      toast.success(`كفو! تم تحويل طلبك لفزعة في ${selectedBooking.courts?.name} 🔥`);
+
+      // 6. التوجه لصفحة الفزعة
+      setTimeout(() => {
+        navigate('/faz3a');
+      }, 1000);
+
     } catch (error: any) {
-      toast.error("فشل التحويل");
+      console.error(error);
+      toast.error("فشل التحويل، حاول مرة أخرى");
     } finally {
       setIsConverting(false);
     }
@@ -93,7 +113,6 @@ export default function MyBookings() {
   });
 
   return (
-    /* 🌌 الشفافية المطلقة: تم إزالة أي لون خلفية لضمان ظهور نجوم App.tsx */
     <div className="min-h-screen bg-transparent text-white font-sans pb-32 relative overflow-x-hidden" dir="rtl">
       <Header />
       
@@ -105,7 +124,6 @@ export default function MyBookings() {
           <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">حجوزاتي</h1>
         </div>
 
-        {/* التبويبات الزجاجية */}
         <div className="flex bg-white/5 backdrop-blur-3xl p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-2xl">
           {(['current', 'previous', 'cancelled'] as const).map((tab) => (
             <button
