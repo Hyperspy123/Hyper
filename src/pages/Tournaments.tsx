@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@metagptx/web-sdk';
 import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
 import { useI18n } from '@/lib/i18n';
 import { toast } from 'sonner';
 import { Trophy, Calendar, Users, MapPin, Loader2, DollarSign, Medal, ChevronLeft } from 'lucide-react';
@@ -77,55 +76,43 @@ export default function Tournaments() {
 
   const getCategoryLabel = (cat: string) => cat === 'men' ? t('menCategory') : t('womenCategory');
 
-  const handleRegister = (tournament: Tournament) => {
-    if (tournament.current_participants >= tournament.max_participants) {
-      toast.error(t('tournamentFullError'));
-      return;
-    }
-    if (tournament.status === 'completed') {
-      toast.error(t('tournamentEndedError'));
-      return;
-    }
-    toast.success(`${t('registeredSuccess')} - ${tournament.name}`);
-  };
-
   return (
-    // STEP 1: Changed gradient to bg-transparent to show App.tsx mesh glows
-    <div className="min-h-screen bg-transparent pb-32 text-white font-sans" dir={dir}>
+    // 🌌 الشفافية المطلقة لإظهار نجوم App.tsx
+    <div className="min-h-screen bg-transparent pb-32 text-white font-sans relative overflow-x-hidden" dir={dir}>
       <Header />
 
-      <main className="p-6 max-w-md mx-auto space-y-8">
+      <main className="p-6 max-w-md mx-auto space-y-8 relative z-10 pt-24 text-right">
         {/* Page Header */}
-        <div className="mt-4">
-          <div className="flex items-center gap-4 mb-4">
+        <div>
+          <div className="flex items-center gap-4 mb-6">
              <button 
-              onClick={() => navigate('/')} 
-              className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-cyan-500 hover:text-[#0a0f3c] transition-all active:scale-90"
+              onClick={() => navigate(-1)} 
+              className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 backdrop-blur-md active:scale-90 transition-all"
             >
               <ChevronLeft size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
             </button>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-orange-500/20 border border-yellow-500/20 flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.15)]">
-              <Trophy size={24} className="text-yellow-400 shadow-sm" />
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl backdrop-blur-md">
+              <Trophy size={24} className="text-yellow-400" />
             </div>
           </div>
-          <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none">
+          <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
             {t('tournamentsTitle')}
           </h1>
-          <p className="text-gray-400 text-xs mt-2 font-bold tracking-widest uppercase opacity-60">
+          <p className="text-gray-500 text-[10px] mt-2 font-black tracking-[0.3em] uppercase italic opacity-60">
             {t('tournamentsSubtitle')}
           </p>
         </div>
 
         {/* Tabs - Glass Style */}
-        <div className="flex bg-white/5 backdrop-blur-md p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-xl">
+        <div className="flex bg-white/5 backdrop-blur-3xl p-1.5 rounded-[24px] mb-8 border border-white/10 shadow-2xl">
           {tabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-3 rounded-[18px] font-black text-[10px] uppercase tracking-wider transition-all duration-300 ${
+              className={`flex-1 py-3.5 rounded-[18px] font-black text-[10px] uppercase transition-all duration-300 ${
                 activeTab === tab.key
-                  ? 'bg-cyan-500 text-[#0a0f3c] shadow-[0_10px_20px_rgba(6,182,212,0.3)]'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-500/20'
+                  : 'text-gray-500 hover:text-white'
               }`}
             >
               {tab.label}
@@ -135,15 +122,12 @@ export default function Tournaments() {
 
         {/* Content */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="animate-spin text-cyan-400" size={32} />
-            <span className="text-cyan-500 font-black italic text-sm animate-pulse uppercase tracking-widest">جاري التحميل...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 backdrop-blur-sm rounded-[40px] border border-dashed border-white/10 opacity-60">
-            <Trophy size={48} className="text-gray-700 mx-auto mb-4" />
-            <h3 className="text-lg font-black text-white mb-2">{t('noTournaments')}</h3>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">{t('noTournamentsDesc')}</p>
+          <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-[40px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase tracking-widest italic">
+            {t('noTournaments')}
           </div>
         ) : (
           <div className="grid gap-8">
@@ -153,10 +137,9 @@ export default function Tournaments() {
               const spotsLeft = tournament.max_participants - tournament.current_participants;
 
               return (
-                // STEP 2: Applied Glassmorphism (bg-white/5 + backdrop-blur-xl)
                 <div
                   key={tournament.id}
-                  className="group relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] overflow-hidden transition-all duration-300 hover:border-white/20 shadow-2xl"
+                  className="group relative bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[40px] overflow-hidden transition-all duration-300 shadow-2xl active:scale-[0.98]"
                 >
                   {/* Image Section */}
                   <div className="relative h-48 overflow-hidden">
@@ -167,67 +150,65 @@ export default function Tournaments() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#05081d]/90 via-transparent to-transparent" />
                     <div className={`absolute top-4 ${dir === 'rtl' ? 'right-4' : 'left-4'} flex gap-2`}>
-                      <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border backdrop-blur-md ${badge.style}`}>
+                      <span className={`px-3 py-1.5 rounded-xl text-[9px] font-[1000] uppercase border backdrop-blur-md ${badge.style}`}>
                         {badge.label}
                       </span>
-                      <span className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30 backdrop-blur-md">
+                      <span className="px-3 py-1.5 rounded-xl text-[9px] font-[1000] uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30 backdrop-blur-md">
                         {getCategoryLabel(tournament.category)}
                       </span>
                     </div>
                   </div>
 
                   {/* Content Section */}
-                  <div className="p-8 pt-2">
-                    <h3 className="text-2xl font-black mb-2 tracking-tight">{tournament.name}</h3>
-                    <p className="text-gray-400 text-xs font-bold leading-relaxed mb-6 line-clamp-2 uppercase tracking-wider opacity-80">{tournament.description}</p>
+                  <div className="p-8 pt-4">
+                    <h3 className="text-2xl font-[1000] mb-2 tracking-tight italic uppercase leading-none">{tournament.name}</h3>
+                    <p className="text-gray-500 text-[10px] font-black leading-relaxed mb-6 uppercase tracking-wider italic opacity-80">{tournament.description}</p>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-white/5 p-3 rounded-2xl flex items-center gap-3 border border-white/5">
-                        <Calendar size={16} className="text-cyan-400" />
-                        <span className="text-white text-[11px] font-black">{tournament.start_date}</span>
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      <div className="bg-white/5 p-3.5 rounded-2xl flex items-center gap-3 border border-white/5">
+                        <Calendar size={14} className="text-cyan-400" />
+                        <span className="text-white text-[10px] font-black italic">{tournament.start_date}</span>
                       </div>
-                      <div className="bg-white/5 p-3 rounded-2xl flex items-center gap-3 border border-white/5">
-                        <MapPin size={16} className="text-cyan-400" />
-                        <span className="text-white text-[11px] font-black truncate">{tournament.court_name}</span>
+                      <div className="bg-white/5 p-3.5 rounded-2xl flex items-center gap-3 border border-white/5">
+                        <MapPin size={14} className="text-cyan-400" />
+                        <span className="text-white text-[10px] font-black italic truncate">{tournament.court_name}</span>
                       </div>
-                      <div className="bg-white/5 p-3 rounded-2xl flex items-center gap-3 border border-white/5">
-                        <Users size={16} className="text-cyan-400" />
-                        <span className="text-white text-[11px] font-black">{tournament.current_participants}/{tournament.max_participants}</span>
+                      <div className="bg-white/5 p-3.5 rounded-2xl flex items-center gap-3 border border-white/5">
+                        <Users size={14} className="text-cyan-400" />
+                        <span className="text-white text-[10px] font-black italic">{tournament.current_participants}/{tournament.max_participants}</span>
                       </div>
-                      <div className="bg-white/5 p-3 rounded-2xl flex items-center gap-3 border border-white/5">
-                        <DollarSign size={16} className="text-cyan-400" />
-                        <span className="text-white text-[11px] font-black">{tournament.entry_fee} {t('sar')}</span>
+                      <div className="bg-white/5 p-3.5 rounded-2xl flex items-center gap-3 border border-white/5">
+                        <DollarSign size={14} className="text-cyan-400" />
+                        <span className="text-white text-[10px] font-black italic">{tournament.entry_fee} {t('sar')}</span>
                       </div>
                     </div>
 
                     {/* Prize Highlight */}
-                    <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 shadow-[inset_0_0_20px_rgba(234,179,8,0.05)]">
-                      <Medal size={20} className="text-yellow-400" />
-                      <span className="text-yellow-400 text-sm font-black uppercase tracking-tight">{tournament.prize}</span>
+                    <div className="flex items-center gap-3 mb-6 px-5 py-3.5 rounded-2xl bg-yellow-400/5 border border-yellow-400/10">
+                      <Medal size={18} className="text-yellow-400" />
+                      <span className="text-yellow-400 text-[11px] font-[1000] uppercase tracking-tighter italic">{tournament.prize}</span>
                     </div>
 
                     {/* Progress bar */}
-                    <div className="mb-6">
-                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                    <div className="mb-8">
+                      <div className="flex justify-between text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">
                         <span>{t('registered')}</span>
                         <span className={isFull ? 'text-red-400' : 'text-cyan-400'}>
                           {isFull ? t('fullCapacity') : `${spotsLeft} ${t('seatsLeft')}`}
                         </span>
                       </div>
-                      <div className="h-2.5 bg-black/40 rounded-full overflow-hidden p-[1px] border border-white/5">
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
                         <div
-                          className={`h-full rounded-full transition-all duration-1000 ease-out relative ${isFull ? 'bg-red-500' : 'bg-gradient-to-r from-cyan-600 to-cyan-400'}`}
+                          className={`h-full rounded-full transition-all duration-1000 ease-out ${isFull ? 'bg-red-500' : 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]'}`}
                           style={{ width: `${(tournament.current_participants / tournament.max_participants) * 100}%` }}
-                        >
-                           <div className="absolute inset-0 bg-white/20 w-full h-[1px] top-0" />
-                        </div>
+                        />
                       </div>
                     </div>
 
                     <button
-                      onClick={() => handleRegister(tournament)}
+                      onClick={() => toast.success(`${t('registeredSuccess')} - ${tournament.name}`)}
                       disabled={isFull || tournament.status === 'completed'}
-                      className="w-full py-4 rounded-[24px] bg-cyan-500 text-[#0a0f3c] font-black text-sm uppercase tracking-tighter hover:bg-white disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed transition-all shadow-[0_10px_20px_rgba(6,182,212,0.3)] active:scale-95"
+                      className="w-full py-5 rounded-[24px] bg-cyan-500 text-[#0a0f3c] font-[1000] text-xs uppercase shadow-lg shadow-cyan-500/20 active:scale-95 transition-all disabled:bg-white/5 disabled:text-gray-500"
                     >
                       {tournament.status === 'completed'
                         ? t('tournamentEnded')
