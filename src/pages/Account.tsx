@@ -6,6 +6,16 @@ import { useI18n } from '@/lib/i18n';
 import { User, Trophy, Calendar, Star, LogIn, Mail, Zap, ChevronLeft, ChevronRight, LogOut, Settings, Award, Bell, ShieldCheck, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
+// --- دليل التصنيفات الموحد (نفس الموجود في Personal) ---
+const RANKS_GUIDE = [
+  { title: 'مستجد (Rookie)', icon: '🥚', color: 'text-gray-400', min: 0 },
+  { title: 'هايب (Hype)', icon: '⚡', color: 'text-cyan-400', min: 11 },
+  { title: 'برنس (Prince)', icon: '👑', color: 'text-purple-400', min: 51 },
+  { title: 'كينج (King)', icon: '🦁', color: 'text-yellow-500', min: 151 },
+  { title: 'أسطورة (Legend)', icon: '🌌', color: 'text-indigo-400', min: 301 },
+  { title: 'هايبر (HYPER)', icon: '💫', color: 'text-pink-500', min: 500 },
+];
+
 export default function Account() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -35,19 +45,23 @@ export default function Account() {
     getProfileData();
   }, []);
 
-  // --- منطق الحسبة الديناميكية (كل 50 مباراة لفل) ---
+  // --- منطق الحسبة الموحد بناءً على Hype Guide ---
   const matchesPlayed = profile?.total_matches || 0;
-  // الهدف القادم هو أقرب مضاعف للـ 50
-  const nextRankGoal = Math.ceil((matchesPlayed + 1) / 50) * 50;
-  const matchesLeft = nextRankGoal - matchesPlayed;
-  // نسبة التقدم في اللفل الحالي (0-100)
-  const progressPercentage = (matchesPlayed % 50) * 2; 
 
-  const getNextRankName = () => {
-    if (matchesPlayed < 50) return "SEMI-PRO 🥈";
-    if (matchesPlayed < 100) return "ELITE PLAYER 🥇";
-    if (matchesPlayed < 150) return "HYPER LEGEND 👑";
-    return "MAX LEVEL";
+  // تحديد الرانك الحالي والقادم بناءً على مصفوفة الرانكات
+  const currentRankData = [...RANKS_GUIDE].reverse().find(r => matchesPlayed >= r.min) || RANKS_GUIDE[0];
+  const nextRankData = RANKS_GUIDE[RANKS_GUIDE.indexOf(currentRankData) + 1];
+
+  // حساب عدد المباريات المتبقية
+  const matchesLeft = nextRankData ? nextRankData.min - matchesPlayed : 0;
+
+  // حساب نسبة التقدم للشريط (بناءً على المسافة بين الرانك الحالي والقادم)
+  const calculateProgress = () => {
+    if (!nextRankData) return 100;
+    const rangeSize = nextRankData.min - currentRankData.min;
+    const progressInRange = matchesPlayed - currentRankData.min;
+    const percentage = (progressInRange / rangeSize) * 100;
+    return Math.min(Math.max(percentage, 5), 100); // 5% كحد أدنى للشكل الجمالي
   };
 
   const handleLogout = async () => {
@@ -116,45 +130,55 @@ export default function Account() {
             </div>
             <div>
               <h2 className="text-2xl font-black italic uppercase leading-none mb-1">{t('welcomeBack')}</h2>
-              <span className="text-cyan-400 text-[10px] font-black uppercase tracking-widest">{profile?.current_rank || 'ROOKIE 🥉'}</span>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${currentRankData.color}`}>
+                {profile?.current_rank || currentRankData.title} {currentRankData.icon}
+              </span>
             </div>
           </div>
 
           {/* Stats Bar */}
           <div className="grid grid-cols-2 gap-3 mb-8">
-            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5">
+            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5 group-hover:border-cyan-500/30 transition-all">
                 <Award size={20} className="text-cyan-500" />
                 <div><span className="block text-[7px] font-black text-gray-500 uppercase">المباريات</span><span className="text-xl font-[1000] text-white italic">{matchesPlayed}</span></div>
             </div>
-            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5">
+            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5 group-hover:border-purple-500/30 transition-all">
                 <Star size={20} className="text-purple-400" />
                 <div><span className="block text-[7px] font-black text-gray-500 uppercase">النقاط</span><span className="text-xl font-[1000] text-white italic">{matchesPlayed * 50}</span></div>
             </div>
           </div>
 
-          {/* Dynamic Progress Engine */}
+          {/* Dynamic Progress Engine - Hype Guide Version */}
           <div className="bg-black/40 rounded-3xl p-6 border border-white/5 relative overflow-hidden">
              <div className="flex justify-between items-end mb-4">
                 <div className="space-y-1">
                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                       <Target size={12} className="text-yellow-500" /> اللقب القادم
                    </span>
-                   <h4 className="text-lg font-black italic text-white uppercase leading-none">{getNextRankName()}</h4>
+                   <h4 className="text-lg font-black italic text-white uppercase leading-none">
+                     {nextRankData ? nextRankData.title : 'أقصى تصنيف (HYPER) 💫'}
+                   </h4>
                 </div>
-                <span className="text-[10px] font-black text-cyan-400">{progressPercentage}%</span>
+                <span className="text-[10px] font-black text-cyan-400">{Math.floor(calculateProgress())}%</span>
              </div>
              
              {/* Progress Bar */}
              <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
                 <div 
-                  className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all duration-1000 ease-out"
-                  style={{ width: `${progressPercentage}%` }}
+                  className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all duration-1000 ease-out"
+                  style={{ width: `${calculateProgress()}%` }}
                 />
              </div>
              
-             <p className="text-[10px] font-bold text-gray-500 text-center mt-4 tracking-tighter uppercase">
-                تبقى <span className="text-white">{matchesLeft}</span> مباريات للوصول لـ <span className="text-yellow-500">{getNextRankName()}</span>
-             </p>
+             {nextRankData ? (
+               <p className="text-[10px] font-bold text-gray-500 text-center mt-4 tracking-tighter uppercase">
+                  تبقى <span className="text-white">{matchesLeft}</span> مباريات للوصول لـ <span className={nextRankData.color}>{nextRankData.title}</span>
+               </p>
+             ) : (
+               <p className="text-[10px] font-bold text-yellow-500 text-center mt-4 tracking-tighter uppercase">
+                  لقد وصلت لقمة الهرم في هايب بادل! 🦁🔥
+               </p>
+             )}
           </div>
         </div>
 
