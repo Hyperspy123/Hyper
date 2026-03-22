@@ -124,6 +124,8 @@ export default function BookCourt() {
       const startDate = new Date(startTimeISO);
       const endDate = new Date(startDate.getTime() + duration * 60000);
 
+      // بمجرد إدخال الحجز بوضع 'confirmed' ستقوم الـ Trigger في قاعدة البيانات 
+      // بزيادة عداد المباريات وتحديث الرانك في بروفايل المستخدم آلياً.
       const { error: bookingError } = await supabase.from('bookings').insert([{ 
         court_id: cleanId, 
         user_id: user.id, 
@@ -134,7 +136,7 @@ export default function BookCourt() {
 
       if (bookingError) throw bookingError;
 
-      toast.success("تم الحجز بنجاح! ننتظرك في الملعب 🎾");
+      toast.success("تم الحجز بنجاح! رانكك في تطور مستمر 🎾🚀");
       setTimeout(() => navigate('/rewards'), 1200);
 
     } catch (error: any) {
@@ -229,5 +231,3 @@ export default function BookCourt() {
     </div>
   );
 }
-
-// Last Sync: 2026-03-22 08:41 Riyadh Time Sync Fix
