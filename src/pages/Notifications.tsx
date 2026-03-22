@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { supabase } from '../LLL';
-import { ChevronLeft, Zap, BellOff, X, Loader2, Clock, CalendarCheck, Check } from 'lucide-react';
+import { ChevronLeft, Zap, BellOff, X, Loader2, CalendarCheck, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Notifications() {
@@ -57,19 +57,35 @@ export default function Notifications() {
     }
   };
 
-  // 🔥 التعديل هنا لحل مشكلة الـ 404
+  // 🔥 محرك القبول المطور لربط "الفزيع" بالطلب
   const handleInviteAction = async (notifId: string, postId: string, action: 'accept' | 'decline') => {
     if (action === 'accept') {
-      toast.success("أبشر بالفزعة! 🔥 جاري توجيهك لطلبات الفزعة...");
-      
-      // توجيه لصفحة الفزعة العامة بدلاً من رابط postId غير الموجود
-      // هذا يضمن عدم ظهور صفحة 404
-      navigate('/faz3a'); 
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 1. تسجيل اللاعب كمشارك في الفزعة (لضمان ظهورها في "الشباب طالبينك")
+        const { error: joinError } = await supabase
+          .from('faz3a_participants')
+          .insert([{ post_id: postId, participant_id: user.id }]);
+
+        if (joinError && joinError.code !== '23505') { // تجاهل الخطأ إذا كان منضماً مسبقاً
+          throw joinError;
+        }
+
+        toast.success("كفو! أبشر بالفزعة 🔥 جاري توجيهك لتنسيق اللعب...");
+        
+        // 2. التوجيه لصفحة الفزعة الرئيسية (تبويب طلباتي سيعالج الباقي)
+        navigate('/faz3a'); 
+      } catch (error: any) {
+        toast.error("حدث خطأ في قبول الفزعة أو ربما اكتمل العدد");
+        console.error(error.message);
+      }
     } else {
       toast.info("تم رفض الدعوة");
     }
     
-    // تحديث التنبيه كمقروء في الحالتين
+    // تحديث التنبيه كمقروء في كل الحالات
     await markAsRead(notifId);
   };
 
