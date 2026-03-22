@@ -3,12 +3,12 @@ import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useI18n } from '@/lib/i18n';
-import { User, Trophy, Calendar, Star, LogIn, Mail, Zap, ChevronLeft, ChevronRight, LogOut, Settings, Award, Bell, ShieldCheck } from 'lucide-react';
+import { User, Trophy, Calendar, Star, LogIn, Mail, Zap, ChevronLeft, ChevronRight, LogOut, Settings, Award, Bell, ShieldCheck, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Account() {
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null); // إضافة حالة للبروفايل
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { t, dir } = useI18n();
@@ -20,7 +20,6 @@ export default function Account() {
       
       if (currentUser) {
         setUser(currentUser);
-        // جلب البيانات الديناميكية (الرانك والمباريات) من جدول profiles
         const { data: profileData, error } = await supabase
           .from('profiles')
           .select('total_matches, current_rank')
@@ -35,6 +34,21 @@ export default function Account() {
     }
     getProfileData();
   }, []);
+
+  // --- منطق الحسبة الديناميكية (كل 50 مباراة لفل) ---
+  const matchesPlayed = profile?.total_matches || 0;
+  // الهدف القادم هو أقرب مضاعف للـ 50
+  const nextRankGoal = Math.ceil((matchesPlayed + 1) / 50) * 50;
+  const matchesLeft = nextRankGoal - matchesPlayed;
+  // نسبة التقدم في اللفل الحالي (0-100)
+  const progressPercentage = (matchesPlayed % 50) * 2; 
+
+  const getNextRankName = () => {
+    if (matchesPlayed < 50) return "SEMI-PRO 🥈";
+    if (matchesPlayed < 100) return "ELITE PLAYER 🥇";
+    if (matchesPlayed < 150) return "HYPER LEGEND 👑";
+    return "MAX LEVEL";
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -67,13 +81,8 @@ export default function Account() {
           <div className="w-20 h-20 bg-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-cyan-500/30">
             <User className="text-cyan-400" size={40} />
           </div>
-          <h2 className="text-2xl font-black mb-2 text-white italic tracking-tighter uppercase">{t('loginRequiredTitle')}</h2>
-          <p className="text-gray-400 text-sm mb-8 font-bold opacity-70">{t('loginRequiredDesc')}</p>
-          <button
-            onClick={() => navigate('/auth')}
-            className="w-full py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black text-lg shadow-lg shadow-cyan-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-          >
-            <LogIn size={20} />
+          <h2 className="text-2xl font-black mb-2 text-white italic uppercase tracking-tighter">{t('loginRequiredTitle')}</h2>
+          <button onClick={() => navigate('/auth')} className="w-full py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black">
             <span>{t('login')}</span>
           </button>
         </div>
@@ -86,100 +95,82 @@ export default function Account() {
       <Header />
 
       <div className="pt-24 max-w-lg mx-auto px-6 relative z-10">
-        {/* Header Section */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-[1000] italic uppercase tracking-tighter">
-            حسابي <span className="text-cyan-400">Account</span>
-          </h1>
-          
+          <h1 className="text-3xl font-[1000] italic uppercase tracking-tighter">حسابي <span className="text-cyan-400">Account</span></h1>
           <div className="flex gap-2">
-            <button 
-              onClick={() => navigate('/notifications')}
-              className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:text-yellow-400 transition-all active:scale-90 relative"
-            >
-              <Bell size={20} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-[#05081d]"></span>
+            <button onClick={() => navigate('/notifications')} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 relative">
+              <Bell size={20} /><span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-[#05081d]"></span>
             </button>
-            <button 
-              onClick={() => navigate('/settings')}
-              className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:text-cyan-400 transition-all active:scale-90"
-            >
-              <Settings size={20} />
-            </button>
+            <button onClick={() => navigate('/settings')} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400"><Settings size={20} /></button>
           </div>
         </div>
 
-        {/* Profile Card with Dynamic Rank */}
+        {/* Profile Card & Rank Engine */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/10 blur-[50px] rounded-full -ml-16 -mt-16 group-hover:bg-cyan-500/20 transition-all" />
-          
           <div className="flex items-center gap-5 mb-8 relative z-10">
             <div className="relative">
                 <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
                     <User size={36} className="text-[#0a0f3c]" />
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-black p-1.5 rounded-xl border-2 border-[#14224d]">
-                    <ShieldCheck size={14} className="fill-black" />
-                </div>
+                <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-black p-1.5 rounded-xl border-2 border-[#14224d]"><ShieldCheck size={14} className="fill-black" /></div>
             </div>
             <div>
-              <h2 className="text-2xl font-black italic tracking-tighter uppercase leading-none mb-1">{t('welcomeBack')}</h2>
-              {/* عرض الرانك الحقيقي القادم من قاعدة البيانات */}
-              <span className="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-cyan-500/30">
-                {profile?.current_rank || 'ROOKIE'}
-              </span>
+              <h2 className="text-2xl font-black italic uppercase leading-none mb-1">{t('welcomeBack')}</h2>
+              <span className="text-cyan-400 text-[10px] font-black uppercase tracking-widest">{profile?.current_rank || 'ROOKIE 🥉'}</span>
             </div>
           </div>
 
-          <div className="space-y-3 relative z-10">
-            <div className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-black/40 border border-white/5 overflow-hidden">
-              <Mail size={16} className="text-gray-500 flex-shrink-0" />
-              <span className="text-gray-300 font-bold text-xs truncate">{user.email}</span>
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5">
+                <Award size={20} className="text-cyan-500" />
+                <div><span className="block text-[7px] font-black text-gray-500 uppercase">المباريات</span><span className="text-xl font-[1000] text-white italic">{matchesPlayed}</span></div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5 group/stat hover:border-cyan-500/30 transition-all">
-                    <Award size={20} className="text-cyan-500 group-hover:scale-110 transition-transform" />
-                    <div>
-                        <span className="block text-[7px] font-black text-gray-500 uppercase tracking-tighter">المباريات</span>
-                        <span className="text-xl font-[1000] text-white leading-none italic">{profile?.total_matches || 0}</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5 group/stat hover:border-purple-500/30 transition-all">
-                    <Star size={20} className="text-purple-400" />
-                    <div>
-                        <span className="block text-[7px] font-black text-gray-500 uppercase tracking-tighter">النقاط</span>
-                        <span className="text-xl font-[1000] text-white leading-none italic">{(profile?.total_matches || 0) * 50}</span>
-                    </div>
-                </div>
+            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5">
+                <Star size={20} className="text-purple-400" />
+                <div><span className="block text-[7px] font-black text-gray-500 uppercase">النقاط</span><span className="text-xl font-[1000] text-white italic">{matchesPlayed * 50}</span></div>
             </div>
+          </div>
+
+          {/* Dynamic Progress Engine */}
+          <div className="bg-black/40 rounded-3xl p-6 border border-white/5 relative overflow-hidden">
+             <div className="flex justify-between items-end mb-4">
+                <div className="space-y-1">
+                   <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      <Target size={12} className="text-yellow-500" /> اللقب القادم
+                   </span>
+                   <h4 className="text-lg font-black italic text-white uppercase leading-none">{getNextRankName()}</h4>
+                </div>
+                <span className="text-[10px] font-black text-cyan-400">{progressPercentage}%</span>
+             </div>
+             
+             {/* Progress Bar */}
+             <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <div 
+                  className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all duration-1000 ease-out"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+             </div>
+             
+             <p className="text-[10px] font-bold text-gray-500 text-center mt-4 tracking-tighter uppercase">
+                تبقى <span className="text-white">{matchesLeft}</span> مباريات للوصول لـ <span className="text-yellow-500">{getNextRankName()}</span>
+             </p>
           </div>
         </div>
 
         {/* Menu Items */}
         <div className="space-y-3">
           {menuItems.map(item => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className="w-full flex items-center justify-between px-5 py-5 rounded-[24px] bg-white/5 border border-white/10 hover:border-cyan-500/40 hover:bg-white/10 transition-all group active:scale-[0.98]"
-            >
+            <button key={item.path} onClick={() => navigate(item.path)} className="w-full flex items-center justify-between px-5 py-5 rounded-[24px] bg-white/5 border border-white/10 hover:border-cyan-500/40 transition-all group active:scale-[0.98]">
               <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl ${item.bg} flex items-center justify-center transition-transform group-hover:scale-110`}>
-                  <item.icon size={20} className={item.color} />
-                </div>
+                <div className={`w-12 h-12 rounded-2xl ${item.bg} flex items-center justify-center transition-transform group-hover:scale-110`}><item.icon size={20} className={item.color} /></div>
                 <span className="text-white text-sm font-black uppercase tracking-tight">{item.label}</span>
               </div>
-              <Arrow size={18} className="text-gray-600 group-hover:text-cyan-400 transition-colors" />
+              <Arrow size={18} className="text-gray-600" />
             </button>
           ))}
-          
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-5 py-5 mt-4 rounded-[24px] bg-red-500/10 border border-red-500/20 text-red-400 font-black text-sm uppercase hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]"
-          >
-            <LogOut size={18} />
-            <span>تسجيل الخروج</span>
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-5 py-5 mt-4 rounded-[24px] bg-red-500/10 border border-red-500/20 text-red-400 font-black text-sm uppercase transition-all active:scale-[0.98]">
+            <LogOut size={18} /><span>تسجيل الخروج</span>
           </button>
         </div>
       </div>
