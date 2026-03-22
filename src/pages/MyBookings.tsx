@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Calendar, Clock, ChevronLeft, Hash, Loader2, Zap, Trash2, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, ChevronLeft, Hash, Loader2, Zap, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -44,7 +44,9 @@ export default function MyBookings() {
     setIsModalOpen(true);
   };
 
-  // --- الدالة المحدثة ---
+  /**
+   * دالة التحويل المعدلة لضمان ظهور الإشعار واختفاء العنصر
+   */
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
     
@@ -65,27 +67,28 @@ export default function MyBookings() {
 
       if (insertError) throw insertError;
 
-      // 2. حذف الحجز الأصلي (أو تحديث حالته لكي لا يظهر)
+      // 2. حذف الحجز الأصلي من قاعدة البيانات
       const { error: deleteError } = await supabase.from('bookings').delete().eq('id', selectedBooking.id);
-      
       if (deleteError) throw deleteError;
 
-      // 3. إخفاء الحجز من القائمة المحلية فوراً
+      // 3. إظهار إشعار النجاح (يجب أن يكون قبل الـ navigate)
+      toast.success(`كفو! تم تحويل طلبك لفزعة في ${selectedBooking.courts?.name} 🔥`, {
+        duration: 4000,
+      });
+
+      // 4. إخفاء الحجز من القائمة المحلية فوراً لضمان تجربة سريعة
       setBookings(prev => prev.filter(b => b.id !== selectedBooking.id));
       
-      // 4. إغلاق المودال
+      // 5. إغلاق المودال
       setIsModalOpen(false);
 
-      // 5. إظهار إشعار النجاح
-      toast.success(`كفو! تم تحويل طلبك لفزعة في ${selectedBooking.courts?.name} 🔥`);
-
-      // 6. التوجه لصفحة الفزعة
+      // 6. تأخير بسيط جداً للانتقال لضمان بقاء الإشعار ثابتاً على الشاشة
       setTimeout(() => {
         navigate('/faz3a');
-      }, 1000);
+      }, 800);
 
     } catch (error: any) {
-      console.error(error);
+      console.error("Conversion error:", error);
       toast.error("فشل التحويل، حاول مرة أخرى");
     } finally {
       setIsConverting(false);
@@ -162,11 +165,6 @@ export default function MyBookings() {
                       </div>
                     </div>
                   </div>
-                  <div className={`px-4 py-1.5 rounded-full text-[9px] font-[1000] uppercase tracking-tighter border ${
-                    booking.status === 'confirmed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
-                  }`}>
-                    {booking.status === 'confirmed' ? 'مؤكد' : 'ملغي'}
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -207,7 +205,7 @@ export default function MyBookings() {
                   key={num} 
                   onClick={() => setMissingCount(num)} 
                   className={`flex-1 py-4 rounded-2xl font-[1000] transition-all border ${
-                    missingCount === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-105' : 'bg-white/10 border-white/10 text-gray-400'
+                    missingCount === num ? 'bg-cyan-400 border-cyan-400 text-[#0a0f3c] scale-105' : 'bg-white/10 border-white/10 text-gray-400'
                   }`}
                 >
                   {num}
