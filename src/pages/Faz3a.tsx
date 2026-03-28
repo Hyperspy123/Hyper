@@ -144,7 +144,7 @@ export default function Faz3a() {
     try {
       const { error } = await supabase.from('faz3a_posts').insert([{ creator_id: currentUserId, missing_players: missingPlayers, location: 'الصحافة', court_name: 'ملعب هايب', match_time: '10:00 PM' }]);
       if (!error) {
-        toast.success("تم النشر! ادعُ الأبطال الآن");
+        toast.success("تم النشر! ادعُ الشباب الآن");
         setIsModalOpen(false);
         setActiveTab('community');
       }
