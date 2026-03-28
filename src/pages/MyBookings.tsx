@@ -57,16 +57,18 @@ export default function MyBookings() {
     }
   };
 
+  // 🔥 الدالة المحدثة لضمان انتقال الفزعة بنجاح
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
     const bookingId = selectedBooking.id;
-    const courtName = selectedBooking.courts?.name;
+    const courtName = selectedBooking.courts?.name || "ملعب هايب";
     setIsConverting(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("مستخدم غير مسجل");
 
+      // 1. تحديث حالة الحجز إلى 'converted' لكي يختفي من القائمة
       const { error: updateError } = await supabase
         .from('bookings')
         .update({ status: 'converted' })
@@ -74,21 +76,36 @@ export default function MyBookings() {
       
       if (updateError) throw updateError;
 
-      await supabase.from('faz3a_posts').insert([{
+      // 2. تنسيق الوقت بشكل عالمي (لضمان القبول في قاعدة البيانات)
+      const formattedTime = new Date(selectedBooking.start_time).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+
+      // 3. إرسال البيانات لساحة الفزعات
+      const { error: insertError } = await supabase.from('faz3a_posts').insert([{
           creator_id: user.id,
-          location: 'الصحافة', 
+          location: 'حي الصحافة', 
           court_name: courtName,
-          match_time: new Date(selectedBooking.start_time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+          match_time: formattedTime,
           missing_players: missingCount,
           is_from_booking: true
       }]);
 
+      if (insertError) throw insertError;
+
+      // 4. تحديث الواجهة والتوجيه
       setBookings(prev => prev.filter(b => b.id !== bookingId));
       setIsModalOpen(false);
-      toast.success("كفو! تم التحويل لساحة الفزعات 🔥");
-      setTimeout(() => navigate('/faz3a'), 800);
+      toast.success("كفو! حجزك الحين في ساحة الفزعات 🔥");
+      
+      // ننتظر قليلاً ثم نتوجه لصفحة الفزعة
+      setTimeout(() => navigate('/faz3a'), 500);
+
     } catch (error: any) {
-      toast.error("فشل التحويل");
+      console.error("Conversion Error:", error);
+      toast.error("فشل التحويل، حاول مجدداً");
     } finally {
       setIsConverting(false);
     }
@@ -182,13 +199,10 @@ export default function MyBookings() {
         )}
       </main>
 
-      {/* مودال التحويل المطور - بسيط وأنيق */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-3xl animate-in fade-in duration-300">
           <div className="relative bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[50px] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden text-right" dir="rtl">
-            
             <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 blur-[100px] rounded-full"></div>
-
             <div className="relative z-10 space-y-10 text-right">
               <div className="flex justify-between items-center text-right">
                 <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 rounded-2xl text-gray-500 hover:text-white transition-all active:scale-90">
@@ -214,14 +228,14 @@ export default function MyBookings() {
                       }`}
                     >
                       <User size={22} className={`${missingCount === num ? 'animate-bounce' : 'opacity-20'}`} />
-                      <span className="text-2xl font-[1000] italic leading-none mt-1">{num}</span>
+                      <span className="text-2xl font-[1000] italic leading-none mt-1 text-center">{num}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="space-y-4 text-right">
-                 <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest px-2 italic text-right leading-none">2. تفاصيل الفزعة</p>
+                 <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest px-2 italic text-right leading-none">2. مراجعة البيانات</p>
                  <div className="bg-white/5 rounded-[30px] p-6 border border-white/5 space-y-4 text-right shadow-inner">
                     <div className="flex items-center justify-between text-right">
                        <span className="text-xs font-black text-white italic text-right">{selectedBooking?.courts?.name}</span>
@@ -239,16 +253,9 @@ export default function MyBookings() {
               <button 
                 onClick={handleFinalConversion} 
                 disabled={isConverting} 
-                className="group relative w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_20px_40px_rgba(34,211,238,0.2)] overflow-hidden"
+                className="group relative w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_20px_40px_rgba(34,211,238,0.2)]"
               >
-                {isConverting ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  <>
-                    <Zap size={18} className="fill-current group-hover:scale-125 transition-transform" />
-                    <span>انشر الفزعة الآن 🔥</span>
-                  </>
-                )}
+                {isConverting ? <Loader2 className="animate-spin" size={20} /> : <><Zap size={18} fill="currentColor" /> انشر الفزعة الآن 🔥</>}
               </button>
             </div>
           </div>
