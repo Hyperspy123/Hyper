@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Calendar, Clock, ChevronLeft, Hash, Loader2, Zap, Trash2, X, User, MapPin } from 'lucide-react';
+import { Calendar, Clock, ChevronLeft, Hash, Loader2, Zap, Trash2, X, User, MapPin, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -57,7 +57,6 @@ export default function MyBookings() {
     }
   };
 
-  // 🔥 الدالة المحدثة لضمان انتقال الفزعة بنجاح
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
     const bookingId = selectedBooking.id;
@@ -66,9 +65,30 @@ export default function MyBookings() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("مستخدم غير مسجل");
+      if (!user) throw new Error("يجب تسجيل الدخول أولاً");
 
-      // 1. تحديث حالة الحجز إلى 'converted' لكي يختفي من القائمة
+      // تنسيق الوقت بشكل نصي بسيط (10:00 PM)
+      const formattedTime = new Date(selectedBooking.start_time).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+
+      // 1. إنشاء الفزعة أولاً
+      const { error: insertError } = await supabase
+        .from('faz3a_posts')
+        .insert([{
+            creator_id: user.id,
+            location: 'الرياض - حي الصحافة', 
+            court_name: courtName,
+            match_time: formattedTime,
+            missing_players: missingCount,
+            is_from_booking: true
+        }]);
+
+      if (insertError) throw new Error(`خطأ قاعدة بيانات: ${insertError.message}`);
+
+      // 2. تحديث حالة الحجز لكي يختفي
       const { error: updateError } = await supabase
         .from('bookings')
         .update({ status: 'converted' })
@@ -76,36 +96,16 @@ export default function MyBookings() {
       
       if (updateError) throw updateError;
 
-      // 2. تنسيق الوقت بشكل عالمي (لضمان القبول في قاعدة البيانات)
-      const formattedTime = new Date(selectedBooking.start_time).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      });
-
-      // 3. إرسال البيانات لساحة الفزعات
-      const { error: insertError } = await supabase.from('faz3a_posts').insert([{
-          creator_id: user.id,
-          location: 'حي الصحافة', 
-          court_name: courtName,
-          match_time: formattedTime,
-          missing_players: missingCount,
-          is_from_booking: true
-      }]);
-
-      if (insertError) throw insertError;
-
-      // 4. تحديث الواجهة والتوجيه
+      // النجاح
       setBookings(prev => prev.filter(b => b.id !== bookingId));
       setIsModalOpen(false);
       toast.success("كفو! حجزك الحين في ساحة الفزعات 🔥");
       
-      // ننتظر قليلاً ثم نتوجه لصفحة الفزعة
-      setTimeout(() => navigate('/faz3a'), 500);
+      setTimeout(() => navigate('/faz3a'), 600);
 
     } catch (error: any) {
+      toast.error(error.message || "فشل التحويل");
       console.error("Conversion Error:", error);
-      toast.error("فشل التحويل، حاول مجدداً");
     } finally {
       setIsConverting(false);
     }
@@ -149,7 +149,7 @@ export default function MyBookings() {
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={32} /></div>
         ) : filteredBookings.length === 0 ? (
-          <div className="text-center py-24 bg-white/5 rounded-[50px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase italic tracking-widest leading-none">
+          <div className="text-center py-24 bg-white/5 rounded-[50px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase italic tracking-widest leading-none text-center">
             لا توجد حجوزات
           </div>
         ) : (
@@ -157,28 +157,28 @@ export default function MyBookings() {
             {filteredBookings.map((booking) => (
               <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 space-y-6 shadow-2xl">
                 <div className="flex items-center gap-5 text-right">
-                  <div className="w-16 h-16 rounded-[22px] overflow-hidden border border-white/10 shadow-inner">
+                  <div className="w-16 h-16 rounded-[22px] overflow-hidden border border-white/10">
                     <img src={booking.courts?.image_url} className="w-full h-full object-cover grayscale-[20%]" />
                   </div>
                   <div className="text-right">
                     <h3 className="font-black text-xl italic leading-none mb-1 text-white text-right">{booking.courts?.name}</h3>
-                    <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest text-right opacity-60 italic">
+                    <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest text-right opacity-60 italic leading-none">
                         <Hash size={10} className="inline ml-1" /> {booking.id.slice(0,8).toUpperCase()}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-right">
-                  <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300 text-right">
+                  <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300">
                     <Calendar size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleDateString('ar-EG')}
                   </div>
-                  <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300 text-right">
+                  <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300">
                     <Clock size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}
                   </div>
                 </div>
 
                 {activeTab === 'current' && (
-                  <div className="flex gap-2 pt-2 text-right">
+                  <div className="flex gap-2 pt-2">
                     <button 
                       onClick={() => { setSelectedBooking(booking); setIsModalOpen(true); }}
                       className="flex-[2] py-4.5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-cyan-400"
@@ -187,7 +187,7 @@ export default function MyBookings() {
                     </button>
                     <button 
                       onClick={() => handleCancelBooking(booking.id)}
-                      className="flex-1 py-4.5 bg-white/5 text-red-500 border border-red-500/20 rounded-[24px] font-[1000] text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-red-500/10"
+                      className="flex-1 py-4.5 bg-white/5 text-red-500 border border-red-500/20 rounded-[24px] font-[1000] text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
                     >
                       <Trash2 size={15} /> إلغاء
                     </button>
@@ -199,18 +199,20 @@ export default function MyBookings() {
         )}
       </main>
 
+      {/* مودال التحويل المطور والفخم */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-3xl animate-in fade-in duration-300">
           <div className="relative bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[50px] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden text-right" dir="rtl">
             <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 blur-[100px] rounded-full"></div>
-            <div className="relative z-10 space-y-10 text-right">
+            <div className="relative z-10 space-y-10">
+              
               <div className="flex justify-between items-center text-right">
                 <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 rounded-2xl text-gray-500 hover:text-white transition-all active:scale-90">
                   <X size={20} />
                 </button>
                 <div className="text-right">
                   <h3 className="text-3xl font-[1000] italic text-white tracking-tighter uppercase leading-none text-right">تحويل <span className="text-cyan-400">لفزعة</span></h3>
-                  <p className="text-[9px] font-black text-gray-500 uppercase mt-2 tracking-[0.2em] italic text-right">انشر حجزك وابحث عن محترفين</p>
+                  <p className="text-[9px] font-black text-gray-500 uppercase mt-2 tracking-[0.2em] italic text-right">انشر حجزك وابحث عن فزيعة</p>
                 </div>
               </div>
 
@@ -253,7 +255,7 @@ export default function MyBookings() {
               <button 
                 onClick={handleFinalConversion} 
                 disabled={isConverting} 
-                className="group relative w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_20px_40px_rgba(34,211,238,0.2)]"
+                className="group relative w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_20px_40px_rgba(34,211,238,0.2)] overflow-hidden"
               >
                 {isConverting ? <Loader2 className="animate-spin" size={20} /> : <><Zap size={18} fill="currentColor" /> انشر الفزعة الآن 🔥</>}
               </button>
