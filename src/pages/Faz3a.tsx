@@ -206,7 +206,7 @@ export default function Faz3a() {
             <div className="space-y-10 animate-in fade-in duration-500">
               {myRequests.length > 0 && (
                 <div className="space-y-4">
-                   <h3 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] px-4 italic leading-none">طلباتي النشطة</h3>
+                   <h3 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] px-4 italic leading-none text-right">طلباتي النشطة</h3>
                    {myRequests.map(post => (
                       <div key={post.id} className="bg-white/5 border border-cyan-500/20 rounded-[35px] p-7 flex justify-between items-center backdrop-blur-xl">
                          <div className="text-right">
@@ -220,13 +220,13 @@ export default function Faz3a() {
               )}
               {joinedRequests.length > 0 && (
                 <div className="space-y-4">
-                   <h3 className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] px-4 italic leading-none">الشباب طالبينك 🔥</h3>
+                   <h3 className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] px-4 italic leading-none text-right">الشباب طالبينك 🔥</h3>
                    {joinedRequests.map(post => (
-                      <div key={post.id} className="relative bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/30 rounded-[35px] p-7 space-y-5 shadow-2xl overflow-hidden">
+                      <div key={post.id} className="relative bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/30 rounded-[35px] p-7 space-y-5 shadow-2xl overflow-hidden text-right">
                          <div className="absolute top-4 left-4 bg-yellow-500 text-[#0a0f3c] px-3 py-1 rounded-full text-[8px] font-black uppercase italic rotate-[-5deg] shadow-lg">الشباب طالبينك</div>
                          <div className="flex items-center gap-4 text-right">
                             <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 font-black border border-yellow-500/20">{post.profiles?.first_name?.[0]}</div>
-                            <div>
+                            <div className="text-right">
                                <h4 className="font-black text-sm italic text-white leading-none mb-1">داعي الفزعة: <span className="text-yellow-500">{post.profiles?.first_name}</span></h4>
                                <p className="text-[9px] text-gray-500 font-bold uppercase">{post.court_name}</p>
                             </div>
@@ -250,10 +250,10 @@ export default function Faz3a() {
             </div>
           ) : (
              communityPlayers.map(player => (
-               <div key={player.id} className="bg-white/5 border border-white/10 rounded-[35px] p-6 flex items-center justify-between backdrop-blur-xl group hover:border-cyan-500/30 transition-all">
+               <div key={player.id} className="bg-white/5 border border-white/10 rounded-[35px] p-6 flex items-center justify-between backdrop-blur-xl group hover:border-cyan-500/30 transition-all text-right">
                   <div className="flex items-center gap-4 text-right">
                     <div className="w-14 h-14 rounded-2xl bg-cyan-500/5 border border-white/5 flex items-center justify-center font-black text-cyan-400 text-lg group-hover:scale-110 transition-transform">{player.first_name?.[0]}</div>
-                    <div>
+                    <div className="text-right">
                       <h4 className="font-black text-lg italic text-white leading-none mb-1">{player.first_name}</h4>
                       <span className="text-[9px] font-black text-cyan-500/60 uppercase tracking-widest italic">{player.current_rank || 'ROOKIE'}</span>
                     </div>
@@ -268,24 +268,80 @@ export default function Faz3a() {
 
         <button onClick={() => setIsModalOpen(true)} className="fixed bottom-28 left-6 w-18 h-18 bg-cyan-500 rounded-[22px] flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.4)] z-50 border-4 border-[#05081d] active:scale-90 transition-all hover:scale-110"><Plus size={36} className="text-[#0a0f3c]" strokeWidth={3} /></button>
 
+        {/* مودال إنشاء فزعة - التصميم الجديد المطور والواضح جداً */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl animate-in fade-in">
-            <div className="bg-[#0a0f3c]/90 border border-white/10 w-full max-w-sm rounded-[45px] p-10 space-y-8 shadow-2xl text-right" dir="rtl">
-              <div className="flex justify-between items-center">
-                <h3 className="text-3xl font-[1000] italic text-cyan-400 uppercase leading-none">إنشاء فزعة</h3>
-                <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white/5 rounded-full text-gray-500 hover:text-white transition-colors"><X size={20} /></button>
-              </div>
-              <div className="space-y-5">
-                <label className="text-[10px] font-black text-gray-500 uppercase px-2 italic tracking-widest leading-none">كم بطل ناقصك؟</label>
-                <div className="flex gap-3">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#05081d]/95 backdrop-blur-xl animate-in fade-in duration-300">
+            <div className="relative bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[40px] p-8 shadow-2xl overflow-hidden text-right" dir="rtl">
+              
+              <div className="absolute -top-20 -left-20 w-40 h-40 bg-cyan-500/5 blur-[100px] rounded-full"></div>
+
+              <div className="relative z-10 space-y-8">
+                
+                <div className="flex justify-between items-center text-right">
+                   <div className="text-right">
+                      <span className="text-[9px] font-black text-cyan-400 uppercase tracking-[0.2em] bg-cyan-500/10 px-3 py-1 rounded-full italic">الخطوة 1 من 2</span>
+                      <h3 className="text-3xl font-[1000] italic text-white mt-3 leading-none text-right">كم لاعب <span className="text-cyan-400">ناقصك؟</span></h3>
+                   </div>
+                   <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white/5 rounded-full text-gray-500 hover:text-white transition-colors">
+                      <X size={24} />
+                   </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
                   {[1, 2, 3].map(num => (
-                    <button key={num} onClick={() => setMissingPlayers(num)} className={`flex-1 py-5 rounded-[22px] font-[1000] text-lg border transition-all ${missingPlayers === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-xl shadow-cyan-500/40 scale-105' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}>{num}</button>
+                    <button 
+                      key={num} 
+                      onClick={() => setMissingPlayers(num)} 
+                      className={`flex items-center justify-between p-5 rounded-3xl border-2 transition-all duration-300 text-right ${
+                        missingPlayers === num 
+                        ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-[0_10px_20px_rgba(34,211,238,0.2)] scale-[1.02]' 
+                        : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4 text-right">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${missingPlayers === num ? 'bg-[#0a0f3c] text-cyan-400' : 'bg-white/5 text-gray-600'}`}>
+                           <User size={20} />
+                        </div>
+                        <div className="text-right">
+                           <p className="font-black text-sm italic leading-none text-right">أحتاج {num} لاعبين</p>
+                           <p className={`text-[9px] font-bold uppercase mt-1 text-right ${missingPlayers === num ? 'text-[#0a0f3c]/60' : 'text-gray-600'}`}>لتكملة الفريق</p>
+                        </div>
+                      </div>
+                      {missingPlayers === num && <CheckCircle2 size={24} className="animate-in zoom-in" />}
+                    </button>
                   ))}
                 </div>
+
+                <div className="pt-4 border-t border-white/5 space-y-4 text-right">
+                   <div className="text-right">
+                      <span className="text-[9px] font-black text-cyan-400 uppercase tracking-[0.2em] bg-cyan-500/10 px-3 py-1 rounded-full italic">الخطوة 2 من 2</span>
+                      <p className="text-xs font-black text-white mt-3 italic text-right">سيتم النشر في الموقع التالي:</p>
+                   </div>
+                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+                      <MapPin size={18} className="text-cyan-500" />
+                      <div className="text-right">
+                         <p className="text-[11px] font-black text-white italic text-right">ملعب هايب (فرع الصحافة)</p>
+                         <p className="text-[9px] text-gray-500 font-bold uppercase text-right">الرياض، المملكة العربية السعودية</p>
+                      </div>
+                   </div>
+                </div>
+
+                <button 
+                  onClick={handleCreatePost} 
+                  disabled={isSubmitting} 
+                  className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-3xl font-[1000] uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl hover:brightness-110"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <>
+                      <Zap size={18} className="fill-current" />
+                      انشر طلب الفزعة الآن 🔥
+                    </>
+                  )}
+                </button>
+
               </div>
-              <button onClick={handleCreatePost} disabled={isSubmitting} className="w-full py-5.5 bg-cyan-500 text-[#0a0f3c] rounded-[26px] font-[1000] uppercase text-xs flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all">
-                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <><Zap size={18} className="fill-current" /> انشر الفزعة وادعُ أصحابك 🔥</>}
-              </button>
             </div>
           </div>
         )}
