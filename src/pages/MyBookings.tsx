@@ -63,6 +63,7 @@ export default function MyBookings() {
     }
   };
 
+  // 🔥 الدالة الذهبية: تحويل الحجز لفزعة وضمان عدم الضياع
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
     const bookingId = selectedBooking.id;
@@ -70,48 +71,53 @@ export default function MyBookings() {
     setIsConverting(true);
 
     try {
+      // 1. التأكد من هوية المستخدم
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("يجب تسجيل الدخول أولاً");
 
-      // 1. تنسيق الوقت بشكل متوافق مع SQL (10:00 PM)
+      // 2. تنسيق الوقت ليظهر بشكل صحيح في ساحة الفزعات (10:00 PM)
       const formattedTime = new Date(selectedBooking.start_time).toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit',
         hour12: true 
       });
 
-      // 2. إرسال الفزعة أولاً (لضمان وجودها قبل تغيير حالة الحجز)
+      // 3. الخطوة الأهم: إرسال الفزعة لجدول faz3a_posts أولاً
       const { error: insertError } = await supabase
         .from('faz3a_posts')
         .insert([{
             creator_id: user.id,
-            location: 'حي الصحافة', 
+            location: 'حي الصحافة - الرياض', 
             court_name: courtName,
             match_time: formattedTime,
             missing_players: missingCount,
-            is_from_booking: true // هذا العمود أضفناه في SQL لتمييز الحجز المحول
+            is_from_booking: true // العلامة التي تجعلها تظهر في "فزعاتي"
         }]);
 
-      if (insertError) throw insertError;
+      if (insertError) throw new Error(`فشل نشر الفزعة: ${insertError.message}`);
 
-      // 3. تحديث حالة الحجز لكي يختفي من القائمة القادمة
+      // 4. الآن نحدث حالة الحجز الأصلي لكي يختفي من "الحجوزات القادمة"
       const { error: updateError } = await supabase
         .from('bookings')
         .update({ status: 'converted' })
         .eq('id', bookingId);
       
-      if (updateError) throw updateError;
+      if (updateError) throw new Error(`فشل تحديث حالة الحجز: ${updateError.message}`);
 
-      // 4. تحديث الواجهة والتوجيه
+      // 5. تحديث الواجهة المحلية وحذف الحجز المحول من القائمة
       setBookings(prev => prev.filter(b => b.id !== bookingId));
       setIsModalOpen(false);
-      toast.success("كفو! حجزك الحين في ساحة الفزعات 🔥");
       
-      setTimeout(() => navigate('/faz3a'), 600);
+      toast.success("كفو! حجزك الحين منور في ساحة الفزعات 🔥");
+      
+      // 6. التوجيه المباشر لساحة الفزعات لمشاهدة النتيجة
+      setTimeout(() => {
+        navigate('/faz3a');
+      }, 800);
 
     } catch (error: any) {
-      console.error("Conversion Error:", error);
-      toast.error(error.message || "فشل التحويل، تأكد من إعدادات قاعدة البيانات");
+      console.error("Critical Error:", error);
+      toast.error(error.message || "حدث خطأ غير متوقع أثناء التحويل");
     } finally {
       setIsConverting(false);
     }
@@ -184,7 +190,7 @@ export default function MyBookings() {
                 </div>
 
                 {activeTab === 'current' && (
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-2 pt-2 text-right">
                     <button 
                       onClick={() => { setSelectedBooking(booking); setIsModalOpen(true); }}
                       className="flex-[2] py-4.5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-cyan-400"
@@ -205,9 +211,9 @@ export default function MyBookings() {
         )}
       </main>
 
-      {/* مودال التحويل المطور والفخم */}
+      {/* مودال التحويل المطور - نيون وكاريزما */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-3xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-3xl animate-in fade-in duration-300 text-right">
           <div className="relative bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[50px] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden text-right" dir="rtl">
             <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 blur-[100px] rounded-full"></div>
             <div className="relative z-10 space-y-10 text-right">
@@ -244,7 +250,7 @@ export default function MyBookings() {
 
               <div className="space-y-4 text-right">
                  <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest px-2 italic text-right leading-none">2. مراجعة البيانات</p>
-                 <div className="bg-white/5 rounded-[30px] p-6 border border-white/5 space-y-4 text-right shadow-inner text-right">
+                 <div className="bg-white/5 rounded-[30px] p-6 border border-white/5 space-y-4 text-right shadow-inner">
                     <div className="flex items-center justify-between text-right">
                        <span className="text-xs font-black text-white italic text-right">{selectedBooking?.courts?.name}</span>
                        <MapPin size={16} className="text-gray-600 ml-2" />
