@@ -10,7 +10,6 @@ export default function Header() {
   const [unreadCount, setUnreadCount] = useState(0); 
   const navigate = useNavigate();
 
-  // 1. منطق الرانك والقادم بناءً على عدد المباريات
   const getRankProgress = (matches: number) => {
     if (matches < 11) return { next: 'HYPE ⚡', min: 0, max: 11 };
     if (matches < 51) return { next: 'PRINCE 👑', min: 11, max: 51 };
@@ -20,7 +19,6 @@ export default function Header() {
     return { next: 'MAX LEVEL 🏆', min: 501, max: 501 };
   };
 
-  // 2. جلب بيانات البروفايل والرانك
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
@@ -30,42 +28,64 @@ export default function Header() {
     if (data) setProfile(data);
   }, []);
 
-  // 3. جلب حالة الإشعارات
+  // تحسين جلب عدد التنبيهات ليكون أدق
   const fetchUnreadStatus = useCallback(async () => {
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (!currentUser) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
       setUnreadCount(0);
       return;
     }
-    const { count: systemCount } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('is_read', false);
-    const { count: inviteCount } = await supabase.from('faz3a_invites').select('*', { count: 'exact', head: true }).eq('receiver_id', currentUser.id).eq('status', 'pending');
+
+    const userId = session.user.id;
+
+    // جلب عدد التنبيهات غير المقروءة
+    const { count: systemCount } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    // جلب عدد الدعوات المعلقة (إذا كنت تستخدم هذا الجدول)
+    const { count: inviteCount } = await supabase
+      .from('faz3a_invites')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', userId)
+      .eq('status', 'pending');
+
     setUnreadCount((systemCount || 0) + (inviteCount || 0));
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user) {
+    // التحقق المبدئي من الجلسة
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
         fetchUnreadStatus();
-        fetchProfile(user.id);
+        fetchProfile(currentUser.id);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
         fetchUnreadStatus();
-        fetchProfile(session.user.id);
+        fetchProfile(currentUser.id);
       } else {
         setUnreadCount(0);
         setProfile(null);
       }
     });
 
-    const channel = supabase.channel('header-all-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchUnreadStatus())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'faz3a_invites' }, () => fetchUnreadStatus())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => setProfile(payload.new as any))
+    // مراقبة التغييرات اللحظية بدقة
+    const channel = supabase.channel('header-live-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        fetchUnreadStatus();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+        if (payload.new) setProfile(payload.new as any);
+      })
       .subscribe();
 
     return () => {
@@ -74,7 +94,6 @@ export default function Header() {
     };
   }, [fetchUnreadStatus, fetchProfile]);
 
-  // 🔥 إصلاح خطأ تسجيل الخروج
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -85,7 +104,6 @@ export default function Header() {
     }
   };
 
-  // حسابات شريط التقدم
   const progress = profile ? getRankProgress(profile.total_matches) : { next: '', min: 0, max: 1 };
   const percentage = profile ? Math.min(100, ((profile.total_matches - progress.min) / (progress.max - progress.min)) * 100) : 0;
 
@@ -122,7 +140,9 @@ export default function Header() {
         <div className="flex items-center gap-2.5" dir="ltr">
           <button onClick={() => navigate('/notifications')} className="relative p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 transition-all active:scale-90">
             <Bell size={20} />
-            {unreadCount > 0 && <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0f3c] animate-pulse" />}
+            {unreadCount > 0 && (
+              <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0f3c] animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
+            )}
           </button>
 
           {user && (
@@ -138,7 +158,6 @@ export default function Header() {
             {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          {/* القائمة المنسدلة */}
           <div className={`absolute top-20 left-6 w-[220px] bg-[#14224d]/98 backdrop-blur-3xl border border-white/10 rounded-[28px] shadow-2xl transition-all duration-300 z-[120] overflow-hidden ${isMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'}`} style={{ transformOrigin: 'top left' }}>
             <div className="p-3 space-y-1" dir="rtl">
               {[
@@ -166,7 +185,6 @@ export default function Header() {
         {isMenuOpen && <div className="fixed inset-0 z-[115] bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />}
       </header>
       
-      {/* Spacer لتعويض طول الهيدر */}
       <div className="h-24 w-full pointer-events-none" />
     </>
   );
