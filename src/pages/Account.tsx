@@ -3,7 +3,7 @@ import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useI18n } from '@/lib/i18n';
-import { User, Trophy, Calendar, Star, LogIn, Mail, Zap, ChevronLeft, ChevronRight, LogOut, Settings, Award, Bell, ShieldCheck, Target, ArrowUpRight } from 'lucide-react';
+import { User, Trophy, Calendar, Star, Zap, ChevronLeft, LogOut, Settings, Award, Bell, ShieldCheck, Target, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 const RANKS_GUIDE = [
@@ -20,7 +20,6 @@ export default function Account() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { t, dir } = useI18n();
 
   useEffect(() => {
     async function getProfileData() {
@@ -41,10 +40,9 @@ export default function Account() {
   }, []);
 
   const matchesPlayed = profile?.total_matches || 0;
-  const currentPoints = matchesPlayed * 50; // الحسبة: كل مباراة بـ 50 نقطة
+  const currentPoints = matchesPlayed * 50; 
   const currentRankData = [...RANKS_GUIDE].reverse().find(r => matchesPlayed >= r.min) || RANKS_GUIDE[0];
   const nextRankData = RANKS_GUIDE[RANKS_GUIDE.indexOf(currentRankData) + 1];
-  const matchesLeft = nextRankData ? nextRankData.min - matchesPlayed : 0;
 
   const calculateProgress = () => {
     if (!nextRankData) return 100;
@@ -74,13 +72,13 @@ export default function Account() {
           </div>
         </div>
 
-        {/* بطاقة البروفايل */}
+        {/* Profile Card */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 shadow-2xl relative overflow-hidden group">
           <div className="flex items-center gap-5 mb-8">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
               <User size={36} className="text-[#0a0f3c]" />
             </div>
-            <div>
+            <div className="text-right">
               <h2 className="text-2xl font-black italic uppercase leading-none mb-1">يا هلا بطل!</h2>
               <span className={`text-[10px] font-black uppercase tracking-widest ${currentRankData.color}`}>
                 {profile?.current_rank || currentRankData.title} {currentRankData.icon}
@@ -89,17 +87,16 @@ export default function Account() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-8">
-            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5 group-hover:border-cyan-500/30 transition-all">
+            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5">
                 <Award size={20} className="text-cyan-500" />
-                <div><span className="block text-[7px] font-black text-gray-500 uppercase">المباريات</span><span className="text-xl font-[1000] text-white italic">{matchesPlayed}</span></div>
+                <div className="text-right"><span className="block text-[7px] font-black text-gray-500 uppercase">المباريات</span><span className="text-xl font-[1000] text-white italic">{matchesPlayed}</span></div>
             </div>
-            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5 group-hover:border-purple-500/30 transition-all">
+            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-black/40 border border-white/5">
                 <Star size={20} className="text-purple-400" />
-                <div><span className="block text-[7px] font-black text-gray-500 uppercase">النقاط</span><span className="text-xl font-[1000] text-white italic">{currentPoints}</span></div>
+                <div className="text-right"><span className="block text-[7px] font-black text-gray-500 uppercase">النقاط</span><span className="text-xl font-[1000] text-white italic">{currentPoints}</span></div>
             </div>
           </div>
 
-          {/* شريط التقدم */}
           <div className="bg-black/40 rounded-3xl p-6 border border-white/5">
              <div className="flex justify-between items-end mb-4 text-right">
                 <div className="space-y-1">
@@ -116,14 +113,14 @@ export default function Account() {
           </div>
         </div>
 
-        {/* 🔥 قسم مهارة اللعب والنقاط الجديد */}
+        {/* قسم مهارة اللعب المعدل */}
         <div className="bg-white/5 border border-white/10 rounded-[35px] p-8 space-y-5 backdrop-blur-3xl relative overflow-hidden">
           <div className="flex items-center gap-4 justify-end">
             <div className="text-right">
               <h3 className="text-xl font-[1000] italic text-white uppercase leading-none">مهارة اللعب</h3>
-              <p className="text-[9px] font-black text-cyan-500/60 uppercase mt-2 tracking-widest italic">طريقك نحو الاحتراف</p>
+              <p className="text-[9px] font-black text-cyan-400/60 uppercase mt-2 tracking-widest italic">طريقك نحو الاحتراف</p>
             </div>
-            <div className="p-3 bg-cyan-500/10 rounded-2xl text-cyan-400 border border-cyan-500/20">
+            <div className="p-3 bg-cyan-400/10 rounded-2xl text-cyan-400 border border-cyan-400/20">
               <Zap size={22} fill="currentColor" />
             </div>
           </div>
@@ -146,16 +143,16 @@ export default function Account() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 bg-cyan-500/5 p-3 rounded-xl border border-cyan-500/10 justify-end">
-              <span className="text-[9px] font-black text-cyan-400/80 italic">اجمع النقاط من خلال الفوز في الفزعات وتقييم اللاعبين لك!</span>
+            {/* تم تعديل الجملة هنا 👇 */}
+            <div className="flex items-center gap-2 bg-cyan-400/5 p-3 rounded-xl border border-cyan-400/10 justify-end">
+              <span className="text-[9px] font-black text-cyan-400 italic">كل مباراة تلعبها تحصل على 50 نقطة! 🎾</span>
               <ArrowUpRight size={14} className="text-cyan-400" />
             </div>
           </div>
         </div>
 
-        {/* القائمة السفلية */}
         <div className="space-y-3 pb-10">
-          <button onClick={() => navigate('/personal')} className="w-full flex items-center justify-between px-6 py-5 rounded-[24px] bg-white/5 border border-white/10 active:scale-95 transition-all group">
+          <button onClick={() => navigate('/personal')} className="w-full flex items-center justify-between px-6 py-5 rounded-[24px] bg-white/5 border border-white/10 active:scale-95 transition-all">
             <ChevronLeft size={18} className="text-gray-600" />
             <div className="flex items-center gap-4">
                <span className="text-white text-sm font-black uppercase">بياناتي الشخصية</span>
