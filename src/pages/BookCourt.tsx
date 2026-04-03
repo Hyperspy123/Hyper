@@ -124,8 +124,6 @@ export default function BookCourt() {
       const startDate = new Date(startTimeISO);
       const endDate = new Date(startDate.getTime() + duration * 60000);
 
-      // بمجرد إدخال الحجز بوضع 'confirmed' ستقوم الـ Trigger في قاعدة البيانات 
-      // بزيادة عداد المباريات وتحديث الرانك في بروفايل المستخدم آلياً.
       const { error: bookingError } = await supabase.from('bookings').insert([{ 
         court_id: cleanId, 
         user_id: user.id, 
@@ -137,7 +135,11 @@ export default function BookCourt() {
       if (bookingError) throw bookingError;
 
       toast.success("تم الحجز بنجاح! رانكك في تطور مستمر 🎾🚀");
-      setTimeout(() => navigate('/rewards'), 1200);
+
+      // 🔥 التعديل هنا: التوجيه لصفحة "حجوزاتي" بدلاً من المكافآت
+      setTimeout(() => {
+        navigate('/my-bookings'); 
+      }, 1000);
 
     } catch (error: any) {
       console.error(error);
