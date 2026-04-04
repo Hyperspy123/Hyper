@@ -8,16 +8,19 @@ import { useNavigate } from 'react-router-dom';
 export default function Tournaments() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  // قراءة الفعاليات المسجلة من ذاكرة الجهاز (localStorage)
+  
+  // قراءة الفعاليات المسجلة من ذاكرة الجهاز (localStorage) لضمان بقاء حالة الزر حتى بعد التحديث
   const [joinedEvents, setJoinedEvents] = useState<string[]>(() => {
     const saved = localStorage.getItem('hype_joined_events');
     return saved ? JSON.parse(saved) : [];
   });
+  
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchEvents();
 
+    // نظام التحديث اللحظي (Real-time) للعداد
     const channel = supabase
       .channel('tournaments-realtime')
       .on(
@@ -36,7 +39,7 @@ export default function Tournaments() {
     };
   }, []);
 
-  // حفظ التغييرات في ذاكرة الجهاز كل ما انضم لفعالية جديدة
+  // حفظ التغييرات في ذاكرة الجهاز
   useEffect(() => {
     localStorage.setItem('hype_joined_events', JSON.stringify(joinedEvents));
   }, [joinedEvents]);
@@ -56,21 +59,45 @@ export default function Tournaments() {
     setLoading(false);
   };
 
-  const handleJoin = async (id: string, current: number, max: number) => {
+  const handleJoin = async (tournamentId: string, current: number, max: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error("سجل دخولك أولاً يا وحش! 🎾");
+      return;
+    }
+
     // التأكد إنه مو مسجل أصلاً والعدد مو كامل
-    if (joinedEvents.includes(id) || current >= max) return;
+    if (joinedEvents.includes(tournamentId) || current >= max) return;
 
     try {
-      const { error } = await supabase
+      // 1. تسجيل بيانات المستخدم في جدول المشاركين (عشان تظهر لك في Supabase)
+      const { error: participantError } = await supabase
+        .from('tournament_participants')
+        .insert([
+          { tournament_id: tournamentId, participant_id: user.id }
+        ]);
+
+      if (participantError) {
+        // إذا كان الشخص مسجل مسبقاً في قاعدة البيانات
+        if (participantError.code === '23505') {
+          setJoinedEvents(prev => [...prev, tournamentId]);
+          return toast.error("أنت مسجل بالفعل في هذه البطولة!");
+        }
+        throw participantError;
+      }
+
+      // 2. تحديث عداد الفعالية في جدول البطولات
+      const { error: updateError } = await supabase
         .from('tournaments')
         .update({ current_participants: current + 1 })
-        .eq('id', id);
+        .eq('id', tournamentId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // إضافة الفعالية لقائمة المسجلين محلياً
-      setJoinedEvents(prev => [...prev, id]);
-      toast.success("كفو! تم تسجيلك وتحديث العداد للجميع 🔥");
+      // 3. تحديث الحالة المحلية
+      setJoinedEvents(prev => [...prev, tournamentId]);
+      toast.success("كفو! تم تسجيلك وحفظ بياناتك في السيرفر 🔥");
 
     } catch (error) {
       console.error(error);
@@ -95,7 +122,7 @@ export default function Tournaments() {
         <div className="flex items-center justify-between mb-6">
           <div className="text-right">
             <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none text-white">الفعاليات</h1>
-            <p className="text-[10px] font-black text-cyan-400 mt-1 uppercase tracking-widest opacity-60 italic">HYPE EVENTS</p>
+            <p className="text-[10px] font-black text-cyan-400 mt-1 uppercase tracking-widest opacity-60 italic">HYPE EVENTS HUB</p>
           </div>
           <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
             <ChevronLeft size={20} className="rotate-180" />
@@ -106,7 +133,6 @@ export default function Tournaments() {
           {events.map((event) => {
             const isFull = event.current_participants >= event.max_participants;
             const progress = (event.current_participants / event.max_participants) * 100;
-            // التحقق إذا كان الشخص مسجل في هذه الفعالية
             const isUserRegistered = joinedEvents.includes(event.id);
 
             return (
@@ -120,26 +146,25 @@ export default function Tournaments() {
                 </div>
 
                 <div className="p-8 space-y-6">
-                  <div className="flex justify-between items-start">
-                    <div className="p-2.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-yellow-500">
+                  <div className="flex justify-between items-start text-right">
+                    <div className="p-2.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-yellow-500 shadow-lg">
                       <Trophy size={20} />
                     </div>
-                    <h3 className="text-2xl font-[1000] italic uppercase text-white tracking-tighter">{event.name}</h3>
+                    <h3 className="text-2xl font-[1000] italic uppercase text-white tracking-tighter leading-none">{event.name}</h3>
                   </div>
 
-                  <p className="text-sm text-gray-400 font-bold leading-relaxed opacity-80">{event.description}</p>
+                  <p className="text-sm text-gray-400 font-bold leading-relaxed opacity-80 text-right">{event.description}</p>
 
-                  {/* العداد */}
                   <div className="space-y-3">
                     <div className="flex justify-between items-end">
                       <span className="text-[10px] font-black text-gray-500 uppercase italic">اكتمال العدد</span>
                       <span className={`text-sm font-black italic ${isFull ? 'text-red-500' : 'text-cyan-400'}`}>
-                        {event.current_participants} / {event.max_participants}
+                        {event.current_participants} / {event.max_participants} بطل
                       </span>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
                       <div 
-                        className={`h-full transition-all duration-1000 ${isFull ? 'bg-red-500' : 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]'}`}
+                        className={`h-full transition-all duration-1000 ${isFull ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]'}`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -150,7 +175,6 @@ export default function Tournaments() {
                     <div className="flex items-center gap-1.5">{event.start_date} <Calendar size={14} className="text-cyan-500" /></div>
                   </div>
 
-                  {/* الزر الذكي المحدث ✅ */}
                   <button
                     onClick={() => handleJoin(event.id, event.current_participants, event.max_participants)}
                     disabled={isUserRegistered || (isFull && !isUserRegistered)}
