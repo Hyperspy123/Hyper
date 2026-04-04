@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { useI18n } from '@/lib/i18n';
 import { toast } from 'sonner';
-import { Trophy, Calendar, Users, MapPin, Loader2, Zap, Medal, ChevronLeft, Clock } from 'lucide-react';
+import { Trophy, Calendar, Users, Medal, ChevronLeft, Clock, Zap, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// بيانات الملاعب الثلاثة الحالية كفعاليات (Mock Data)
-const MOCK_EVENTS = [
+// بيانات الملاعب (أضفت حالة 'isJoined' لكل فعالية للتحكم بالزر)
+const INITIAL_EVENTS = [
   {
     id: 1,
     name: 'بطولة الشتاء الكبرى',
@@ -15,23 +15,23 @@ const MOCK_EVENTS = [
     start_date: '2024-05-20',
     time: '08:00 PM',
     max_participants: 32,
-    current_participants: 28,
+    current_participants: 31, // خليته 31 عشان تجرب كيف يمتلئ
     prize: '10,000 SAR + كبوس ذهبي',
     image_url: 'https://images.unsplash.com/photo-1626225443592-d6776899450c?q=80&w=800',
-    status: 'upcoming'
+    isJoined: false
   },
   {
     id: 2,
     name: 'تحدي الملوك (KING)',
-    description: 'تحدي خاص للفئات المتقدمة (Legend & Hyper). اللعب بملعبين متجاورين لسرعة الأداء.',
+    description: 'تحدي خاص للفئات المتقدمة. اللعب بملعبين متجاورين لضمان سرعة الأداء.',
     court_name: 'HYPE Court',
     start_date: '2024-05-22',
     time: '09:30 PM',
     max_participants: 16,
-    current_participants: 15,
+    current_participants: 16, // هذا ممتلئ جاهز عشان أخوك يشيك عليه
     prize: 'ساعات لعب مجانية لمدة شهر',
     image_url: 'https://images.unsplash.com/photo-1592910129881-892a72f92469?q=80&w=800',
-    status: 'upcoming'
+    isJoined: false
   },
   {
     id: 3,
@@ -44,136 +44,111 @@ const MOCK_EVENTS = [
     current_participants: 8,
     prize: 'مضرب بادل احترافي للفائز',
     image_url: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?q=80&w=800',
-    status: 'upcoming'
+    isJoined: false
   }
 ];
 
 export default function Tournaments() {
-  const [loading, setLoading] = useState(true);
-  const { t, dir } = useI18n();
+  const [events, setEvents] = useState(INITIAL_EVENTS);
+  const { dir } = useI18n();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // محاكاة تحميل البيانات
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+  const handleJoin = (id: number) => {
+    setEvents(prevEvents => prevEvents.map(event => {
+      if (event.id === id && !event.isJoined && event.current_participants < event.max_participants) {
+        toast.success(`تم تسجيلك بنجاح في ${event.name}! 🔥`);
+        return { 
+          ...event, 
+          isJoined: true, 
+          current_participants: event.current_participants + 1 
+        };
+      }
+      return event;
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-transparent pb-32 text-white font-sans relative" dir="rtl">
       <Header />
-
       <main className="p-6 max-w-md mx-auto space-y-8 relative z-10 pt-24 text-right">
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-10">
-          <div className="text-right">
-            <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
-              الفعاليات <span className="text-cyan-400 text-2xl block mt-1">EVENTS</span>
-            </h1>
-          </div>
-          <button 
-            onClick={() => navigate(-1)} 
-            className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all"
-          >
+        
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase">الفعاليات</h1>
+          <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400">
             <ChevronLeft size={20} className="rotate-180" />
           </button>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="animate-spin text-cyan-400" size={32} />
-          </div>
-        ) : (
-          <div className="grid gap-10">
-            {MOCK_EVENTS.map(event => {
-              const spotsLeft = event.max_participants - event.current_participants;
-              const isFull = spotsLeft === 0;
+        <div className="grid gap-10">
+          {events.map(event => {
+            const isFull = event.current_participants >= event.max_participants;
+            const progress = (event.current_participants / event.max_participants) * 100;
 
-              return (
-                <div
-                  key={event.id}
-                  className="group relative bg-[#0a0f3c]/60 backdrop-blur-2xl border border-white/10 rounded-[45px] overflow-hidden transition-all duration-500 shadow-2xl hover:border-cyan-500/30"
-                >
-                  {/* Image Section - تصميم طولي مرتفع */}
-                  <div className="relative h-64 overflow-hidden">
-                    <img
-                      src={event.image_url}
-                      alt={event.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f3c] via-transparent to-transparent" />
-                    
-                    {/* Badge الملعب */}
-                    <div className="absolute top-6 left-6">
-                      <div className="bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic shadow-lg border border-cyan-400/50">
-                        {event.court_name}
-                      </div>
-                    </div>
-
-                    {/* عداد المقاعد المتبقية */}
-                    <div className="absolute bottom-6 right-6 bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2">
-                      <Users size={14} className="text-cyan-400" />
-                      <span className="text-[10px] font-black text-white italic">
-                        {isFull ? 'اكتمل العدد' : `متبقي ${spotsLeft} لاعبين`}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Content Section */}
-                  <div className="p-8 space-y-5">
-                    <div className="flex justify-between items-start">
-                       <div className="p-2.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
-                        <Trophy size={20} />
-                      </div>
-                      <h3 className="text-2xl font-[1000] italic tracking-tighter text-white uppercase leading-none">
-                        {event.name}
-                      </h3>
-                    </div>
-
-                    <p className="text-sm text-gray-400 font-bold leading-relaxed opacity-80 text-right">
-                      {event.description}
-                    </p>
-
-                    {/* تفاصيل الوقت والمكان */}
-                    <div className="grid grid-cols-2 gap-3 py-4 border-y border-white/5">
-                      <div className="flex items-center gap-2 justify-end text-gray-400">
-                        <span className="text-[10px] font-black">{event.start_date}</span>
-                        <Calendar size={14} className="text-cyan-500" />
-                      </div>
-                      <div className="flex items-center gap-2 justify-end text-gray-400">
-                        <span className="text-[10px] font-black">{event.time}</span>
-                        <Clock size={14} className="text-cyan-500" />
-                      </div>
-                    </div>
-
-                    {/* Prize Highlight */}
-                    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-yellow-400/5 border border-yellow-400/10">
-                      <Medal size={18} className="text-yellow-400" />
-                      <span className="text-yellow-400 text-[11px] font-[1000] uppercase italic tracking-tighter truncate">
-                        {event.prize}
-                      </span>
-                    </div>
-
-                    {/* Join Button */}
-                    <button
-                      onClick={() => toast.success(`كفو! تم تسجيل طلب انضمامك لـ ${event.name} 🔥`)}
-                      disabled={isFull}
-                      className={`w-full py-5 rounded-[28px] font-[1000] text-sm uppercase italic transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl ${
-                        isFull
-                        ? 'bg-white/5 text-gray-500 cursor-not-allowed border border-white/5'
-                        : 'bg-cyan-500 text-[#0a0f3c] hover:bg-cyan-400 shadow-cyan-500/30'
-                      }`}
-                    >
-                      {isFull ? 'نراكم في الفعالية القادمة 🛑' : (
-                        <> انضم معنا الآن <Zap size={18} fill="currentColor" /> </>
-                      )}
-                    </button>
+            return (
+              <div key={event.id} className="bg-[#0a0f3c]/80 backdrop-blur-2xl border border-white/10 rounded-[45px] overflow-hidden shadow-2xl">
+                
+                {/* Image Section */}
+                <div className="relative h-60">
+                  <img src={event.image_url} className="w-full h-full object-cover" alt="" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f3c] via-transparent" />
+                  <div className="absolute top-6 left-6 bg-cyan-500 text-[#0a0f3c] px-4 py-1 rounded-full text-[10px] font-black italic">
+                    {event.court_name}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+
+                {/* Content */}
+                <div className="p-8 space-y-6">
+                  <h3 className="text-2xl font-[1000] italic uppercase">{event.name}</h3>
+                  <p className="text-xs text-gray-400 font-bold leading-relaxed">{event.description}</p>
+
+                  {/* العداد (Progress Counter) */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-end">
+                      <span className="text-[10px] font-black text-gray-500 uppercase italic">اكتمال العدد</span>
+                      <span className={`text-sm font-black italic ${isFull ? 'text-red-500' : 'text-cyan-400'}`}>
+                        {event.current_participants} / {event.max_participants} لاعب
+                      </span>
+                    </div>
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                      <div 
+                        className={`h-full transition-all duration-1000 ${isFull ? 'bg-red-500' : 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]'}`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* تفاصيل سريعة */}
+                  <div className="flex gap-4 justify-end text-[10px] font-black text-gray-400 border-t border-white/5 pt-4">
+                    <span className="flex items-center gap-1">{event.time} <Clock size={12}/></span>
+                    <span className="flex items-center gap-1">{event.start_date} <Calendar size={12}/></span>
+                  </div>
+
+                  {/* زر الانضمام الذكي */}
+                  <button
+                    onClick={() => handleJoin(event.id)}
+                    disabled={isFull && !event.isJoined}
+                    className={`w-full py-5 rounded-[28px] font-[1000] text-sm uppercase italic transition-all flex items-center justify-center gap-2 shadow-xl ${
+                      event.isJoined 
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                      : isFull 
+                      ? 'bg-white/5 text-gray-600 border border-white/5 cursor-not-allowed' 
+                      : 'bg-cyan-500 text-[#0a0f3c] active:scale-95'
+                    }`}
+                  >
+                    {event.isJoined ? (
+                      <>أنت مسجل في هذه الفعالية <CheckCircle2 size={18} /></>
+                    ) : isFull ? (
+                      'نعتذر، اكتملت المقاعد 🛑'
+                    ) : (
+                      <>انضم الآن <Zap size={18} fill="currentColor" /></>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </main>
     </div>
   );
