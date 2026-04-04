@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { MapPin, Clock, Zap, Loader2, ChevronLeft, MessageCircle, Calendar, Users, User, CheckCircle2 } from 'lucide-react';
+import { MapPin, Clock, Zap, Loader2, ChevronLeft, Calendar, Users, User, CheckCircle2, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -16,7 +16,7 @@ export default function Faz3a() {
 
   const navigate = useNavigate();
 
-  // 1. التحقق من هوية المستخدم
+  // 1. جلب بيانات المستخدم الحالي
   useEffect(() => {
     async function getUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -25,7 +25,7 @@ export default function Faz3a() {
     getUser();
   }, []);
 
-  // 2. دالة جلب البيانات (تتضمن فحص المشاركين)
+  // 2. دالة جلب البيانات (محسنة لعرض الأبطال المشاركين)
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -33,7 +33,6 @@ export default function Faz3a() {
     setLoading(true);
     try {
       if (activeTab === 'public_faz3at') {
-        // جلب الفزعات العامة مع بيانات المشاركين لفحص التسجيل المسبق
         const { data, error } = await supabase
           .from('faz3a_posts')
           .select('*, profiles:creator_id(first_name, last_name, current_rank), faz3a_participants(participant_id)')
@@ -43,15 +42,15 @@ export default function Faz3a() {
         setPublicFaz3at(data || []);
       } 
       else {
-        // جلب الفزعات التي يشارك فيها المستخدم أو يملكها
+        // جلب الفزعات (التي أملكها أو انضممت لها) لعرض الفريق لايف
         const { data: myData, error } = await supabase
           .from('faz3a_posts')
           .select(`
             *,
-            profiles:creator_id (first_name, last_name, current_rank, phone),
+            profiles:creator_id (first_name, last_name, current_rank),
             faz3a_participants (
               participant_id,
-              profiles:participant_id (first_name, last_name, current_rank, phone)
+              profiles:participant_id (first_name, last_name, current_rank)
             )
           `)
           .or(`creator_id.eq.${user.id}, id.in.(select post_id from faz3a_participants where participant_id = '${user.id}')`)
@@ -67,7 +66,7 @@ export default function Faz3a() {
     }
   }, [activeTab]);
 
-  // 3. نظام التحديث اللحظي (Real-time)
+  // 3. التحديث اللحظي (Real-time)
   useEffect(() => {
     fetchData();
     const channel = supabase.channel('faz3a-realtime-sync')
@@ -90,7 +89,7 @@ export default function Faz3a() {
       if (error) throw error;
 
       if (success) {
-        toast.success("أبشر بالفزعة! تم تسجيلك في الفريق 🔥");
+        toast.success("أبشر بالفزعة! تم تسجيل اسمك في الفريق 🔥");
         setActiveTab('joined_faz3at'); 
       } else {
         toast.error("عذراً، الفريق اكتمل أو أنت مسجل مسبقاً!");
@@ -105,18 +104,16 @@ export default function Faz3a() {
   return (
     <div className="min-h-screen bg-transparent text-white font-sans pb-32 relative text-right" dir="rtl">
       <Header />
-      <main className="p-6 max-w-md mx-auto space-y-8 pt-24">
+      <main className="p-6 max-w-md mx-auto space-y-8 pt-24 text-right">
         
         <div className="flex items-center justify-between">
            <div className="text-right">
               <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
                 ساحة <span className="text-cyan-400">الفزعات</span>
               </h1>
-              <p className="text-[10px] font-bold text-gray-500 uppercase mt-2 italic tracking-widest leading-none">
-                مباريات حقيقية بانتظار الأبطال
-              </p>
+              <p className="text-[10px] font-bold text-gray-500 uppercase mt-2 italic tracking-widest leading-none">أبطال الملاعب لايف</p>
            </div>
-           <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
+           <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all shadow-xl">
              <ChevronLeft size={20} className="rotate-180" />
            </button>
         </div>
@@ -144,6 +141,7 @@ export default function Faz3a() {
           {loading ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
           ) : activeTab === 'public_faz3at' ? (
+            /* --- السوق العام للفزعات --- */
             publicFaz3at.length > 0 ? publicFaz3at.map(post => {
               const isFull = post.missing_players === 0;
               const isMyPost = post.creator_id === currentUserId;
@@ -153,23 +151,19 @@ export default function Faz3a() {
                 <div key={post.id} className={`bg-[#0a0f3c]/40 border border-white/10 rounded-[35px] p-7 space-y-5 backdrop-blur-2xl transition-all ${isFull ? 'opacity-50 grayscale' : 'hover:border-cyan-500/30'}`}>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center font-black text-cyan-400 border border-white/10 text-xl italic shadow-inner">
+                      <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center font-black text-cyan-400 border border-white/10 text-xl italic">
                         {post.profiles?.first_name?.[0] || 'P'}
                       </div>
                       <div className="text-right">
-                        <h4 className="font-black text-lg italic text-white leading-none">{isMyPost ? "حجزك" : (post.profiles?.first_name || "لاعب بادل")}</h4>
-                        <p className="text-[9px] font-black text-cyan-500/60 uppercase mt-1">{post.profiles?.current_rank || 'ROOKIE'}</p>
+                        <h4 className="font-black text-lg italic text-white leading-none">{isMyPost ? "حجزك أنت" : (post.profiles?.first_name || "لاعب بادل")}</h4>
+                        <p className="text-[9px] font-black text-cyan-500/60 uppercase mt-1 tracking-tighter">{post.profiles?.current_rank || 'ROOKIE'}</p>
                       </div>
                     </div>
-                    {isFull ? (
-                      <span className="bg-gray-500/20 text-gray-400 px-3 py-1 rounded-full text-[10px] font-black italic">مكتملة</span>
-                    ) : (
-                      <span className="bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full text-[10px] font-black italic animate-pulse">ناقص {post.missing_players}</span>
-                    )}
+                    {!isFull && <span className="bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full text-[10px] font-black italic animate-pulse">ناقص {post.missing_players}</span>}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white/5 p-4 rounded-2xl text-[10px] font-black italic border border-white/5 flex items-center gap-2 truncate"><MapPin size={14} className="text-cyan-400" /> {post.court_name}</div>
+                    <div className="bg-white/5 p-4 rounded-2xl text-[10px] font-black italic border border-white/5 truncate flex items-center gap-2"><MapPin size={14} className="text-cyan-400" /> {post.court_name}</div>
                     <div className="bg-white/5 p-4 rounded-2xl text-[10px] font-black italic border border-white/5 flex items-center gap-2"><Clock size={14} className="text-cyan-400" /> {post.match_time}</div>
                   </div>
 
@@ -177,7 +171,7 @@ export default function Faz3a() {
                     <button 
                       onClick={() => handleJoin(post.id)} 
                       disabled={isJoining === post.id}
-                      className="w-full py-4.5 bg-cyan-500 text-[#0a0f3c] rounded-[22px] font-[1000] text-[11px] uppercase shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[22px] font-[1000] text-[11px] uppercase shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                       {isJoining === post.id ? <Loader2 className="animate-spin" size={16} /> : <><Zap size={16} fill="currentColor" /> أبشر بالفزعة ✋</>}
                     </button>
@@ -190,18 +184,16 @@ export default function Faz3a() {
                 </div>
               )
             }) : (
-              <div className="text-center py-20 opacity-20"><Calendar size={60} className="mx-auto mb-4" /><p className="font-black italic">لا يوجد فزعات حالياً</p></div>
+              <div className="text-center py-20 opacity-20"><Calendar size={60} className="mx-auto mb-4 text-gray-600" /><p className="font-black italic text-gray-500">لا يوجد فزعات حالياً</p></div>
             )
           ) : (
+            /* --- فزعاتي: عرض أبطال الفريق المسجلين --- */
             myFullFaz3at.length > 0 ? myFullFaz3at.map(post => {
               const isOwner = post.creator_id === currentUserId;
-              const contactPhone = isOwner 
-                ? post.faz3a_participants?.[0]?.profiles?.phone 
-                : post.profiles?.phone;
 
               return (
                 <div key={post.id} className="bg-[#0a0f3c]/60 border border-cyan-500/20 rounded-[35px] p-7 space-y-6 shadow-2xl">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center text-right">
                      <div className="text-right">
                         <p className="text-[10px] font-black text-cyan-400 uppercase italic mb-1">
                           {isOwner ? "فزعتك المنشورة" : "فزعة انضممت لها"} <CheckCircle2 size={12} className="inline ml-1" />
@@ -212,43 +204,52 @@ export default function Faz3a() {
                   </div>
 
                   <div className="space-y-4">
-                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">أبطال الفريق ({post.faz3a_participants?.length + 1})</p>
-                     <div className="flex flex-wrap gap-3">
-                        <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 p-2 rounded-2xl">
-                           <div className="w-8 h-8 rounded-xl bg-cyan-500 text-[#0a0f3c] flex items-center justify-center font-black italic text-xs">
-                             {post.profiles?.first_name?.[0] || 'P'}
+                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest italic text-right">أبطال المباراة الحاليين ({post.faz3a_participants?.length + 1})</p>
+                     <div className="flex flex-wrap gap-3 justify-start">
+                        {/* راعي الحجز (الأصلي) */}
+                        <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 p-2.5 rounded-2xl">
+                           <div className="w-9 h-9 rounded-xl bg-cyan-500 text-[#0a0f3c] flex items-center justify-center font-[1000] italic text-xs shadow-lg shadow-cyan-500/20">
+                             {post.profiles?.first_name?.[0] || 'U'}
                            </div>
-                           <span className="text-[10px] font-black italic text-white">{post.profiles?.first_name}</span>
+                           <div className="flex flex-col text-right">
+                              <span className="text-[10px] font-black italic text-white leading-none">{(post.profiles?.first_name || 'بطل')}</span>
+                              <span className="text-[7px] font-black text-cyan-500 uppercase mt-1">راعيها</span>
+                           </div>
                         </div>
+
+                        {/* الفزيعة المنضمين (هنا يظهر أخوك) */}
                         {post.faz3a_participants?.map((p: any) => (
-                           <div key={p.participant_id} className="flex items-center gap-2 bg-white/5 border border-white/10 p-2 rounded-2xl animate-in zoom-in">
-                              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center font-black italic text-xs text-cyan-400">
+                           <div key={p.participant_id} className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl animate-in zoom-in duration-300">
+                              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center font-[1000] italic text-xs text-cyan-400 border border-white/5">
                                 {p.profiles?.first_name?.[0] || 'F'}
                               </div>
-                              <span className="text-[10px] font-black italic text-gray-300">{p.profiles?.first_name}</span>
+                              <div className="flex flex-col text-right">
+                                <span className="text-[10px] font-black italic text-gray-200 leading-none">{p.profiles?.first_name || 'فزيع'}</span>
+                                <span className="text-[7px] font-black text-gray-500 uppercase mt-1 italic">فزع لك</span>
+                              </div>
+                           </div>
+                        ))}
+
+                        {/* أماكن شاغرة */}
+                        {[...Array(post.missing_players)].map((_, i) => (
+                           <div key={i} className="w-9 h-9 rounded-xl border border-dashed border-white/10 flex items-center justify-center opacity-20 bg-white/5">
+                             <User size={14} />
                            </div>
                         ))}
                      </div>
                   </div>
 
-                  {contactPhone ? (
-                    <button 
-                      onClick={() => {
-                        // تنظيف الرقم من المسافات ليعمل الرابط فوراً
-                        const cleanPhone = contactPhone.replace(/\s+/g, '');
-                        window.location.href = `https://wa.me/${cleanPhone}`;
-                      }}
-                      className="w-full py-4 bg-green-500 text-[#0a0f3c] rounded-[22px] font-black text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-green-500/20"
-                    >
-                      <MessageCircle size={16} /> تواصل مع {isOwner ? "الفزيع" : "راعي الحجز"} واتساب
-                    </button>
-                  ) : (
-                    <div className="text-center py-2 text-[9px] text-gray-500 italic font-bold">بانتظار انضمام لاعب لتفعيل التواصل..</div>
-                  )}
+                  <div className="pt-4 border-t border-white/5 flex items-center gap-2 text-cyan-400">
+                    <Trophy size={16} className="text-yellow-500" />
+                    <span className="text-[9px] font-black uppercase italic tracking-widest text-gray-400">نراكم في الملعب لمباراة حماسية!</span>
+                  </div>
                 </div>
               );
             }) : (
-              <div className="text-center py-20 opacity-20"><Zap size={60} className="mx-auto mb-4" /><p className="font-black italic">لم تنضم لأي فزعة بعد</p></div>
+              <div className="text-center py-20 opacity-20 bg-white/5 rounded-[40px] border border-dashed border-white/10">
+                <Zap size={60} className="mx-auto mb-4 text-gray-600" />
+                <p className="font-black italic text-[10px] uppercase tracking-widest text-gray-600">لم تنضم لأي فزعة بعد</p>
+              </div>
             )
           )}
         </div>
