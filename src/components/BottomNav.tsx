@@ -23,13 +23,13 @@ export default function BottomNav() {
     },
     { 
       icon: Trophy, 
-      label: 'البطولات', 
+      label: 'فعاليات', // تم تغيير "البطولات" إلى "فعاليات" بناءً على طلبك
       path: '/tournaments' 
     },
     { 
-      icon: Gift, // Changed icon to Gift for "Rewards"
-      label: 'مكافآتي', // UI label set to Rewards
-      path: '/rewards' // Path points to rewards
+      icon: Gift, 
+      label: 'مكافآتي', 
+      path: '/rewards' 
     },
   ];
 
