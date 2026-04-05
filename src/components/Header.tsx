@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft, LogIn, Bell, Trophy } from 'lucide-react';
+import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft, Bell, Trophy } from 'lucide-react';
 
 export default function Header() {
   const [user, setUser] = useState<any>(null);
@@ -28,7 +28,6 @@ export default function Header() {
     if (data) setProfile(data);
   }, []);
 
-  // تحسين جلب عدد التنبيهات ليكون أدق
   const fetchUnreadStatus = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
@@ -38,25 +37,16 @@ export default function Header() {
 
     const userId = session.user.id;
 
-    // جلب عدد التنبيهات غير المقروءة
     const { count: systemCount } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_read', false);
 
-    // جلب عدد الدعوات المعلقة (إذا كنت تستخدم هذا الجدول)
-    const { count: inviteCount } = await supabase
-      .from('faz3a_invites')
-      .select('*', { count: 'exact', head: true })
-      .eq('receiver_id', userId)
-      .eq('status', 'pending');
-
-    setUnreadCount((systemCount || 0) + (inviteCount || 0));
+    setUnreadCount(systemCount || 0);
   }, []);
 
   useEffect(() => {
-    // التحقق المبدئي من الجلسة
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -78,7 +68,6 @@ export default function Header() {
       }
     });
 
-    // مراقبة التغييرات اللحظية بدقة
     const channel = supabase.channel('header-live-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
         fetchUnreadStatus();
@@ -109,7 +98,15 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-[110] flex items-center justify-between bg-[#0a0f3c]/80 border-b border-white/5 px-6 h-24 backdrop-blur-2xl" dir="rtl">
+      {/* الطبقة الشفافة مع Blur كامل للشاشة عند فتح المنيو ✅ */}
+      {isMenuOpen && (
+        <div 
+          className="fixed inset-0 z-[115] bg-[#05081d]/40 backdrop-blur-md transition-all duration-500 animate-in fade-in"
+          onClick={() => setIsMenuOpen(false)} 
+        />
+      )}
+
+      <header className="fixed top-0 left-0 right-0 z-[130] flex items-center justify-between bg-[#0a0f3c]/80 border-b border-white/5 px-6 h-24 backdrop-blur-2xl" dir="rtl">
         
         {/* اليمين: اللوغو وشريط الرانك */}
         <div className="flex flex-col gap-1.5 text-right">
@@ -141,7 +138,7 @@ export default function Header() {
           <button onClick={() => navigate('/notifications')} className="relative p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 transition-all active:scale-90">
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0f3c] animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
+              <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0f3c] animate-pulse" />
             )}
           </button>
 
@@ -154,37 +151,50 @@ export default function Header() {
             </div>
           )}
 
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-2.5 rounded-xl border transition-all duration-300 active:scale-95 ${isMenuOpen ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-cyan-400'}`}>
+          {/* زر المنيو بـ z-index أعلى ليبرز فوق الـ blur ✅ */}
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)} 
+            className={`p-2.5 rounded-xl border transition-all duration-300 relative z-[140] active:scale-95 ${isMenuOpen ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-cyan-400'}`}
+          >
             {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          <div className={`absolute top-20 left-6 w-[220px] bg-[#14224d]/98 backdrop-blur-3xl border border-white/10 rounded-[28px] shadow-2xl transition-all duration-300 z-[120] overflow-hidden ${isMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'}`} style={{ transformOrigin: 'top left' }}>
-            <div className="p-3 space-y-1" dir="rtl">
+          {/* محتوى المنيو المنسدل ✅ */}
+          <div className={`absolute top-24 left-6 w-[240px] bg-[#0a0f3c]/95 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300 z-[140] overflow-hidden ${isMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'}`} style={{ transformOrigin: 'top left' }}>
+            <div className="p-4 space-y-1" dir="rtl">
               {[
                 { icon: User, label: 'ملفي الشخصي', path: '/account' },
+                { icon: Trophy, label: 'الفعاليات', path: '/tournaments' },
                 { icon: Settings, label: 'الإعدادات', path: '/settings' },
                 { icon: Headphones, label: 'الدعم الفني', path: '/contact' },
               ].map((item) => (
-                <button key={item.path} onClick={() => { navigate(item.path); setIsMenuOpen(false); }} className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-white/5 transition-all group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-cyan-400/10 text-cyan-400 group-hover:bg-cyan-400 group-hover:text-[#0a0f3c] transition-colors"><item.icon size={16} /></div>
-                    <span className="font-black text-xs text-gray-200">{item.label}</span>
+                <button 
+                  key={item.path} 
+                  onClick={() => { navigate(item.path); setIsMenuOpen(false); }} 
+                  className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-white/5 transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-xl bg-cyan-400/10 text-cyan-400 group-hover:bg-cyan-400 group-hover:text-[#0a0f3c] transition-all"><item.icon size={18} /></div>
+                    <span className="font-black text-sm text-gray-200 group-hover:text-white">{item.label}</span>
                   </div>
-                  <ChevronLeft size={14} className="text-gray-600 group-hover:text-cyan-400" />
+                  <ChevronLeft size={16} className="text-gray-600 group-hover:text-cyan-400 transition-transform group-hover:-translate-x-1" />
                 </button>
               ))}
+              
+              <div className="h-px bg-white/5 my-2 mx-4" />
+
               {user && (
-                <button onClick={handleLogout} className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-500/5 transition-all">
-                  <LogOut size={16} /> <span className="font-black text-xs uppercase">تسجيل الخروج</span>
+                <button onClick={handleLogout} className="w-full flex items-center gap-4 p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all group">
+                  <div className="p-2 rounded-xl bg-red-400/10 group-hover:bg-red-400 group-hover:text-white transition-all"><LogOut size={18} /></div>
+                  <span className="font-black text-sm uppercase italic">تسجيل الخروج</span>
                 </button>
               )}
             </div>
           </div>
         </div>
-
-        {isMenuOpen && <div className="fixed inset-0 z-[115] bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />}
       </header>
       
+      {/* مساحة تعويضية خلف الهيدر */}
       <div className="h-24 w-full pointer-events-none" />
     </>
   );
