@@ -23,6 +23,7 @@ import Faz3a from './pages/Faz3a';
 import Notifications from './pages/Notifications';
 import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
+import Community from './pages/Community'; // استيراد صفحة المجتمع الجديدة ✅
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ const App = () => {
                       <Route path="/rewards" element={<Rewards />} />
                       <Route path="/tournaments" element={<Tournaments />} />
                       <Route path="/faz3a" element={<Faz3a />} />
+                      <Route path="/community" element={<Community />} /> {/* مسار المجتمع الجديد ✅ */}
                       
                       {/* الإعدادات والحساب */}
                       <Route path="/account" element={<Account />} />
