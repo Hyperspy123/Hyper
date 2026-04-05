@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { supabase } from '../LLL';
-import { ChevronLeft, Zap, BellOff, X, Loader2, CalendarCheck, Check } from 'lucide-react';
+import { ChevronLeft, Zap, BellOff, X, Loader2, Trophy, Check, Swords } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Notifications() {
@@ -10,7 +10,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. دالة جلب التنبيهات
+  // 1. دالة جلب التنبيهات مع تحديث حالة القراءة
   const fetchAllNotifications = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -20,14 +20,13 @@ export default function Notifications() {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
-        // عرضنا كل التنبيهات (المقروءة وغير المقروءة) لكي لا تختفي الصفحة فجأة أمام المستخدم
         .order('created_at', { ascending: false })
         .limit(20);
 
       if (!error && data) {
         setNotifications(data);
         
-        // 🔥 الحركة الذكية: بمجرد جلب البيانات، نجعلها كلها "مقروءة" في الخلفية
+        // تحديث التنبيهات غير المقروءة لتصبح مقروءة عند فتح الصفحة
         const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
         if (unreadIds.length > 0) {
           await supabase
@@ -46,6 +45,7 @@ export default function Notifications() {
   useEffect(() => {
     fetchAllNotifications();
     
+    // مراقبة التغييرات اللحظية
     const channel = supabase
       .channel('notif-changes')
       .on('postgres_changes', 
@@ -57,8 +57,29 @@ export default function Notifications() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchAllNotifications]);
 
-  // دالة القبول اليدوي (للمحافظة على المنطق الحالي)
-  const handleInviteAction = async (notifId: string, postId: string, action: 'accept' | 'decline') => {
+  // 2. معالج التحديات (قبول/رفض)
+  const handleChallengeAction = async (challengeId: string, action: 'accepted' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('challenges')
+        .update({ status: action })
+        .eq('id', challengeId);
+
+      if (error) throw error;
+
+      if (action === 'accepted') {
+        toast.success("كفو! تم قبول التحدي 🔥");
+      } else {
+        toast.info("تم رفض التحدي");
+      }
+      fetchAllNotifications();
+    } catch (error: any) {
+      toast.error("حدث خطأ في تحديث التحدي");
+    }
+  };
+
+  // 3. معالج دعوات الفزعة
+  const handleInviteAction = async (postId: string, action: 'accept' | 'decline') => {
     if (action === 'accept') {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -72,16 +93,16 @@ export default function Notifications() {
         if (joinError) throw joinError;
 
         if (success) {
-          toast.success("كفو! تم قبول الفزعة بنجاح 🔥");
+          toast.success("أبشر بالفزعة! تم الانضمام 🔥");
           navigate('/faz3a'); 
         } else {
-          toast.error("للأسف، اكتمل العدد في هذه الفزعة! ✋");
+          toast.error("للأسف اكتمل الفريق");
         }
       } catch (error: any) {
-        toast.error("حدث خطأ أثناء قبول الدعوة");
+        toast.error("خطأ في الانضمام");
       }
     } else {
-      toast.info("تم رفض الدعوة");
+      toast.info("تم الرفض");
     }
   };
 
@@ -90,15 +111,13 @@ export default function Notifications() {
       <Header />
       
       <main className="pt-28 max-w-lg mx-auto px-6 relative z-10">
+        {/* Header Section */}
         <div className="flex items-center gap-4 mb-10">
-            <button 
-              onClick={() => navigate(-1)} 
-              className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all backdrop-blur-md"
-            >
+            <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all backdrop-blur-md">
                 <ChevronLeft size={20} className="rotate-180" />
             </button>
-            <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none text-right">
-              التنبيهات <span className="text-cyan-400">Notifs</span>
+            <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
+              التنبيهات <span className="text-cyan-400 text-2xl tracking-normal">NOTIFS</span>
             </h1>
         </div>
 
@@ -111,35 +130,32 @@ export default function Notifications() {
             notifications.map((n) => (
               <div 
                 key={n.id} 
-                className={`p-6 rounded-[35px] border backdrop-blur-2xl shadow-2xl transition-all duration-500 ${!n.is_read ? 'bg-cyan-500/5 border-cyan-500/30' : 'bg-white/5 border-white/10 opacity-80'}`}
+                className={`p-6 rounded-[35px] border backdrop-blur-2xl transition-all duration-500 ${!n.is_read ? 'bg-cyan-500/5 border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/10 opacity-80'}`}
               >
                 
-                {n.type === 'invite' ? (
+                {/* إشعار التحدي (Challenge) */}
+                {n.type === 'challenge' ? (
                   <div className="flex items-start gap-5">
-                    <div className="p-4 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
-                      <Zap size={24} className="fill-cyan-400" />
+                    <div className="p-4 rounded-2xl bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                      <Swords size={24} className="animate-bounce" />
                     </div>
                     <div className="flex-1 text-right">
-                      <div className="flex justify-between items-center mb-1 gap-4">
-                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[8px] text-gray-500 font-bold uppercase">
                           {new Date(n.created_at).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}
                         </span>
-                        <h4 className="font-black text-lg italic text-white uppercase tracking-tighter text-right">
-                          {n.title}
-                        </h4>
+                        <h4 className="font-black text-lg italic text-yellow-500 uppercase leading-none">تحدي جديد ⚔️</h4>
                       </div>
-                      <p className="text-sm text-gray-400 font-bold mb-5 leading-snug text-right">
-                        {n.message}
-                      </p>
+                      <p className="text-sm text-gray-300 font-bold mb-5 leading-snug">{n.message}</p>
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => handleInviteAction(n.id, n.related_post_id, 'accept')} 
-                          className="flex-1 py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl text-[10px] font-[1000] uppercase shadow-lg shadow-cyan-400/20 active:scale-95 transition-all"
+                          onClick={() => handleChallengeAction(n.related_id, 'accepted')} 
+                          className="flex-1 py-4 bg-yellow-500 text-[#0a0f3c] rounded-2xl text-[10px] font-[1000] uppercase active:scale-95 transition-all shadow-lg shadow-yellow-500/20"
                         >
-                          أبشر بالفزعة 🔥
+                          أنا قد التحدي ⚡
                         </button>
                         <button 
-                          onClick={() => handleInviteAction(n.id, n.related_post_id, 'decline')} 
+                          onClick={() => handleChallengeAction(n.related_id, 'rejected')} 
                           className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-gray-500 active:scale-95 transition-all"
                         >
                           <X size={18} />
@@ -147,34 +163,54 @@ export default function Notifications() {
                       </div>
                     </div>
                   </div>
-                ) : (
+                ) : n.type === 'invite' ? (
+                  /* إشعار دعوة فزعة (Invite) */
                   <div className="flex items-start gap-5">
-                    <div className={`p-4 rounded-2xl border ${n.type === 'rank_up' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
-                      {n.type === 'rank_up' ? <CalendarCheck size={24} /> : <Check size={24} />}
+                    <div className="p-4 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      <Zap size={24} className="fill-cyan-400" />
                     </div>
                     <div className="flex-1 text-right">
-                      <div className="flex justify-between items-center mb-1 gap-4">
+                      <div className="flex justify-between items-center mb-1">
                         <span className="text-[8px] text-gray-500 font-bold uppercase">
                           {new Date(n.created_at).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}
                         </span>
-                        <h4 className={`font-black text-lg italic uppercase tracking-tighter text-right ${n.type === 'rank_up' ? 'text-yellow-500' : 'text-green-400'}`}>
+                        <h4 className="font-black text-lg italic text-white uppercase leading-none">{n.title}</h4>
+                      </div>
+                      <p className="text-sm text-gray-400 font-bold mb-5 leading-snug">{n.message}</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleInviteAction(n.related_id, 'accept')} className="flex-1 py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl text-[10px] font-[1000] uppercase shadow-lg shadow-cyan-400/20 active:scale-95 transition-all">أبشر بالفزعة 🔥</button>
+                        <button onClick={() => handleInviteAction(n.related_id, 'decline')} className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-gray-500 active:scale-95 transition-all">
+                          <X size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* الإشعارات العادية (نظام / رانك) */
+                  <div className="flex items-start gap-5">
+                    <div className={`p-4 rounded-2xl border ${n.type === 'rank_up' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
+                      {n.type === 'rank_up' ? <Trophy size={24} /> : <Check size={24} />}
+                    </div>
+                    <div className="flex-1 text-right">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[8px] text-gray-500 font-bold uppercase">
+                          {new Date(n.created_at).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}
+                        </span>
+                        <h4 className={`font-black text-lg italic uppercase leading-none ${n.type === 'rank_up' ? 'text-purple-400' : 'text-green-400'}`}>
                           {n.title}
                         </h4>
                       </div>
-                      <p className="text-sm text-gray-300 font-bold leading-relaxed text-right">
-                        {n.message}
-                      </p>
+                      <p className="text-sm text-gray-300 font-bold leading-relaxed">{n.message}</p>
                     </div>
                   </div>
                 )}
               </div>
             ))
           ) : (
+            /* في حال عدم وجود تنبيهات */
             <div className="text-center py-32 bg-white/5 rounded-[50px] border border-dashed border-white/10 opacity-30">
               <BellOff size={60} className="mx-auto mb-6 text-gray-800" />
-              <p className="font-black text-[10px] uppercase tracking-[0.3em] text-gray-600 italic leading-none text-center">
-                لا توجد تنبيهات جديدة
-              </p>
+              <p className="font-black text-[10px] uppercase tracking-[0.3em] text-gray-600 italic leading-none text-center">لا توجد تنبيهات جديدة</p>
             </div>
           )}
         </div>
