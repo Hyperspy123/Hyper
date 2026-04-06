@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft, Bell, Trophy, Users } from 'lucide-react';
+import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft, Bell, Trophy, Users, MessageSquare } from 'lucide-react';
 
 export default function Header() {
   const [user, setUser] = useState<any>(null);
@@ -98,7 +98,6 @@ export default function Header() {
 
   return (
     <>
-      {/* الطبقة الشفافة مع Blur كامل للشاشة عند فتح المنيو ✅ */}
       {isMenuOpen && (
         <div 
           className="fixed inset-0 z-[115] bg-[#05081d]/40 backdrop-blur-md transition-all duration-500 animate-in fade-in"
@@ -134,16 +133,24 @@ export default function Header() {
         </div>
 
         {/* اليسار: الأزرار والمنيو */}
-        <div className="flex items-center gap-2.5" dir="ltr">
+        <div className="flex items-center gap-2" dir="ltr">
           
-          {/* أيقونة المجتمع الجديدة ✅ */}
+          {/* أيقونة الرسائل (المحادثات) ✅ */}
+          <button 
+            onClick={() => navigate('/messages')} 
+            className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 transition-all active:scale-90"
+            title="المحادثات"
+          >
+            <MessageSquare size={20} />
+          </button>
+
+          {/* أيقونة المجتمع ✅ */}
           <button 
             onClick={() => navigate('/community')} 
-            className="relative p-2.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20 text-cyan-400 transition-all active:scale-90 shadow-[0_0_15px_rgba(34,211,238,0.1)]"
+            className="p-2.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20 text-cyan-400 transition-all active:scale-90 shadow-[0_0_15px_rgba(34,211,238,0.1)]"
             title="المجتمع"
           >
             <Users size={20} />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           </button>
 
           {/* أيقونة التنبيهات */}
@@ -154,15 +161,7 @@ export default function Header() {
             )}
           </button>
 
-          {user && (
-            <div className="hidden xs:flex flex-col items-end mr-1 text-right">
-               <span className="text-[10px] font-black text-white leading-none mb-1">{profile?.first_name || 'لاعب'}</span>
-               <div className="flex items-center gap-1 text-[8px] font-bold text-yellow-500 uppercase italic">
-                  <Trophy size={8} /> {profile?.current_rank}
-               </div>
-            </div>
-          )}
-
+          {/* زر المنيو */}
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)} 
             className={`p-2.5 rounded-xl border transition-all duration-300 relative z-[140] active:scale-95 ${isMenuOpen ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-cyan-400'}`}
@@ -170,11 +169,12 @@ export default function Header() {
             {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          {/* محتوى المنيو المنسدل */}
+          {/* المنيو المنسدل */}
           <div className={`absolute top-24 left-6 w-[240px] bg-[#0a0f3c]/95 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300 z-[140] overflow-hidden ${isMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'}`} style={{ transformOrigin: 'top left' }}>
             <div className="p-4 space-y-1" dir="rtl">
               {[
                 { icon: User, label: 'ملفي الشخصي', path: '/account' },
+                { icon: MessageSquare, label: 'مركز الرسائل', path: '/messages' },
                 { icon: Users, label: 'مجتمع الأساطير', path: '/community' },
                 { icon: Trophy, label: 'الفعاليات', path: '/tournaments' },
                 { icon: Settings, label: 'الإعدادات', path: '/settings' },
