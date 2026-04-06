@@ -178,7 +178,7 @@ export default function Header() {
                 { icon: Users, label: 'مجتمع الأساطير', path: '/community' },
                 { icon: Trophy, label: 'الفعاليات', path: '/tournaments' },
                 { icon: Settings, label: 'الإعدادات', path: '/settings' },
-                { icon: Headphones, label: 'الدعم الفني', path: '/contact' },
+                { icon: Headphones, label:  'الدعم الفني', path: '/contact' },
               ].map((item) => (
                 <button 
                   key={item.path} 
