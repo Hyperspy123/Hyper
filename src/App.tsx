@@ -23,7 +23,8 @@ import Faz3a from './pages/Faz3a';
 import Notifications from './pages/Notifications';
 import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
-import Community from './pages/Community'; // استيراد صفحة المجتمع الجديدة ✅
+import Community from './pages/Community'; 
+import Chat from './pages/Chat'; // استيراد صفحة الدردشة الجديدة ✅
 
 const queryClient = new QueryClient();
 
@@ -50,7 +51,7 @@ const App = () => {
       <div className="fixed top-[20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-indigo-500/20 blur-[110px] rounded-full pointer-events-none z-0" />
       
-      {/* 2. النجوم (Stardust) - نسخة مدمجة */}
+      {/* 2. النجوم (Stardust) */}
       <div 
         className="fixed inset-0 pointer-events-none z-[1] opacity-40 mix-blend-screen" 
         style={{ 
@@ -97,7 +98,8 @@ const App = () => {
                       <Route path="/rewards" element={<Rewards />} />
                       <Route path="/tournaments" element={<Tournaments />} />
                       <Route path="/faz3a" element={<Faz3a />} />
-                      <Route path="/community" element={<Community />} /> {/* مسار المجتمع الجديد ✅ */}
+                      <Route path="/community" element={<Community />} />
+                      <Route path="/chat/:challengeId" element={<Chat />} /> {/* مسار الشات الجديد ✅ */}
                       
                       {/* الإعدادات والحساب */}
                       <Route path="/account" element={<Account />} />

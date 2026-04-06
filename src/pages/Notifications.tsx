@@ -10,7 +10,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. دالة جلب التنبيهات مع تحديث حالة القراءة
+  // 1. جلب التنبيهات وتحديث حالة القراءة تلقائياً
   const fetchAllNotifications = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -26,7 +26,7 @@ export default function Notifications() {
       if (!error && data) {
         setNotifications(data);
         
-        // تحديث التنبيهات غير المقروءة لتصبح مقروءة عند فتح الصفحة
+        // تحويل غير المقروء إلى مقروء فور فتح الصفحة
         const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
         if (unreadIds.length > 0) {
           await supabase
@@ -36,7 +36,7 @@ export default function Notifications() {
         }
       }
     } catch (error: any) {
-      console.error("Error fetching notifications:", error.message);
+      console.error("Error:", error.message);
     } finally {
       setLoading(false);
     }
@@ -45,19 +45,16 @@ export default function Notifications() {
   useEffect(() => {
     fetchAllNotifications();
     
-    // مراقبة التغييرات اللحظية
+    // المزامنة اللحظية للإشعارات
     const channel = supabase
-      .channel('notif-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'notifications' }, 
-        () => fetchAllNotifications()
-      )
+      .channel('notif-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchAllNotifications())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [fetchAllNotifications]);
 
-  // 2. معالج التحديات (قبول/رفض)
+  // 2. معالج التحديات: عند القبول يتم التوجه للشات مباشرة ✅
   const handleChallengeAction = async (challengeId: string, action: 'accepted' | 'rejected') => {
     try {
       const { error } = await supabase
@@ -68,17 +65,21 @@ export default function Notifications() {
       if (error) throw error;
 
       if (action === 'accepted') {
-        toast.success("كفو! تم قبول التحدي 🔥");
+        toast.success("كفو! تم قبول التحدي.. جاري فتح الشات 🔥");
+        // توجيه المستخدم لصفحة الشات الخاصة بهذا التحدي
+        setTimeout(() => {
+          navigate(`/chat/${challengeId}`);
+        }, 1000);
       } else {
         toast.info("تم رفض التحدي");
+        fetchAllNotifications();
       }
-      fetchAllNotifications();
     } catch (error: any) {
-      toast.error("حدث خطأ في تحديث التحدي");
+      toast.error("حدث خطأ في تحديث حالة التحدي");
     }
   };
 
-  // 3. معالج دعوات الفزعة
+  // 3. معالج دعوات الفزعة (نظام الـ RPC)
   const handleInviteAction = async (postId: string, action: 'accept' | 'decline') => {
     if (action === 'accept') {
       try {
@@ -93,25 +94,25 @@ export default function Notifications() {
         if (joinError) throw joinError;
 
         if (success) {
-          toast.success("أبشر بالفزعة! تم الانضمام 🔥");
+          toast.success("أبشر بالفزعة! تم الانضمام للفريق 🔥");
           navigate('/faz3a'); 
         } else {
-          toast.error("للأسف اكتمل الفريق");
+          toast.error("للأسف اكتمل العدد في هذا الفريق");
         }
       } catch (error: any) {
-        toast.error("خطأ في الانضمام");
+        toast.error("خطأ أثناء محاولة الانضمام");
       }
     } else {
-      toast.info("تم الرفض");
+      toast.info("تم رفض الدعوة");
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#05081d] text-white pb-32 relative text-right font-sans" dir="rtl">
+    <div className="min-h-screen bg-[#05081d] text-white pb-32 relative text-right font-sans selection:bg-cyan-500/30" dir="rtl">
       <Header />
       
       <main className="pt-28 max-w-lg mx-auto px-6 relative z-10">
-        {/* Header Section */}
+        {/* العناوين */}
         <div className="flex items-center gap-4 mb-10">
             <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all backdrop-blur-md">
                 <ChevronLeft size={20} className="rotate-180" />
@@ -133,7 +134,7 @@ export default function Notifications() {
                 className={`p-6 rounded-[35px] border backdrop-blur-2xl transition-all duration-500 ${!n.is_read ? 'bg-cyan-500/5 border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/10 opacity-80'}`}
               >
                 
-                {/* إشعار التحدي (Challenge) */}
+                {/* النوع الأول: تحدي من المجتمع */}
                 {n.type === 'challenge' ? (
                   <div className="flex items-start gap-5">
                     <div className="p-4 rounded-2xl bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
@@ -164,7 +165,7 @@ export default function Notifications() {
                     </div>
                   </div>
                 ) : n.type === 'invite' ? (
-                  /* إشعار دعوة فزعة (Invite) */
+                  /* النوع الثاني: دعوة انضمام لفزعة */
                   <div className="flex items-start gap-5">
                     <div className="p-4 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                       <Zap size={24} className="fill-cyan-400" />
@@ -186,7 +187,7 @@ export default function Notifications() {
                     </div>
                   </div>
                 ) : (
-                  /* الإشعارات العادية (نظام / رانك) */
+                  /* النوع الثالث: تنبيهات النظام والرانك */
                   <div className="flex items-start gap-5">
                     <div className={`p-4 rounded-2xl border ${n.type === 'rank_up' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
                       {n.type === 'rank_up' ? <Trophy size={24} /> : <Check size={24} />}
@@ -207,10 +208,10 @@ export default function Notifications() {
               </div>
             ))
           ) : (
-            /* في حال عدم وجود تنبيهات */
-            <div className="text-center py-32 bg-white/5 rounded-[50px] border border-dashed border-white/10 opacity-30">
+            /* حالة عدم وجود بيانات */
+            <div className="text-center py-32 bg-[#0a0f3c]/40 rounded-[50px] border border-dashed border-white/10 opacity-30">
               <BellOff size={60} className="mx-auto mb-6 text-gray-800" />
-              <p className="font-black text-[10px] uppercase tracking-[0.3em] text-gray-600 italic leading-none text-center">لا توجد تنبيهات جديدة</p>
+              <p className="font-black text-[10px] uppercase tracking-[0.3em] text-gray-600 italic text-center">لا توجد تنبيهات جديدة حالياً</p>
             </div>
           )}
         </div>
