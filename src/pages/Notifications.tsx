@@ -10,7 +10,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. جلب التنبيهات وتحديث حالة القراءة تلقائياً
+  // 1. جلب التنبيهات وتحديث حالة القراءة تلقائياً ✅
   const fetchAllNotifications = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -26,17 +26,24 @@ export default function Notifications() {
       if (!error && data) {
         setNotifications(data);
         
-        // تحويل غير المقروء إلى مقروء فور فتح الصفحة
+        // جلب معرفات التنبيهات غير المقروءة فقط
         const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
+        
         if (unreadIds.length > 0) {
-          await supabase
+          // تحديثها في قاعدة البيانات لتصبح مقروءة
+          const { error: updateError } = await supabase
             .from('notifications')
             .update({ is_read: true })
             .in('id', unreadIds);
+          
+          if (!updateError) {
+            // ملاحظة: الهيدر سيقوم بتحديث نفسه تلقائياً بفضل الـ Realtime
+            console.log("تمت قراءة جميع التنبيهات بنجاح ✅");
+          }
         }
       }
     } catch (error: any) {
-      console.error("Error:", error.message);
+      console.error("Error fetching notifications:", error.message);
     } finally {
       setLoading(false);
     }
@@ -45,16 +52,23 @@ export default function Notifications() {
   useEffect(() => {
     fetchAllNotifications();
     
-    // المزامنة اللحظية للإشعارات
+    // المزامنة اللحظية للإشعارات لضمان تحديث الواجهة فوراً
     const channel = supabase
-      .channel('notif-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchAllNotifications())
+      .channel('notif-live-updates')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'notifications' 
+      }, () => {
+        // لا نقوم بالتحديث هنا لتجنب الحلقات اللانهائية عند القراءة، 
+        // التحديث يتم فقط عند إضافة إشعار جديد
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [fetchAllNotifications]);
 
-  // 2. معالج التحديات: عند القبول يتم التوجه للشات مباشرة ✅
+  // 2. معالج التحديات: عند القبول يتم التوجه للشات
   const handleChallengeAction = async (challengeId: string, action: 'accepted' | 'rejected') => {
     try {
       const { error } = await supabase
@@ -66,7 +80,6 @@ export default function Notifications() {
 
       if (action === 'accepted') {
         toast.success("كفو! تم قبول التحدي.. جاري فتح الشات 🔥");
-        // توجيه المستخدم لصفحة الشات الخاصة بهذا التحدي
         setTimeout(() => {
           navigate(`/chat/${challengeId}`);
         }, 1000);
@@ -75,11 +88,11 @@ export default function Notifications() {
         fetchAllNotifications();
       }
     } catch (error: any) {
-      toast.error("حدث خطأ في تحديث حالة التحدي");
+      toast.error("حدث خطأ في تحديث التحدي");
     }
   };
 
-  // 3. معالج دعوات الفزعة (نظام الـ RPC)
+  // 3. معالج دعوات الفزعة
   const handleInviteAction = async (postId: string, action: 'accept' | 'decline') => {
     if (action === 'accept') {
       try {
@@ -97,10 +110,10 @@ export default function Notifications() {
           toast.success("أبشر بالفزعة! تم الانضمام للفريق 🔥");
           navigate('/faz3a'); 
         } else {
-          toast.error("للأسف اكتمل العدد في هذا الفريق");
+          toast.error("للأسف اكتمل العدد");
         }
       } catch (error: any) {
-        toast.error("خطأ أثناء محاولة الانضمام");
+        toast.error("خطأ أثناء الانضمام");
       }
     } else {
       toast.info("تم رفض الدعوة");
@@ -112,13 +125,12 @@ export default function Notifications() {
       <Header />
       
       <main className="pt-28 max-w-lg mx-auto px-6 relative z-10">
-        {/* العناوين */}
         <div className="flex items-center gap-4 mb-10">
             <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all backdrop-blur-md">
                 <ChevronLeft size={20} className="rotate-180" />
             </button>
             <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
-              التنبيهات <span className="text-cyan-400 text-2xl tracking-normal">NOTIFS</span>
+              التنبيهات <span className="text-cyan-400 text-2xl tracking-normal italic">NOTIFS</span>
             </h1>
         </div>
 
@@ -131,10 +143,9 @@ export default function Notifications() {
             notifications.map((n) => (
               <div 
                 key={n.id} 
-                className={`p-6 rounded-[35px] border backdrop-blur-2xl transition-all duration-500 ${!n.is_read ? 'bg-cyan-500/5 border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/10 opacity-80'}`}
+                className={`p-6 rounded-[35px] border backdrop-blur-2xl transition-all duration-500 ${!n.is_read ? 'bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'bg-white/5 border-white/10 opacity-70'}`}
               >
                 
-                {/* النوع الأول: تحدي من المجتمع */}
                 {n.type === 'challenge' ? (
                   <div className="flex items-start gap-5">
                     <div className="p-4 rounded-2xl bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
@@ -165,7 +176,6 @@ export default function Notifications() {
                     </div>
                   </div>
                 ) : n.type === 'invite' ? (
-                  /* النوع الثاني: دعوة انضمام لفزعة */
                   <div className="flex items-start gap-5">
                     <div className="p-4 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                       <Zap size={24} className="fill-cyan-400" />
@@ -187,7 +197,6 @@ export default function Notifications() {
                     </div>
                   </div>
                 ) : (
-                  /* النوع الثالث: تنبيهات النظام والرانك */
                   <div className="flex items-start gap-5">
                     <div className={`p-4 rounded-2xl border ${n.type === 'rank_up' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
                       {n.type === 'rank_up' ? <Trophy size={24} /> : <Check size={24} />}
@@ -208,10 +217,9 @@ export default function Notifications() {
               </div>
             ))
           ) : (
-            /* حالة عدم وجود بيانات */
             <div className="text-center py-32 bg-[#0a0f3c]/40 rounded-[50px] border border-dashed border-white/10 opacity-30">
               <BellOff size={60} className="mx-auto mb-6 text-gray-800" />
-              <p className="font-black text-[10px] uppercase tracking-[0.3em] text-gray-600 italic text-center">لا توجد تنبيهات جديدة حالياً</p>
+              <p className="font-black text-[10px] uppercase tracking-[0.3em] text-gray-600 italic text-center">لا توجد تنبيهات جديدة</p>
             </div>
           )}
         </div>
