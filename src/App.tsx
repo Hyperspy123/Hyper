@@ -24,7 +24,8 @@ import Notifications from './pages/Notifications';
 import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
 import Community from './pages/Community'; 
-import Chat from './pages/Chat'; // استيراد صفحة الدردشة الجديدة ✅
+import Chat from './pages/Chat'; 
+import Messages from './pages/Messages'; // استيراد صفحة مركز الرسائل ✅
 
 const queryClient = new QueryClient();
 
@@ -99,7 +100,8 @@ const App = () => {
                       <Route path="/tournaments" element={<Tournaments />} />
                       <Route path="/faz3a" element={<Faz3a />} />
                       <Route path="/community" element={<Community />} />
-                      <Route path="/chat/:challengeId" element={<Chat />} /> {/* مسار الشات الجديد ✅ */}
+                      <Route path="/messages" element={<Messages />} /> {/* مسار مركز الرسائل ✅ */}
+                      <Route path="/chat/:challengeId" element={<Chat />} />
                       
                       {/* الإعدادات والحساب */}
                       <Route path="/account" element={<Account />} />
