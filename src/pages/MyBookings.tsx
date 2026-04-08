@@ -63,40 +63,38 @@ export default function MyBookings() {
     }
   };
 
-  // 🔥 الدالة الذهبية: تحويل الحجز لفزعة وضمان عدم الضياع
+  // 🔥 الدالة المحدثة: تحويل الحجز لفزعة (بدون العمود المسبب للخطأ)
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
     const bookingId = selectedBooking.id;
-    const courtName = selectedBooking.courts?.name || "ملعب هايب";
+    const courtName = selectedBooking.courts?.name || "ملعب بادل";
     setIsConverting(true);
 
     try {
-      // 1. التأكد من هوية المستخدم
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("يجب تسجيل الدخول أولاً");
 
-      // 2. تنسيق الوقت ليظهر بشكل صحيح في ساحة الفزعات (10:00 PM)
+      // تنسيق الوقت (مثلاً: 10:00 PM)
       const formattedTime = new Date(selectedBooking.start_time).toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit',
         hour12: true 
       });
 
-      // 3. الخطوة الأهم: إرسال الفزعة لجدول faz3a_posts أولاً
+      // إرسال الفزعة لجدول faz3a_posts (الأعمدة المتوافقة مع SQL فقط ✅)
       const { error: insertError } = await supabase
         .from('faz3a_posts')
         .insert([{
             creator_id: user.id,
-            location: 'حي الصحافة - الرياض', 
             court_name: courtName,
             match_time: formattedTime,
-            missing_players: missingCount,
-            is_from_booking: true // العلامة التي تجعلها تظهر في "فزعاتي"
+            missing_players: missingCount
+            // تم حذف is_from_booking لمنع المربع الأحمر
         }]);
 
       if (insertError) throw new Error(`فشل نشر الفزعة: ${insertError.message}`);
 
-      // 4. الآن نحدث حالة الحجز الأصلي لكي يختفي من "الحجوزات القادمة"
+      // تحديث حالة الحجز الأصلي
       const { error: updateError } = await supabase
         .from('bookings')
         .update({ status: 'converted' })
@@ -104,20 +102,18 @@ export default function MyBookings() {
       
       if (updateError) throw new Error(`فشل تحديث حالة الحجز: ${updateError.message}`);
 
-      // 5. تحديث الواجهة المحلية وحذف الحجز المحول من القائمة
       setBookings(prev => prev.filter(b => b.id !== bookingId));
       setIsModalOpen(false);
       
-      toast.success("كفو! حجزك الحين منور في ساحة الفزعات 🔥");
+      toast.success("كفو! حجزك الحين في ساحة الفزعات 🔥");
       
-      // 6. التوجيه المباشر لساحة الفزعات لمشاهدة النتيجة
       setTimeout(() => {
         navigate('/faz3a');
       }, 800);
 
     } catch (error: any) {
       console.error("Critical Error:", error);
-      toast.error(error.message || "حدث خطأ غير متوقع أثناء التحويل");
+      toast.error(error.message || "حدث خطأ أثناء التحويل");
     } finally {
       setIsConverting(false);
     }
@@ -133,7 +129,7 @@ export default function MyBookings() {
   });
 
   return (
-    <div className="min-h-screen bg-transparent text-white font-sans pb-32 relative text-right" dir="rtl">
+    <div className="min-h-screen bg-[#05081d] text-white font-sans pb-32 relative text-right" dir="rtl">
       <Header />
       <main className="p-6 max-w-md mx-auto pt-24 space-y-8 text-right">
         
@@ -150,7 +146,7 @@ export default function MyBookings() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-3.5 rounded-[18px] font-black text-[10px] uppercase transition-all duration-300 ${
-                activeTab === tab ? 'bg-cyan-500 text-[#0a0f3c] shadow-lg shadow-cyan-400/20' : 'text-gray-400 hover:text-gray-200'
+                activeTab === tab ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400'
               }`}
             >
               {tab === 'current' ? 'القادمة' : tab === 'previous' ? 'السابقة' : 'الملغاة'}
@@ -160,27 +156,23 @@ export default function MyBookings() {
 
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={32} /></div>
-        ) : filteredBookings.length === 0 ? (
-          <div className="text-center py-24 bg-white/5 rounded-[50px] border border-dashed border-white/10 opacity-30 font-black text-[10px] uppercase italic tracking-widest leading-none text-center">
-            لا توجد حجوزات
-          </div>
         ) : (
           <div className="grid gap-6">
             {filteredBookings.map((booking) => (
               <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 space-y-6 shadow-2xl">
                 <div className="flex items-center gap-5 text-right">
-                  <div className="w-16 h-16 rounded-[22px] overflow-hidden border border-white/10">
-                    <img src={booking.courts?.image_url} className="w-full h-full object-cover grayscale-[20%]" />
+                  <div className="w-16 h-16 rounded-[22px] overflow-hidden border border-white/10 bg-[#0a0f3c]">
+                    <img src={booking.courts?.image_url} className="w-full h-full object-cover" />
                   </div>
                   <div className="text-right">
-                    <h3 className="font-black text-xl italic leading-none mb-1 text-white text-right">{booking.courts?.name}</h3>
-                    <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest text-right opacity-60 italic leading-none">
-                        <Hash size={10} className="inline ml-1" /> {booking.id.slice(0,8).toUpperCase()}
+                    <h3 className="font-black text-xl italic leading-none mb-1 text-white">{booking.courts?.name}</h3>
+                    <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest opacity-60">
+                        ID: {booking.id.slice(0,8).toUpperCase()}
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-right">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300">
                     <Calendar size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleDateString('ar-EG')}
                   </div>
@@ -190,10 +182,10 @@ export default function MyBookings() {
                 </div>
 
                 {activeTab === 'current' && (
-                  <div className="flex gap-2 pt-2 text-right">
+                  <div className="flex gap-2 pt-2">
                     <button 
                       onClick={() => { setSelectedBooking(booking); setIsModalOpen(true); }}
-                      className="flex-[2] py-4.5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] text-[10px] uppercase shadow-lg shadow-cyan-400/20 flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-cyan-400"
+                      className="flex-[2] py-4.5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg"
                     >
                       <Zap size={15} fill="currentColor" /> تحويل لفزعة
                     </button>
@@ -211,63 +203,43 @@ export default function MyBookings() {
         )}
       </main>
 
-      {/* مودال التحويل المطور - نيون وكاريزما */}
+      {/* مودال التحويل */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-[#05081d]/90 backdrop-blur-3xl animate-in fade-in duration-300 text-right">
-          <div className="relative bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[50px] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden text-right" dir="rtl">
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 blur-[100px] rounded-full"></div>
-            <div className="relative z-10 space-y-10 text-right">
-              
-              <div className="flex justify-between items-center text-right">
-                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 rounded-2xl text-gray-500 hover:text-white transition-all active:scale-90">
-                  <X size={20} />
-                </button>
+          <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-sm rounded-[50px] p-10 shadow-2xl relative">
+            <div className="space-y-10">
+              <div className="flex justify-between items-center">
+                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 rounded-2xl text-gray-500 hover:text-white transition-all"><X size={20} /></button>
                 <div className="text-right">
-                  <h3 className="text-3xl font-[1000] italic text-white tracking-tighter uppercase leading-none text-right">تحويل <span className="text-cyan-400">لفزعة</span></h3>
-                  <p className="text-[9px] font-black text-gray-500 uppercase mt-2 tracking-[0.2em] italic text-right">انشر حجزك وابحث عن فزيعة</p>
+                  <h3 className="text-3xl font-[1000] italic text-white tracking-tighter uppercase leading-none">تحويل <span className="text-cyan-400">لفزعة</span></h3>
+                  <p className="text-[9px] font-black text-gray-500 uppercase mt-2 italic">انشر حجزك وابحث عن فزيعة</p>
                 </div>
               </div>
 
-              <div className="space-y-4 text-right">
-                <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest px-2 italic text-right leading-none">1. كم وحش ناقصك؟</p>
-                <div className="grid grid-cols-3 gap-3 text-right">
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest px-2 italic text-right">1. كم وحش ناقصك؟</p>
+                <div className="grid grid-cols-3 gap-3">
                   {[1, 2, 3].map(num => (
                     <button 
                       key={num} 
                       onClick={() => setMissingCount(num)} 
-                      className={`flex flex-col items-center justify-center py-8 rounded-[35px] border-2 transition-all duration-500 ${
+                      className={`flex flex-col items-center justify-center py-8 rounded-[35px] border-2 transition-all ${
                         missingCount === num 
-                        ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-[0_15px_30px_rgba(34,211,238,0.3)] scale-105' 
-                        : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/20'
+                        ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] scale-105 shadow-xl shadow-cyan-500/20' 
+                        : 'bg-white/5 border-white/5 text-gray-500'
                       }`}
                     >
                       <User size={22} className={`${missingCount === num ? 'animate-bounce' : 'opacity-20'}`} />
-                      <span className="text-2xl font-[1000] italic leading-none mt-1 text-center">{num}</span>
+                      <span className="text-2xl font-[1000] italic leading-none mt-1">{num}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-4 text-right">
-                 <p className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest px-2 italic text-right leading-none">2. مراجعة البيانات</p>
-                 <div className="bg-white/5 rounded-[30px] p-6 border border-white/5 space-y-4 text-right shadow-inner">
-                    <div className="flex items-center justify-between text-right">
-                       <span className="text-xs font-black text-white italic text-right">{selectedBooking?.courts?.name}</span>
-                       <MapPin size={16} className="text-gray-600 ml-2" />
-                    </div>
-                    <div className="flex items-center justify-between border-t border-white/5 pt-4 text-right">
-                       <span className="text-xs font-black text-white italic text-right">
-                          {new Date(selectedBooking?.start_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}
-                       </span>
-                       <Clock size={16} className="text-gray-600 ml-2" />
-                    </div>
-                 </div>
-              </div>
-
               <button 
                 onClick={handleFinalConversion} 
                 disabled={isConverting} 
-                className="group relative w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_20px_40px_rgba(34,211,238,0.2)]"
+                className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-cyan-500/30"
               >
                 {isConverting ? <Loader2 className="animate-spin" size={20} /> : <><Zap size={18} fill="currentColor" /> انشر الفزعة الآن 🔥</>}
               </button>
