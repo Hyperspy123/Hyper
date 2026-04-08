@@ -15,11 +15,11 @@ export default function Faz3a() {
   const [showCreate, setShowCreate] = useState(false);
 
   // بيانات الحجز الجديد
-  const [newPost, setNewPost] = useState({
-    court_name: '',
-    match_date: '',
-    match_time: '',
-    price: ''
+  const [newPost, setNewPost] = useState({ 
+    court_name: '', 
+    match_date: '', 
+    match_time: '', 
+    price: '' 
   });
 
   const navigate = useNavigate();
@@ -35,7 +35,6 @@ export default function Faz3a() {
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    
     setLoading(true);
     try {
       if (activeTab === 'public_faz3at') {
@@ -44,39 +43,36 @@ export default function Faz3a() {
           .select('*, profiles:creator_id(first_name, last_name, current_rank)')
           .eq('status', 'open')
           .order('created_at', { ascending: false });
-        
         if (error) throw error;
         setPublicFaz3at(data || []);
-      } 
-      else {
+      } else {
         const { data: myData, error } = await supabase
           .from('faz3a_posts')
           .select(`
-            *,
-            profiles:creator_id (first_name, last_name, current_rank),
+            *, 
+            profiles:creator_id (first_name, last_name, current_rank), 
             faz3a_participants (
-              participant_id,
+              participant_id, 
               profiles:participant_id (first_name, last_name, current_rank)
             )
           `)
           .or(`creator_id.eq.${user.id}, id.in.(select post_id from faz3a_participants where participant_id = '${user.id}')`)
           .order('created_at', { ascending: false });
-        
         if (error) throw error;
         setMyFullFaz3at(myData || []);
       }
-    } catch (err: any) {
-      console.error("Fetch Error:", err.message);
-    } finally {
-      setLoading(false);
+    } catch (err: any) { 
+      console.error(err.message); 
+    } finally { 
+      setLoading(false); 
     }
   }, [activeTab]);
 
-  useEffect(() => {
-    fetchData();
+  useEffect(() => { 
+    fetchData(); 
   }, [activeTab, fetchData]);
 
-  // نشر حجز جديد - تم تنظيف الأعمدة لضمان التوافق مع SQL ✅
+  // نشر حجز جديد ✅
   const createPost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUserId) return;
@@ -88,15 +84,13 @@ export default function Faz3a() {
       match_time: newPost.match_time,
       price: newPost.price,
       status: 'open'
-      // تم حذف الأعمدة غير الموجودة في الـ SQL لتجنب المربع الأحمر
     }]);
 
-    if (error) {
-      console.error("DB Error:", error.message);
-      toast.error("فشل النشر: " + error.message);
-    } else {
-      toast.success("تم عرض حجزك للنقل بنجاح 🚀");
-      setShowCreate(false);
+    if (error) { 
+      toast.error("فشل النشر: " + error.message); 
+    } else { 
+      toast.success("تم عرض حجزك بنجاح 🚀"); 
+      setShowCreate(false); 
       fetchData(); 
     }
   };
@@ -105,44 +99,32 @@ export default function Faz3a() {
     if (!currentUserId) return toast.error("سجل دخولك أولاً");
     setIsJoining(post.id);
     try {
-      const { data: success, error } = await supabase.rpc('join_faz3a_secure', {
-        p_post_id: post.id,
-        p_user_id: currentUserId
+      const { data: success, error } = await supabase.rpc('join_faz3a_secure', { 
+        p_post_id: post.id, 
+        p_user_id: currentUserId 
       });
 
       if (error) throw error;
 
       if (success) {
-        await supabase.from('notifications').insert([{
-          user_id: post.creator_id,
-          type: 'invite',
-          title: 'شخص مهتم بحجزك! 💰',
-          message: `انضم لاعب لحجزك في ${post.court_name}. تواصل معه الآن للتنسيق.`,
-          is_read: false
+        // إرسال تنبيه لصاحب الحجز
+        await supabase.from('notifications').insert([{ 
+          user_id: post.creator_id, 
+          type: 'invite', 
+          title: 'شخص مهتم بحجزك! 💰', 
+          message: `انضم لاعب لحجزك في ${post.court_name}. يمكنك التواصل معه الآن.`, 
+          is_read: false 
         }]);
 
         toast.success("أبشر بالفزعة! تم إبلاغ راعي الحجز 🔥");
         setActiveTab('joined_faz3at'); 
+      } else {
+        toast.error("الفريق اكتمل أو أنت مسجل مسبقاً");
       }
-    } catch (error: any) {
-      toast.error("حدث خطأ في الاتصال");
-    } finally {
-      setIsJoining(null);
-    }
-  };
-
-  const startChat = async (otherUserId: string, name: string) => {
-    if (!currentUserId) return;
-    try {
-      const { data: chatRoom } = await supabase
-        .from('challenges')
-        .insert([{ sender_id: currentUserId, receiver_id: otherUserId, status: 'accepted' }])
-        .select().single();
-
-      toast.success(`جاري فتح الشات مع ${name}..`);
-      setTimeout(() => navigate('/messages'), 500);
-    } catch (err) {
-      navigate('/messages');
+    } catch (error: any) { 
+      toast.error("خطأ في الاتصال"); 
+    } finally { 
+      setIsJoining(null); 
     }
   };
 
@@ -164,15 +146,15 @@ export default function Faz3a() {
         </div>
 
         {showCreate && (
-          <form onSubmit={createPost} className="bg-[#0a0f3c] border border-cyan-500/30 rounded-[35px] p-6 space-y-4 animate-in zoom-in-95 duration-300 shadow-2xl">
+          <form onSubmit={createPost} className="bg-[#0a0f3c] border border-cyan-500/30 rounded-[35px] p-6 space-y-4 animate-in zoom-in-95 shadow-2xl">
             <h3 className="text-lg font-black italic text-cyan-400">عرض حجز للنقل 📝</h3>
-            <input required placeholder="اسم الملعب..." className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-cyan-500 text-right" onChange={e => setNewPost({...newPost, court_name: e.target.value})} />
+            <input required placeholder="اسم الملعب..." className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-cyan-500 text-right font-bold" onChange={e => setNewPost({...newPost, court_name: e.target.value})} />
             <div className="grid grid-cols-2 gap-4">
-              <input required type="date" className="bg-white/5 border border-white/10 p-4 rounded-2xl outline-none text-right" onChange={e => setNewPost({...newPost, match_date: e.target.value})} />
-              <input required type="time" className="bg-white/5 border border-white/10 p-4 rounded-2xl outline-none text-right" onChange={e => setNewPost({...newPost, match_time: e.target.value})} />
+              <input required type="date" className="bg-white/5 border border-white/10 p-4 rounded-2xl outline-none text-right font-bold text-cyan-400" onChange={e => setNewPost({...newPost, match_date: e.target.value})} />
+              <input required type="time" className="bg-white/5 border border-white/10 p-4 rounded-2xl outline-none text-right font-bold text-cyan-400" onChange={e => setNewPost({...newPost, match_time: e.target.value})} />
             </div>
-            <input required placeholder="السعر المطلوب (ريال)" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-cyan-500 text-right" onChange={e => setNewPost({...newPost, price: e.target.value})} />
-            <button className="w-full py-5 bg-cyan-500 text-[#0a0f3c] font-[1000] rounded-2xl uppercase shadow-lg shadow-cyan-500/20">نشر الحجز 🚀</button>
+            <input required placeholder="السعر المطلوب (ريال)" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-cyan-500 text-right font-bold" onChange={e => setNewPost({...newPost, price: e.target.value})} />
+            <button className="w-full py-5 bg-cyan-500 text-[#0a0f3c] font-[1000] rounded-2xl uppercase shadow-lg shadow-cyan-500/30 transition-all active:scale-95">نشر الحجز 🚀</button>
           </form>
         )}
 
@@ -186,14 +168,14 @@ export default function Faz3a() {
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
           ) : activeTab === 'public_faz3at' ? (
             publicFaz3at.length > 0 ? publicFaz3at.map(post => (
-                <div key={post.id} className="bg-[#0a0f3c]/40 border border-white/10 rounded-[40px] p-7 space-y-5 backdrop-blur-2xl relative overflow-hidden group hover:border-cyan-500/30 transition-all">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500" />
+                <div key={post.id} className="bg-[#0a0f3c]/40 border border-white/10 rounded-[40px] p-7 space-y-5 backdrop-blur-2xl relative overflow-hidden group hover:border-cyan-500/30 transition-all shadow-xl">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.4)]" />
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-4 text-right">
                       <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center font-black text-cyan-400 border border-white/10 text-xl italic">{post.profiles?.first_name?.[0] || 'P'}</div>
                       <div className="text-right">
                         <h4 className="font-black text-lg italic text-white leading-none">{post.profiles?.first_name || "لاعب بادل"}</h4>
-                        <p className="text-[9px] font-black text-cyan-500/60 uppercase mt-1 italic tracking-tighter">راعي الحجز ✅</p>
+                        <p className="text-[9px] font-black text-cyan-500/60 uppercase mt-1 italic tracking-tighter">بائع موثوق ✅</p>
                       </div>
                     </div>
                     <div className="bg-cyan-500/10 text-cyan-400 px-4 py-1.5 rounded-full text-xs font-black italic border border-cyan-500/20">{post.price} ريال</div>
@@ -210,7 +192,7 @@ export default function Faz3a() {
                     </button>
                   )}
                 </div>
-            )) : <p className="text-center opacity-20 py-20 italic">لا توجد حجوزات متاحة حالياً</p>
+            )) : <p className="text-center opacity-20 py-20 italic font-black uppercase tracking-widest text-gray-500">لا توجد حجوزات متاحة حالياً</p>
           ) : (
             myFullFaz3at.length > 0 ? myFullFaz3at.map(post => {
               const isOwner = post.creator_id === currentUserId;
@@ -218,7 +200,7 @@ export default function Faz3a() {
                 <div key={post.id} className="bg-[#0a0f3c]/60 border border-cyan-500/20 rounded-[35px] p-7 space-y-6 shadow-2xl text-right">
                   <div className="flex justify-between items-center">
                      <div className="text-right">
-                        <p className="text-[10px] font-black text-cyan-400 uppercase italic mb-1">{isOwner ? "حجزك المنشور" : "حجز انضممت له"}</p>
+                        <p className="text-[10px] font-black text-cyan-400 uppercase italic mb-1">{isOwner ? "حجزك المنشور" : "حجز انضممت له"} <CheckCircle2 size={12} className="inline mr-1" /></p>
                         <h4 className="font-black text-xl italic text-white leading-none">{post.court_name}</h4>
                      </div>
                      <div className="bg-white/5 px-3 py-1.5 rounded-full border border-white/5 text-[10px] font-black italic text-gray-400">{post.price} ريال</div>
@@ -229,13 +211,13 @@ export default function Faz3a() {
                      <div className="flex flex-col gap-3">
                         {!isOwner && (
                           <div className="flex items-center justify-between bg-cyan-500/5 p-3 rounded-2xl border border-cyan-500/10">
-                            <button onClick={() => startChat(post.creator_id, post.profiles?.first_name)} className="p-2.5 bg-cyan-500 text-[#0a0f3c] rounded-xl active:scale-90 transition-all shadow-lg shadow-cyan-500/20"><MessageSquare size={16} /></button>
+                            <button onClick={() => navigate('/messages')} className="p-2.5 bg-cyan-500 text-[#0a0f3c] rounded-xl active:scale-90 transition-all shadow-lg"><MessageSquare size={16} /></button>
                             <span className="text-[11px] font-black italic text-white">{post.profiles?.first_name} (البائع)</span>
                           </div>
                         )}
                         {post.faz3a_participants?.map((p: any) => (
                           <div key={p.participant_id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5">
-                            <button onClick={() => startChat(p.participant_id, p.profiles?.first_name)} className="p-2.5 bg-white/10 text-cyan-400 rounded-xl active:scale-90 transition-all border border-white/10"><MessageSquare size={16} /></button>
+                            <button onClick={() => navigate('/messages')} className="p-2.5 bg-white/10 text-cyan-400 rounded-xl active:scale-90 transition-all border border-white/10"><MessageSquare size={16} /></button>
                             <span className="text-[11px] font-black italic text-gray-300">{p.profiles?.first_name} (المشتري)</span>
                           </div>
                         ))}
@@ -243,7 +225,7 @@ export default function Faz3a() {
                   </div>
                 </div>
               );
-            }) : <p className="text-center opacity-20 py-20 italic">لم تقم بأي عملية نقل بعد</p>
+            }) : <p className="text-center opacity-20 py-20 italic font-black uppercase tracking-widest text-gray-500">لم تقم بأي عملية نقل بعد</p>
           )}
         </div>
       </main>
