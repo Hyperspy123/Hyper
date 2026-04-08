@@ -10,13 +10,12 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. جلب التنبيهات وتصفير العداد فوراً عند فتح الصفحة ✅
+  // 1. جلب التنبيهات وتصفير العداد فوراً عند فتح الصفحة
   const fetchAllNotifications = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // جلب آخر 20 تنبيه للمستخدم
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -27,20 +26,13 @@ export default function Notifications() {
       if (!error && data) {
         setNotifications(data);
         
-        // استخراج التنبيهات التي لم تُقرأ بعد (is_read = false)
+        // تصفير أولي لجميع الإشعارات المعروضة
         const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
-        
         if (unreadIds.length > 0) {
-          // تحديث حالتها في قاعدة البيانات لتصبح مقروءة (is_read = true)
-          const { error: updateError } = await supabase
+          await supabase
             .from('notifications')
             .update({ is_read: true })
             .in('id', unreadIds);
-          
-          if (!updateError) {
-            // الهيدر سيختفي منه النقطة الحمراء تلقائياً لأننا نستخدم Realtime هناك
-            console.log("تم تصفير عداد التنبيهات بنجاح ✅");
-          }
         }
       }
     } catch (error: any) {
@@ -53,34 +45,34 @@ export default function Notifications() {
   useEffect(() => {
     fetchAllNotifications();
     
-    // المزامنة اللحظية: تحديث القائمة فقط عند وصول إشعار "جديد" فعلياً
     const channel = supabase
       .channel('notif-live-sync')
       .on('postgres_changes', { 
-        event: 'INSERT', // نهتم فقط بالإضافات الجديدة
+        event: 'INSERT', 
         schema: 'public', 
         table: 'notifications' 
       }, (payload) => {
-        // إذا وصل إشعار جديد وأنت داخل الصفحة، أضفه للقائمة وحدث الحالة
         setNotifications(prev => [payload.new, ...prev].slice(0, 20));
-        
-        // تصفيره فوراً لأنه معروض أمام المستخدم الآن
-        supabase
-          .from('notifications')
-          .update({ is_read: true })
-          .eq('id', payload.new.id)
-          .then(() => console.log("تم تصفير الإشعار الجديد تلقائياً"));
       })
       .subscribe();
 
-    return () => { 
-      supabase.removeChannel(channel); 
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [fetchAllNotifications]);
 
-  // 2. معالج التحديات: عند القبول يتم التوجه للشات
-  const handleChallengeAction = async (challengeId: string, action: 'accepted' | 'rejected') => {
+  // دالة مساعدة لتصفير إشعار محدد عند التفاعل معه ✅
+  const markAsRead = async (notificationId: string) => {
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+  };
+
+  // 2. معالج التحديات (معدل لتصفير النقطة فوراً) ✅
+  const handleChallengeAction = async (notificationId: string, challengeId: string, action: 'accepted' | 'rejected') => {
     try {
+      // تصفير الإشعار فوراً
+      await markAsRead(notificationId);
+
       const { error } = await supabase
         .from('challenges')
         .update({ status: action })
@@ -90,20 +82,21 @@ export default function Notifications() {
 
       if (action === 'accepted') {
         toast.success("كفو! تم قبول التحدي.. جاري فتح الشات 🔥");
-        setTimeout(() => {
-          navigate(`/chat/${challengeId}`);
-        }, 1000);
+        setTimeout(() => navigate(`/chat/${challengeId}`), 1000);
       } else {
         toast.info("تم رفض التحدي");
-        fetchAllNotifications(); // تحديث القائمة بعد الرفض
+        fetchAllNotifications();
       }
     } catch (error: any) {
       toast.error("حدث خطأ في تحديث التحدي");
     }
   };
 
-  // 3. معالج دعوات الفزعة (RPC)
-  const handleInviteAction = async (postId: string, action: 'accept' | 'decline') => {
+  // 3. معالج دعوات الفزعة (معدل لتصفير النقطة فوراً) ✅
+  const handleInviteAction = async (notificationId: string, postId: string, action: 'accept' | 'decline') => {
+    // تصفير الإشعار فوراً
+    await markAsRead(notificationId);
+
     if (action === 'accept') {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -117,7 +110,7 @@ export default function Notifications() {
         if (joinError) throw joinError;
 
         if (success) {
-          toast.success("أبشر بالفزعة! تم الانضمام للفريق 🔥");
+          toast.success("أبشر بالفزعة! 🔥");
           navigate('/faz3a'); 
         } else {
           toast.error("للأسف اكتمل العدد");
@@ -127,6 +120,7 @@ export default function Notifications() {
       }
     } else {
       toast.info("تم رفض الدعوة");
+      fetchAllNotifications();
     }
   };
 
@@ -171,13 +165,13 @@ export default function Notifications() {
                       <p className="text-sm text-gray-300 font-bold mb-5 leading-snug">{n.message}</p>
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => handleChallengeAction(n.related_id, 'accepted')} 
+                          onClick={() => handleChallengeAction(n.id, n.related_id, 'accepted')} 
                           className="flex-1 py-4 bg-yellow-500 text-[#0a0f3c] rounded-2xl text-[10px] font-[1000] uppercase active:scale-95 transition-all shadow-lg shadow-yellow-500/20"
                         >
                           أنا قد التحدي ⚡
                         </button>
                         <button 
-                          onClick={() => handleChallengeAction(n.related_id, 'rejected')} 
+                          onClick={() => handleChallengeAction(n.id, n.related_id, 'rejected')} 
                           className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-gray-500 active:scale-95 transition-all"
                         >
                           <X size={18} />
@@ -199,8 +193,8 @@ export default function Notifications() {
                       </div>
                       <p className="text-sm text-gray-400 font-bold mb-5 leading-snug">{n.message}</p>
                       <div className="flex gap-2">
-                        <button onClick={() => handleInviteAction(n.related_id, 'accept')} className="flex-1 py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl text-[10px] font-[1000] uppercase shadow-lg shadow-cyan-400/20 active:scale-95 transition-all">أبشر بالفزعة 🔥</button>
-                        <button onClick={() => handleInviteAction(n.related_id, 'decline')} className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-gray-500 active:scale-95 transition-all">
+                        <button onClick={() => handleInviteAction(n.id, n.related_id, 'accept')} className="flex-1 py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl text-[10px] font-[1000] uppercase shadow-lg shadow-cyan-400/20 active:scale-95 transition-all">أبشر بالفزعة 🔥</button>
+                        <button onClick={() => handleInviteAction(n.id, n.related_id, 'decline')} className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-gray-500 active:scale-95 transition-all">
                           <X size={18} />
                         </button>
                       </div>
