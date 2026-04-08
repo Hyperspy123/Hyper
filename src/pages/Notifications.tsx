@@ -10,12 +10,13 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. جلب التنبيهات وتحديث حالة القراءة تلقائياً ✅
+  // 1. جلب التنبيهات وتصفير العداد فوراً عند فتح الصفحة ✅
   const fetchAllNotifications = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // جلب آخر 20 تنبيه للمستخدم
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -26,19 +27,19 @@ export default function Notifications() {
       if (!error && data) {
         setNotifications(data);
         
-        // جلب معرفات التنبيهات غير المقروءة فقط
+        // استخراج التنبيهات التي لم تُقرأ بعد (is_read = false)
         const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
         
         if (unreadIds.length > 0) {
-          // تحديثها في قاعدة البيانات لتصبح مقروءة
+          // تحديث حالتها في قاعدة البيانات لتصبح مقروءة (is_read = true)
           const { error: updateError } = await supabase
             .from('notifications')
             .update({ is_read: true })
             .in('id', unreadIds);
           
           if (!updateError) {
-            // ملاحظة: الهيدر سيقوم بتحديث نفسه تلقائياً بفضل الـ Realtime
-            console.log("تمت قراءة جميع التنبيهات بنجاح ✅");
+            // الهيدر سيختفي منه النقطة الحمراء تلقائياً لأننا نستخدم Realtime هناك
+            console.log("تم تصفير عداد التنبيهات بنجاح ✅");
           }
         }
       }
@@ -52,20 +53,29 @@ export default function Notifications() {
   useEffect(() => {
     fetchAllNotifications();
     
-    // المزامنة اللحظية للإشعارات لضمان تحديث الواجهة فوراً
+    // المزامنة اللحظية: تحديث القائمة فقط عند وصول إشعار "جديد" فعلياً
     const channel = supabase
-      .channel('notif-live-updates')
+      .channel('notif-live-sync')
       .on('postgres_changes', { 
-        event: '*', 
+        event: 'INSERT', // نهتم فقط بالإضافات الجديدة
         schema: 'public', 
         table: 'notifications' 
-      }, () => {
-        // لا نقوم بالتحديث هنا لتجنب الحلقات اللانهائية عند القراءة، 
-        // التحديث يتم فقط عند إضافة إشعار جديد
+      }, (payload) => {
+        // إذا وصل إشعار جديد وأنت داخل الصفحة، أضفه للقائمة وحدث الحالة
+        setNotifications(prev => [payload.new, ...prev].slice(0, 20));
+        
+        // تصفيره فوراً لأنه معروض أمام المستخدم الآن
+        supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', payload.new.id)
+          .then(() => console.log("تم تصفير الإشعار الجديد تلقائياً"));
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { 
+      supabase.removeChannel(channel); 
+    };
   }, [fetchAllNotifications]);
 
   // 2. معالج التحديات: عند القبول يتم التوجه للشات
@@ -85,14 +95,14 @@ export default function Notifications() {
         }, 1000);
       } else {
         toast.info("تم رفض التحدي");
-        fetchAllNotifications();
+        fetchAllNotifications(); // تحديث القائمة بعد الرفض
       }
     } catch (error: any) {
       toast.error("حدث خطأ في تحديث التحدي");
     }
   };
 
-  // 3. معالج دعوات الفزعة
+  // 3. معالج دعوات الفزعة (RPC)
   const handleInviteAction = async (postId: string, action: 'accept' | 'decline') => {
     if (action === 'accept') {
       try {
