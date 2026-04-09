@@ -15,6 +15,7 @@ export default function Faz3a() {
 
   const navigate = useNavigate();
 
+  // 1. جلب بيانات المستخدم الحالي عند التحميل
   useEffect(() => {
     async function getUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -23,7 +24,7 @@ export default function Faz3a() {
     getUser();
   }, []);
 
-  // دالة جلب البيانات المحدثة (تضمن المزامنة بين الجهازين)
+  // 2. دالة جلب البيانات المحدثة لضمان المزامنة والظهور الفوري
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -31,6 +32,7 @@ export default function Faz3a() {
     setLoading(true);
     try {
       if (activeTab === 'public_faz3at') {
+        // جلب الفزعات العامة المتاحة
         const { data, error } = await supabase
           .from('faz3a_posts')
           .select('*, profiles:creator_id(first_name, last_name, current_rank), faz3a_participants(participant_id)')
@@ -38,8 +40,8 @@ export default function Faz3a() {
         if (error) throw error;
         setPublicFaz3at(data || []);
       } else {
-        // 1. جلب الفزعات التي أنشأتها أنا (بصفتي راعي الحجز)
-        const { data: owned, error: err1 } = await supabase
+        // جلب الفزعات الخاصة بي (التي أنشأتها أو انضممت إليها) مع تفاصيل المشاركين
+        const { data, error } = await supabase
           .from('faz3a_posts')
           .select(`
             *, 
@@ -49,36 +51,12 @@ export default function Faz3a() {
               profiles:participant_id (id, first_name, last_name)
             )
           `)
-          .eq('creator_id', user.id);
+          // الشرط: إما أن أكون المالك أو اسمي موجود في قائمة المشاركين
+          .or(`creator_id.eq.${user.id}, id.in.(select post_id from faz3a_participants where participant_id = '${user.id}')`)
+          .order('created_at', { ascending: false });
 
-        // 2. جلب الفزعات التي انضممت إليها (بصفتي فزيع)
-        const { data: joined, error: err2 } = await supabase
-          .from('faz3a_participants')
-          .select(`
-            post_id,
-            faz3a_posts (
-              *,
-              profiles:creator_id (id, first_name, last_name),
-              faz3a_participants (
-                participant_id,
-                profiles:participant_id (id, first_name, last_name)
-              )
-            )
-          `)
-          .eq('participant_id', user.id);
-
-        if (err1 || err2) throw (err1 || err2);
-
-        // دمج النتائج وتصفية المكرر لضمان التحديث اللحظي
-        const joinedPosts = joined?.map(j => j.faz3a_posts).filter(Boolean) || [];
-        const combined = [...(owned || []), ...joinedPosts];
-        
-        // إزالة التكرار بناءً على معرف الفزعة
-        const uniquePosts = combined.filter((v, i, a) => 
-          a.findIndex(t => (t.id === v.id)) === i
-        );
-        
-        setMyFullFaz3at(uniquePosts);
+        if (error) throw error;
+        setMyFullFaz3at(data || []);
       }
     } catch (err: any) { 
       console.error("Fetch Error:", err.message); 
@@ -91,12 +69,14 @@ export default function Faz3a() {
     fetchData(); 
   }, [activeTab, fetchData]);
 
+  // 3. معالج الانضمام + إرسال التنبيه الفوري
   const handleJoin = async (post: any) => {
     if (!currentUserId) return toast.error("سجل دخولك أولاً");
     if (currentUserId === post.creator_id) return toast.error("لا يمكنك الانضمام لحجزك الخاص");
 
     setIsJoining(post.id);
     try {
+      // استدعاء دالة الـ RPC
       const { data: success, error } = await supabase.rpc('join_faz3a_secure', { 
         p_post_id: post.id, 
         p_user_id: currentUserId 
@@ -105,19 +85,20 @@ export default function Faz3a() {
       if (error) throw error;
 
       if (success) {
+        // إرسال تنبيه للراعي
         await supabase.from('notifications').insert([{ 
           user_id: post.creator_id, 
           type: 'invite', 
           title: 'بطل جديد فزع لك! 🔥', 
-          message: `انضم لاعب لفزعتك في ${post.court_name}. نسق معه الآن.`, 
+          message: `انضم لاعب لفزعتك في ${post.court_name}. تواصل معه الآن.`, 
           is_read: false 
         }]);
 
         toast.success("كفو! تم تسجيلك.. راعي الحجز بيجيه خبر 🔥");
-        setActiveTab('joined_faz3at'); 
-        fetchData();
+        setActiveTab('joined_faz3at'); // تحويل المستخدم لتبويب فزعاتي
+        fetchData(); // تحديث القائمة فوراً
       } else {
-        toast.error("حدث خطأ أو أنك منضم مسبقاً");
+        toast.error("عذراً، الفريق اكتمل أو أنت مسجل مسبقاً");
       }
     } catch (error: any) { 
       toast.error("خطأ في الاتصال"); 
@@ -135,6 +116,7 @@ export default function Faz3a() {
       <Header />
       <main className="p-6 max-w-md mx-auto space-y-8 pt-24 text-right">
         
+        {/* الهيدر */}
         <div className="flex items-center justify-between">
            <div className="text-right">
               <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
@@ -147,15 +129,17 @@ export default function Faz3a() {
            </button>
         </div>
 
-        <div className="flex bg-[#0a0f3c]/60 p-1.5 rounded-[24px] border border-white/10 backdrop-blur-3xl gap-1.5 shadow-2xl">
-            <button onClick={() => setActiveTab('public_faz3at')} className={`flex-1 py-3.5 rounded-[18px] text-[10px] font-black uppercase transition-all ${activeTab === 'public_faz3at' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-500'}`}>فزعات متاحة</button>
-            <button onClick={() => setActiveTab('joined_faz3at')} className={`flex-1 py-3.5 rounded-[18px] text-[10px] font-black uppercase transition-all ${activeTab === 'joined_faz3at' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-500'}`}>فزعاتي</button>
+        {/* التبويبات */}
+        <div className="flex bg-[#0a0f3c]/60 p-1.5 rounded-[24px] border border-white/10 backdrop-blur-3xl gap-1.5 shadow-2xl font-black italic">
+            <button onClick={() => setActiveTab('public_faz3at')} className={`flex-1 py-3.5 rounded-[18px] text-[10px] uppercase transition-all ${activeTab === 'public_faz3at' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-500'}`}>فزعات متاحة</button>
+            <button onClick={() => setActiveTab('joined_faz3at')} className={`flex-1 py-3.5 rounded-[18px] text-[10px] uppercase transition-all ${activeTab === 'joined_faz3at' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-500'}`}>فزعاتي</button>
         </div>
 
         <div className="space-y-6">
           {loading ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
           ) : activeTab === 'public_faz3at' ? (
+            /* --- قائمة الفزعات المتاحة للجميع --- */
             publicFaz3at.length > 0 ? publicFaz3at.map(post => {
               const alreadyJoined = post.faz3a_participants?.some((p: any) => p.participant_id === currentUserId);
               return (
@@ -188,6 +172,7 @@ export default function Faz3a() {
               )
             }) : <p className="text-center opacity-20 py-20 italic">لا توجد فزعات متاحة</p>
           ) : (
+            /* --- تبويب فزعاتي (يظهر البيانات في كلا الجهازين فوراً) --- */
             myFullFaz3at.length > 0 ? myFullFaz3at.map(post => {
               const isOwner = post.creator_id === currentUserId;
               return (
@@ -212,7 +197,7 @@ export default function Faz3a() {
                         {post.faz3a_participants?.map((p: any) => {
                           const isOther = p.participant_id !== currentUserId;
                           return (
-                            <div key={p.participant_id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5">
+                            <div key={p.participant_id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
                               {isOther ? (
                                 <button onClick={openChat} className="p-2.5 bg-white/10 text-cyan-400 rounded-xl active:scale-90 border border-white/10"><MessageSquare size={16} /></button>
                               ) : <div className="w-10" />}
@@ -224,7 +209,7 @@ export default function Faz3a() {
                   </div>
                 </div>
               );
-            }) : <p className="text-center opacity-20 py-20 italic">لم تشارك في أي فزعة بعد</p>
+            }) : <p className="text-center opacity-20 py-20 italic font-black text-gray-500">لم تشارك في أي فزعة بعد</p>
           )}
         </div>
       </main>
