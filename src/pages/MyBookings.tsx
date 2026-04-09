@@ -63,7 +63,7 @@ export default function MyBookings() {
     }
   };
 
-  // 🔥 الدالة المحدثة: تحويل الحجز لفزعة (بدون العمود المسبب للخطأ)
+  // 🔥 الدالة المحدثة: تحويل الحجز لفزعة وضمان ظهوره فوراً
   const handleFinalConversion = async () => {
     if (!selectedBooking) return;
     const bookingId = selectedBooking.id;
@@ -81,20 +81,20 @@ export default function MyBookings() {
         hour12: true 
       });
 
-      // إرسال الفزعة لجدول faz3a_posts (الأعمدة المتوافقة مع SQL فقط ✅)
+      // إرسال الفزعة لجدول faz3a_posts
       const { error: insertError } = await supabase
         .from('faz3a_posts')
         .insert([{
             creator_id: user.id,
             court_name: courtName,
             match_time: formattedTime,
-            missing_players: missingCount
-            // تم حذف is_from_booking لمنع المربع الأحمر
+            missing_players: missingCount,
+            status: 'open' // ✅ ضمان ظهورها في البحث والتبويبات
         }]);
 
       if (insertError) throw new Error(`فشل نشر الفزعة: ${insertError.message}`);
 
-      // تحديث حالة الحجز الأصلي
+      // تحديث حالة الحجز الأصلي إلى "محول"
       const { error: updateError } = await supabase
         .from('bookings')
         .update({ status: 'converted' })
@@ -102,11 +102,13 @@ export default function MyBookings() {
       
       if (updateError) throw new Error(`فشل تحديث حالة الحجز: ${updateError.message}`);
 
+      // تحديث الواجهة المحلية
       setBookings(prev => prev.filter(b => b.id !== bookingId));
       setIsModalOpen(false);
       
       toast.success("كفو! حجزك الحين في ساحة الفزعات 🔥");
       
+      // الانتقال التلقائي لصفحة الفزعات لمشاهدة الحجز هناك
       setTimeout(() => {
         navigate('/faz3a');
       }, 800);
@@ -134,7 +136,7 @@ export default function MyBookings() {
       <main className="p-6 max-w-md mx-auto pt-24 space-y-8 text-right">
         
         <div className="flex items-center gap-4 text-right">
-          <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
+          <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all shadow-xl">
             <ChevronLeft size={20} className="rotate-180" />
           </button>
           <h1 className="text-4xl font-[1000] italic uppercase leading-none tracking-tighter text-right">حجوزاتي</h1>
@@ -158,8 +160,8 @@ export default function MyBookings() {
           <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={32} /></div>
         ) : (
           <div className="grid gap-6">
-            {filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 space-y-6 shadow-2xl">
+            {filteredBookings.length > 0 ? filteredBookings.map((booking) => (
+              <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 space-y-6 shadow-2xl relative overflow-hidden group">
                 <div className="flex items-center gap-5 text-right">
                   <div className="w-16 h-16 rounded-[22px] overflow-hidden border border-white/10 bg-[#0a0f3c]">
                     <img src={booking.courts?.image_url} className="w-full h-full object-cover" />
@@ -173,11 +175,11 @@ export default function MyBookings() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300">
-                    <Calendar size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleDateString('ar-EG')}
+                  <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300 justify-end">
+                    {new Date(booking.start_time).toLocaleDateString('ar-EG')} <Calendar size={14} className="text-cyan-400" />
                   </div>
-                  <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300">
-                    <Clock size={14} className="text-cyan-400" /> {new Date(booking.start_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}
+                  <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5 text-[10px] font-black italic text-gray-300 justify-end">
+                    {new Date(booking.start_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})} <Clock size={14} className="text-cyan-400" />
                   </div>
                 </div>
 
@@ -185,7 +187,7 @@ export default function MyBookings() {
                   <div className="flex gap-2 pt-2">
                     <button 
                       onClick={() => { setSelectedBooking(booking); setIsModalOpen(true); }}
-                      className="flex-[2] py-4.5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg"
+                      className="flex-[2] py-4.5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-cyan-500/20"
                     >
                       <Zap size={15} fill="currentColor" /> تحويل لفزعة
                     </button>
@@ -198,7 +200,9 @@ export default function MyBookings() {
                   </div>
                 )}
               </div>
-            ))}
+            )) : (
+              <p className="text-center opacity-20 py-20 italic font-black uppercase tracking-widest text-gray-500">لا توجد حجوزات هنا</p>
+            )}
           </div>
         )}
       </main>
@@ -212,7 +216,7 @@ export default function MyBookings() {
                 <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 rounded-2xl text-gray-500 hover:text-white transition-all"><X size={20} /></button>
                 <div className="text-right">
                   <h3 className="text-3xl font-[1000] italic text-white tracking-tighter uppercase leading-none">تحويل <span className="text-cyan-400">لفزعة</span></h3>
-                  <p className="text-[9px] font-black text-gray-500 uppercase mt-2 italic">انشر حجزك وابحث عن فزيعة</p>
+                  <p className="text-[9px] font-black text-gray-500 uppercase mt-2 italic">انشر حجزك وابحث عن أبطال</p>
                 </div>
               </div>
 
