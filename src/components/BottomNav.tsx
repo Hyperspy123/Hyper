@@ -5,7 +5,7 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // المصفوفة بعد حذف "فزعة" 🗑️
+  // المصفوفة النظيفة 100% بدون "فزعة" 🗑️
   const navItems = [
     { 
       icon: Home, 
