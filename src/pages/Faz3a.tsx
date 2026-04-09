@@ -15,23 +15,23 @@ export default function Faz3a() {
 
   const navigate = useNavigate();
 
-  // 1. جلب معرف المستخدم الحالي
+  // 1. التأكد من هوية المستخدم عند تحميل الصفحة
   useEffect(() => {
-    async function getUser() {
+    const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setCurrentUserId(user.id);
-    }
+    };
     getUser();
   }, []);
 
-  // 2. دالة جلب البيانات (تحديث ذكي يضمن المزامنة)
+  // 2. دالة جلب البيانات مع كسر الكاش لضمان ظهور الحجوزات المحولة فوراً
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     
     setLoading(true);
     try {
-      // جلب كافة الفزعات مع بيانات المالك والمشاركين
+      // جلب كافة الفزعات (بدون استثناء) لفرزها برمجياً
       const { data, error } = await supabase
         .from('faz3a_posts')
         .select(`
@@ -48,16 +48,14 @@ export default function Faz3a() {
 
       const allPosts = data || [];
 
-      // الفرز البرمجي للتبويبات لضمان عدم اختفاء الحجوزات:
-      
-      // أ. فزعات متاحة: أي فزعة حالة "open" + لست أنا صاحبها + لم أنضم لها بعد
+      // أ. فزعات متاحة: حجز "مو حقي" + أنا "مو منضم" + الحالة "مفتوحة"
       const available = allPosts.filter(p => 
-        p.status === 'open' &&
         p.creator_id !== user.id && 
-        !p.faz3a_participants?.some((pt: any) => pt.participant_id === user.id)
+        !p.faz3a_participants?.some((pt: any) => pt.participant_id === user.id) &&
+        p.status === 'open'
       );
       
-      // ب. فزعاتي: التي أنشأتها أنا (صاحبها) أو انضممت إليها (مشارك) مهما كانت حالتها (Open/Full)
+      // ب. فزعاتي: حجز "أنا صاحبه" أو حجز "أنا منضم له" (تظهر حتى لو اكتمل الفريق)
       const mine = allPosts.filter(p => 
         p.creator_id === user.id || 
         p.faz3a_participants?.some((pt: any) => pt.participant_id === user.id)
@@ -73,19 +71,25 @@ export default function Faz3a() {
     }
   }, []);
 
-  // 3. المستمع اللحظي (Real-time)
+  // 3. المزامنة اللحظية (Real-time) - الاستماع لأي تغيير في الجداول
   useEffect(() => {
     fetchData();
 
-    const channel = supabase.channel('faz3a_sync_channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'faz3a_posts' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'faz3a_participants' }, () => fetchData())
+    const channel = supabase.channel('faz3a_live_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'faz3a_posts' }, () => {
+        console.log("تحديث في الفزعات...");
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'faz3a_participants' }, () => {
+        console.log("تحديث في المشاركين...");
+        fetchData();
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
 
-  // 4. تنفيذ الانضمام باستخدام دالة الـ SQL Secure
+  // 4. دالة الانضمام
   const handleJoin = async (post: any) => {
     if (!currentUserId) return toast.error("سجل دخولك أولاً");
     setIsJoining(post.id);
@@ -98,23 +102,14 @@ export default function Faz3a() {
       if (error) throw error;
 
       if (success) {
-        // تنبيه صاحب الحجز
-        await supabase.from('notifications').insert([{ 
-          user_id: post.creator_id, 
-          type: 'invite', 
-          title: 'بطل جديد فزع لك! 🔥', 
-          message: `انضم لاعب لفزعتك في ${post.court_name}. نسق معه الآن.`, 
-          is_read: false 
-        }]);
-
-        toast.success("كفو! تم تسجيلك بنجاح 🔥");
+        toast.success("كفو! أبشر بالفزعة 🔥");
         setActiveTab('joined_faz3at');
         fetchData();
       } else {
-        toast.error("لا يمكن الانضمام (مكتمل أو حجزك الخاص)");
+        toast.error("عذراً، لا يمكنك الانضمام (مكتمل أو حجزك الخاص)");
       }
     } catch (error) { 
-      toast.error("خطأ في الاتصال"); 
+      toast.error("خطأ في الاتصال بالسيرفر"); 
     } finally { 
       setIsJoining(null); 
     }
@@ -123,15 +118,15 @@ export default function Faz3a() {
   return (
     <div className="min-h-screen bg-[#05081d] text-white font-sans pb-32 relative text-right" dir="rtl">
       <Header />
-      <main className="p-6 max-w-md mx-auto space-y-8 pt-24 text-right">
+      <main className="p-6 max-w-md mx-auto space-y-8 pt-24">
         
-        {/* الهيدر */}
+        {/* الهيدر المحسن */}
         <div className="flex items-center justify-between">
            <div className="text-right">
               <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
                 ساحة <span className="text-cyan-400">الفزعات</span>
               </h1>
-              <p className="text-[10px] font-bold text-gray-500 uppercase mt-2 italic tracking-widest leading-none">تنسيق الفزعات لايف</p>
+              <p className="text-[10px] font-bold text-gray-500 uppercase mt-2 italic tracking-widest leading-none">تنسيق الأبطال لايف</p>
            </div>
            <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all shadow-xl">
              <ChevronLeft size={20} className="rotate-180" />
@@ -144,17 +139,17 @@ export default function Faz3a() {
             <button onClick={() => setActiveTab('joined_faz3at')} className={`flex-1 py-3.5 rounded-[18px] text-[10px] transition-all ${activeTab === 'joined_faz3at' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400'}`}>فزعاتي</button>
         </div>
 
-        {/* قائمة الفزعات */}
+        {/* محتوى القائمة */}
         <div className="space-y-6">
           {loading && (activeTab === 'public_faz3at' ? publicFaz3at.length === 0 : myFullFaz3at.length === 0) ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
           ) : activeTab === 'public_faz3at' ? (
-            /* --- التبويب الأول: الفزعات المتاحة --- */
+            /* --- عرض الفزعات المتاحة --- */
             publicFaz3at.length > 0 ? publicFaz3at.map(post => {
               const count = post.faz3a_participants?.length || 0;
               const isFull = count >= post.missing_players;
               return (
-                <div key={post.id} className="bg-[#0a0f3c]/40 border border-white/10 rounded-[40px] p-7 space-y-5 backdrop-blur-2xl relative overflow-hidden group shadow-xl">
+                <div key={post.id} className="bg-[#0a0f3c]/40 border border-white/10 rounded-[40px] p-7 space-y-5 backdrop-blur-2xl relative overflow-hidden group shadow-xl transition-all">
                   <div className={`absolute top-0 left-0 w-1.5 h-full ${isFull ? 'bg-green-500' : 'bg-cyan-500'}`} />
                   <div className="flex items-center gap-4 text-right">
                     <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center font-black text-cyan-400 border border-white/10 text-xl italic">{post.profiles?.first_name?.[0]}</div>
@@ -164,11 +159,11 @@ export default function Faz3a() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-[10px] font-black italic text-gray-300">
-                    <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-2 justify-end">{post.court_name} <MapPin size={14} className="text-cyan-400" /></div>
-                    <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-2 justify-end">{post.match_time} <Clock size={14} className="text-cyan-400" /></div>
+                    <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-2 justify-end truncate border border-white/5">{post.court_name} <MapPin size={14} className="text-cyan-400" /></div>
+                    <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-2 justify-end border border-white/5">{post.match_time} <Clock size={14} className="text-cyan-400" /></div>
                   </div>
                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-black italic">
+                    <div className="flex justify-between items-center text-[10px] font-black italic uppercase">
                       <span className="text-cyan-400">باقي {post.missing_players - count} أبطال</span>
                       <span className="text-gray-500">حالة الفريق</span>
                     </div>
@@ -178,37 +173,35 @@ export default function Faz3a() {
                   </div>
                   {!isFull && (
                     <button onClick={() => handleJoin(post)} disabled={isJoining === post.id} className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[22px] font-[1000] text-[11px] uppercase shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
-                      {isJoining === post.id ? <Loader2 className="animate-spin" size={16} /> : "أبشر بالفزعة ✋"}
+                      {isJoining === post.id ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} fill="currentColor" />} أبشر بالفزعة ✋
                     </button>
                   )}
                 </div>
               )
-            }) : <p className="text-center opacity-20 py-20 italic font-black uppercase tracking-widest text-gray-500">لا توجد فزعات متاحة</p>
+            }) : <p className="text-center opacity-20 py-20 italic font-black text-gray-500 uppercase">لا توجد فزعات متاحة حالياً</p>
           ) : (
-            /* --- التبويب الثاني: فزعاتي --- */
+            /* --- عرض فزعاتي --- */
             myFullFaz3at.length > 0 ? myFullFaz3at.map(post => {
               const isOwner = post.creator_id === currentUserId;
               return (
                 <div key={post.id} className="bg-[#0a0f3c]/60 border border-cyan-500/20 rounded-[35px] p-7 space-y-6 shadow-2xl text-right animate-in fade-in">
                   <div className="flex justify-between items-center text-right">
                      <div className="text-right">
-                        <p className="text-[10px] font-black text-cyan-400 uppercase italic mb-1">{isOwner ? "فزعتك المنشورة" : "فزعة انضممت لها"}</p>
+                        <p className="text-[10px] font-black text-cyan-400 uppercase italic mb-1">{isOwner ? "حجزك المحول" : "فزعة انضممت لها"}</p>
                         <h4 className="font-black text-xl italic text-white leading-none">{post.court_name}</h4>
                      </div>
                      <div className="bg-white/5 px-3 py-1.5 rounded-full border border-white/5 text-[10px] font-black italic text-gray-400">{post.match_time}</div>
                   </div>
                   
                   <div className="space-y-4 pt-3 border-t border-white/5">
-                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest italic text-right">أبطال المباراة:</p>
+                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest italic text-right">أبطال الفزعة:</p>
                      <div className="flex flex-col gap-3">
-                        {/* عرض المالك */}
                         {!isOwner && post.profiles && (
-                          <div className="flex items-center justify-between bg-cyan-500/5 p-3 rounded-2xl border border-cyan-500/10">
+                          <div className="flex items-center justify-between bg-cyan-500/5 p-3 rounded-2xl border border-cyan-500/10 transition-all">
                             <button onClick={() => navigate('/messages')} className="p-2.5 bg-cyan-500 text-[#0a0f3c] rounded-xl active:scale-90"><MessageSquare size={16} /></button>
                             <span className="text-[11px] font-black italic text-white">{post.profiles.first_name} (الراعي) <ShieldCheck size={12} className="inline ml-1 text-cyan-400" /></span>
                           </div>
                         )}
-                        {/* عرض المشاركين */}
                         {post.faz3a_participants?.map((p: any) => (
                           <div key={p.participant_id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
                             {p.participant_id !== currentUserId ? (
@@ -221,7 +214,7 @@ export default function Faz3a() {
                   </div>
                 </div>
               );
-            }) : <p className="text-center opacity-20 py-20 italic font-black text-gray-500 leading-none">لم تنشر أو تشارك في <br/> أي فزعة بعد</p>
+            }) : <p className="text-center opacity-20 py-20 italic font-black text-gray-500 uppercase tracking-widest leading-none">لم يتم العثور على <br/> أي فزعات خاصة بك</p>
           )}
         </div>
       </main>
