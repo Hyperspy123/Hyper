@@ -23,6 +23,7 @@ export default function Faz3a() {
     getUser();
   }, []);
 
+  // دالة جلب البيانات
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -60,9 +61,26 @@ export default function Faz3a() {
     }
   }, [activeTab]);
 
-  useEffect(() => { 
-    fetchData(); 
-  }, [activeTab, fetchData]);
+  // 🔥 تفعيل التحديث اللحظي (Real-time)
+  useEffect(() => {
+    fetchData();
+
+    // الاستماع لأي تغيير في جدول المشاركين لتحديث العداد فوراً
+    const channel = supabase
+      .channel('realtime-faz3a')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'faz3a_participants' 
+      }, () => {
+        fetchData(); // إعادة جلب البيانات فور حدوث أي انضمام جديد
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
 
   const handleJoin = async (post: any) => {
     if (!currentUserId) return toast.error("سجل دخولك أولاً");
@@ -86,9 +104,8 @@ export default function Faz3a() {
           is_read: false 
         }]);
 
-        toast.success("كفو! تم تسجيلك.. راعي الحجز بيجيه خبر 🔥");
-        setActiveTab('joined_faz3at'); 
-        fetchData();
+        toast.success("كفو! تم تسجيلك 🔥");
+        // لا نحتاج لعمل fetchData يدوياً هنا لأن الـ Realtime سيقوم بذلك
       } else {
         toast.error("عذراً، الفريق اكتمل أو أنت مسجل مسبقاً");
       }
@@ -97,10 +114,6 @@ export default function Faz3a() {
     } finally { 
       setIsJoining(null); 
     }
-  };
-
-  const openChat = () => {
-    navigate('/messages'); 
   };
 
   return (
@@ -126,7 +139,7 @@ export default function Faz3a() {
         </div>
 
         <div className="space-y-6">
-          {loading ? (
+          {loading && publicFaz3at.length === 0 ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
           ) : activeTab === 'public_faz3at' ? (
             publicFaz3at.length > 0 ? publicFaz3at.map(post => {
@@ -136,7 +149,7 @@ export default function Faz3a() {
               
               return (
                 <div key={post.id} className="bg-[#0a0f3c]/40 border border-white/10 rounded-[40px] p-7 space-y-5 backdrop-blur-2xl relative overflow-hidden group shadow-xl">
-                  <div className={`absolute top-0 left-0 w-1.5 h-full ${isFull ? 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.4)]'}`} />
+                  <div className={`absolute top-0 left-0 w-1.5 h-full transition-colors duration-500 ${isFull ? 'bg-green-500' : 'bg-cyan-500'}`} />
                   
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-4 text-right">
@@ -153,23 +166,19 @@ export default function Faz3a() {
                     <div className="bg-white/5 p-4 rounded-2xl text-[10px] border border-white/5 flex items-center gap-2 justify-end">{post.match_time} <Clock size={14} className="text-cyan-400" /></div>
                   </div>
 
-                  {/* العداد وشريط التقدم */}
+                  {/* العداد المحسن */}
                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-3">
                     <div className="flex justify-between items-center text-[10px] font-[1000] italic uppercase">
                       <div className="flex items-center gap-2 text-gray-400">
                         <Users size={12} /> حالة الفريق
                       </div>
-                      {isFull ? (
-                        <span className="text-green-400 animate-pulse tracking-tighter">مكتمل ✅</span>
-                      ) : (
-                        <span className="text-cyan-400 tracking-tighter">
-                          باقي {post.missing_players - participantsCount} أبطال
-                        </span>
-                      )}
+                      <span className={`${isFull ? 'text-green-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
+                        {isFull ? 'مكتمل ✅' : `باقي ${post.missing_players - participantsCount} أبطال`}
+                      </span>
                     </div>
                     <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <div 
-                        className={`h-full transition-all duration-700 ${isFull ? 'bg-green-500' : 'bg-cyan-500'}`}
+                        className={`h-full transition-all duration-1000 ease-out ${isFull ? 'bg-green-500' : 'bg-cyan-500 shadow-[0_0_10px_rgba(34,211,238,0.5)]'}`}
                         style={{ width: `${Math.min((participantsCount / post.missing_players) * 100, 100)}%` }}
                       />
                     </div>
@@ -193,43 +202,38 @@ export default function Faz3a() {
               )
             }) : <p className="text-center opacity-20 py-20 italic">لا توجد فزعات متاحة</p>
           ) : (
-            myFullFaz3at.length > 0 ? myFullFaz3at.map(post => {
-              const isOwner = post.creator_id === currentUserId;
-              return (
+             /* تبويب فزعاتي */
+             myFullFaz3at.length > 0 ? myFullFaz3at.map(post => (
                 <div key={post.id} className="bg-[#0a0f3c]/60 border border-cyan-500/20 rounded-[35px] p-7 space-y-6 shadow-2xl text-right animate-in fade-in">
+                  {/* ... نفس كود العرض القديم لتبويب فزعاتي ... */}
                   <div className="flex justify-between items-center text-right">
                      <div className="text-right">
-                        <p className="text-[10px] font-black text-cyan-400 uppercase italic mb-1">{isOwner ? "فزعتك المنشورة" : "فزعة انضممت لها"} <CheckCircle2 size={12} className="inline mr-1" /></p>
+                        <p className="text-[10px] font-black text-cyan-400 uppercase italic mb-1">{post.creator_id === currentUserId ? "فزعتك المنشورة" : "فزعة انضممت لها"} <CheckCircle2 size={12} className="inline mr-1" /></p>
                         <h4 className="font-black text-xl italic text-white leading-none">{post.court_name}</h4>
                      </div>
                      <div className="bg-white/5 px-3 py-1.5 rounded-full border border-white/5 text-[10px] font-black italic text-gray-400">{post.match_time}</div>
                   </div>
-
                   <div className="space-y-4">
-                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest italic text-right">تواصل لتنسيق المباراة</p>
+                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest italic text-right">أبطال المباراة (تواصل معهم الآن)</p>
                      <div className="flex flex-col gap-3">
-                        {!isOwner && post.profiles && (
+                        {post.creator_id !== currentUserId && post.profiles && (
                           <div className="flex items-center justify-between bg-cyan-500/5 p-3 rounded-2xl border border-cyan-500/10 transition-all">
-                            <button onClick={openChat} className="p-2.5 bg-cyan-500 text-[#0a0f3c] rounded-xl active:scale-90 shadow-lg"><MessageSquare size={16} /></button>
+                            <button onClick={() => navigate('/messages')} className="p-2.5 bg-cyan-500 text-[#0a0f3c] rounded-xl active:scale-90 shadow-lg"><MessageSquare size={16} /></button>
                             <span className="text-[11px] font-black italic text-white">{post.profiles.first_name} (الراعي)</span>
                           </div>
                         )}
-                        {post.faz3a_participants?.map((p: any) => {
-                          const isOther = p.participant_id !== currentUserId;
-                          return (
-                            <div key={p.participant_id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
-                              {isOther ? (
-                                <button onClick={openChat} className="p-2.5 bg-white/10 text-cyan-400 rounded-xl active:scale-90 border border-white/10"><MessageSquare size={16} /></button>
-                              ) : <div className="w-10" />}
-                              <span className="text-[11px] font-black italic text-gray-300">{p.profiles?.first_name} {p.participant_id === currentUserId ? "(أنت)" : "(فزيع)"}</span>
-                            </div>
-                          );
-                        })}
+                        {post.faz3a_participants?.map((p: any) => (
+                          <div key={p.participant_id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
+                            {p.participant_id !== currentUserId ? (
+                                <button onClick={() => navigate('/messages')} className="p-2.5 bg-white/10 text-cyan-400 rounded-xl active:scale-90 border border-white/10"><MessageSquare size={16} /></button>
+                            ) : <div className="w-10" />} 
+                            <span className="text-[11px] font-black italic text-gray-300">{p.profiles?.first_name} {p.participant_id === currentUserId ? "(أنت)" : "(فزيع)"}</span>
+                          </div>
+                        ))}
                      </div>
                   </div>
                 </div>
-              );
-            }) : <p className="text-center opacity-20 py-20 italic font-black text-gray-500">لم تشارك في أي فزعة بعد</p>
+             )) : <p className="text-center opacity-20 py-20 italic">لا توجد حجوزات لعرضها</p>
           )}
         </div>
       </main>
