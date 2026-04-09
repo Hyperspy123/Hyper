@@ -1,10 +1,11 @@
-import { Home, Calendar, Trophy, Gift, Zap } from 'lucide-react';
+import { Home, Calendar, Trophy, Gift, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // المصفوفة بعد حذف "فزعة" 🗑️
   const navItems = [
     { 
       icon: Home, 
@@ -17,13 +18,13 @@ export default function BottomNav() {
       path: '/my-bookings' 
     },
     { 
-      icon: Zap, 
-      label: 'فزعة', 
-      path: '/faz3a' 
+      icon: Users, 
+      label: 'المجتمع', 
+      path: '/community' 
     },
     { 
       icon: Trophy, 
-      label: 'فعاليات', // تم تغيير "البطولات" إلى "فعاليات" بناءً على طلبك
+      label: 'فعاليات', 
       path: '/tournaments' 
     },
     { 
