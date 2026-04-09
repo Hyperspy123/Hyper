@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Zap, Menu, X, User, Settings, Headphones, ChevronLeft, Bell, Trophy, Users, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner'; // تأكد من وجود مكتبة sonner
 
 export default function Header() {
   const [user, setUser] = useState<any>(null);
@@ -36,7 +37,6 @@ export default function Header() {
     }
 
     const userId = session.user.id;
-
     const { count: systemCount } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
@@ -47,8 +47,10 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    let currentUser: any = null;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
+      currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
         fetchUnreadStatus();
@@ -57,7 +59,7 @@ export default function Header() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user ?? null;
+      currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
         fetchUnreadStatus();
@@ -68,12 +70,29 @@ export default function Header() {
       }
     });
 
+    // 🔥 استماع لحظي للإشعارات (الفزعات وغيرها)
     const channel = supabase.channel('header-live-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        fetchUnreadStatus();
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'notifications'
+      }, (payload) => {
+        // إذا كان الإشعار موجه للمستخدم الحالي، أظهر تنبيه Toast
+        if (currentUser && payload.new.user_id === currentUser.id) {
+          toast.success(payload.new.title, {
+            description: payload.new.message,
+            action: {
+              label: 'عرض',
+              onClick: () => navigate('/notifications')
+            },
+          });
+          fetchUnreadStatus();
+        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
-        if (payload.new) setProfile(payload.new as any);
+        if (payload.new && currentUser && (payload.new as any).id === currentUser.id) {
+          setProfile(payload.new as any);
+        }
       })
       .subscribe();
 
@@ -81,7 +100,7 @@ export default function Header() {
       subscription.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [fetchUnreadStatus, fetchProfile]);
+  }, [fetchUnreadStatus, fetchProfile, navigate]);
 
   const handleLogout = async () => {
     try {
@@ -107,7 +126,6 @@ export default function Header() {
 
       <header className="fixed top-0 left-0 right-0 z-[130] flex items-center justify-between bg-[#0a0f3c]/80 border-b border-white/5 px-6 h-24 backdrop-blur-2xl" dir="rtl">
         
-        {/* اليمين: اللوغو وشريط الرانك */}
         <div className="flex flex-col gap-1.5 text-right">
           <div className="flex items-center gap-2 cursor-pointer active:scale-95 transition-all justify-end" onClick={() => navigate('/')}>
             <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(34,211,238,0.4)]">
@@ -132,28 +150,15 @@ export default function Header() {
           )}
         </div>
 
-        {/* اليسار: الأزرار والمنيو */}
         <div className="flex items-center gap-2" dir="ltr">
-          
-          {/* أيقونة الرسائل (المحادثات) ✅ */}
-          <button 
-            onClick={() => navigate('/messages')} 
-            className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 transition-all active:scale-90"
-            title="المحادثات"
-          >
+          <button onClick={() => navigate('/messages')} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 transition-all active:scale-90">
             <MessageSquare size={20} />
           </button>
 
-          {/* أيقونة المجتمع ✅ */}
-          <button 
-            onClick={() => navigate('/community')} 
-            className="p-2.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20 text-cyan-400 transition-all active:scale-90 shadow-[0_0_15px_rgba(34,211,238,0.1)]"
-            title="المجتمع"
-          >
+          <button onClick={() => navigate('/community')} className="p-2.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20 text-cyan-400 transition-all active:scale-90 shadow-[0_0_15px_rgba(34,211,238,0.1)]">
             <Users size={20} />
           </button>
 
-          {/* أيقونة التنبيهات */}
           <button onClick={() => navigate('/notifications')} className="relative p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 transition-all active:scale-90">
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -161,7 +166,6 @@ export default function Header() {
             )}
           </button>
 
-          {/* زر المنيو */}
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)} 
             className={`p-2.5 rounded-xl border transition-all duration-300 relative z-[140] active:scale-95 ${isMenuOpen ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-cyan-400'}`}
@@ -169,7 +173,6 @@ export default function Header() {
             {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          {/* المنيو المنسدل */}
           <div className={`absolute top-24 left-6 w-[240px] bg-[#0a0f3c]/95 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300 z-[140] overflow-hidden ${isMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'}`} style={{ transformOrigin: 'top left' }}>
             <div className="p-4 space-y-1" dir="rtl">
               {[
