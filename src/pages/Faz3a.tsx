@@ -24,7 +24,7 @@ export default function Faz3a() {
     getUser();
   }, []);
 
-  // 2. جلب الفزعات المحولة من الحجوزات
+  // 2. دالة جلب البيانات (تحديث لحظي للفزيعة)
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -32,7 +32,6 @@ export default function Faz3a() {
     setLoading(true);
     try {
       if (activeTab === 'public_faz3at') {
-        // جلب الفزعات العامة
         const { data, error } = await supabase
           .from('faz3a_posts')
           .select('*, profiles:creator_id(first_name, last_name, current_rank), faz3a_participants(participant_id)')
@@ -40,15 +39,14 @@ export default function Faz3a() {
         if (error) throw error;
         setPublicFaz3at(data || []);
       } else {
-        // جلب الفزعات التي تخصني أو انضممت لها
         const { data: myData, error } = await supabase
           .from('faz3a_posts')
           .select(`
             *, 
-            profiles:creator_id (first_name, last_name, current_rank), 
+            profiles:creator_id (first_name, last_name, id), 
             faz3a_participants (
               participant_id, 
-              profiles:participant_id (first_name, last_name, current_rank)
+              profiles:participant_id (first_name, last_name, id)
             )
           `)
           .or(`creator_id.eq.${user.id}, id.in.(select post_id from faz3a_participants where participant_id = '${user.id}')`)
@@ -67,7 +65,7 @@ export default function Faz3a() {
     fetchData(); 
   }, [activeTab, fetchData]);
 
-  // 3. معالج الانضمام للفزعة
+  // 3. معالج الانضمام + إرسال تنبيه للراعي
   const handleJoin = async (post: any) => {
     if (!currentUserId) return toast.error("سجل دخولك أولاً");
     setIsJoining(post.id);
@@ -84,12 +82,12 @@ export default function Faz3a() {
         await supabase.from('notifications').insert([{ 
           user_id: post.creator_id, 
           type: 'invite', 
-          title: 'فزيع جديد انضم لك! 🔥', 
-          message: `انضم بطل لفزعتك في ${post.court_name}. نسق معه الآن في الشات.`, 
+          title: 'بطل جديد فزع لك! 🔥', 
+          message: `انضم لاعب لفزعتك في ${post.court_name}. تواصل معه الآن لتنسيق المباراة.`, 
           is_read: false 
         }]);
 
-        toast.success("كفو! تم تسجيلك في الفزعة 🔥");
+        toast.success("كفو! تم تسجيلك.. صاحب الحجز بيجيه خبر 🔥");
         setActiveTab('joined_faz3at'); 
       } else {
         toast.error("الفريق اكتمل أو أنت مسجل مسبقاً");
@@ -101,12 +99,18 @@ export default function Faz3a() {
     }
   };
 
+  // 4. دالة الانتقال للشات
+  const openChat = (receiverId: string) => {
+    // توجيه لصفحة الرسائل مع تمرير المعرف
+    navigate('/messages'); 
+    // ملاحظة: يمكنك تعديل المسار ليكون /messages/${receiverId} إذا كانت صفحة الرسائل تدعم ذلك
+  };
+
   return (
     <div className="min-h-screen bg-[#05081d] text-white font-sans pb-32 relative text-right" dir="rtl">
       <Header />
       <main className="p-6 max-w-md mx-auto space-y-8 pt-24 text-right">
         
-        {/* هيدر الصفحة بدون زر الزائد */}
         <div className="flex items-center justify-between">
            <div className="text-right">
               <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none">
@@ -119,7 +123,6 @@ export default function Faz3a() {
            </button>
         </div>
 
-        {/* التبويبات */}
         <div className="flex bg-[#0a0f3c]/60 p-1.5 rounded-[24px] border border-white/10 backdrop-blur-3xl gap-1.5 shadow-2xl">
             <button onClick={() => setActiveTab('public_faz3at')} className={`flex-1 py-3.5 rounded-[18px] text-[10px] font-black uppercase transition-all ${activeTab === 'public_faz3at' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-500'}`}>فزعات متاحة</button>
             <button onClick={() => setActiveTab('joined_faz3at')} className={`flex-1 py-3.5 rounded-[18px] text-[10px] font-black uppercase transition-all ${activeTab === 'joined_faz3at' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-500'}`}>فزعاتي</button>
@@ -129,7 +132,6 @@ export default function Faz3a() {
           {loading ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
           ) : activeTab === 'public_faz3at' ? (
-            /* --- عرض الفزعات المتاحة للجميع --- */
             publicFaz3at.length > 0 ? publicFaz3at.map(post => {
               const alreadyJoined = post.faz3a_participants?.some((p: any) => p.participant_id === currentUserId);
               return (
@@ -163,11 +165,10 @@ export default function Faz3a() {
               )
             }) : <p className="text-center opacity-20 py-20 italic font-black uppercase tracking-widest text-gray-500">لا توجد فزعات محولة حالياً</p>
           ) : (
-            /* --- تبويب فزعاتي (لعرض التواصل مع الفريق) --- */
             myFullFaz3at.length > 0 ? myFullFaz3at.map(post => {
               const isOwner = post.creator_id === currentUserId;
               return (
-                <div key={post.id} className="bg-[#0a0f3c]/60 border border-cyan-500/20 rounded-[35px] p-7 space-y-6 shadow-2xl text-right">
+                <div key={post.id} className="bg-[#0a0f3c]/60 border border-cyan-500/20 rounded-[35px] p-7 space-y-6 shadow-2xl text-right animate-in fade-in slide-in-from-bottom-4">
                   <div className="flex justify-between items-center">
                      <div className="text-right">
                         <p className="text-[10px] font-black text-cyan-400 uppercase italic mb-1">{isOwner ? "فزعتك المنشورة" : "فزعة انضممت لها"} <CheckCircle2 size={12} className="inline mr-1" /></p>
@@ -177,20 +178,34 @@ export default function Faz3a() {
                   </div>
 
                   <div className="space-y-4">
-                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest italic text-right">تواصل لتنسيق المباراة</p>
+                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest italic text-right">أبطال المباراة (تواصل معهم الآن)</p>
                      <div className="flex flex-col gap-3">
-                        {!isOwner && (
-                          <div className="flex items-center justify-between bg-cyan-500/5 p-3 rounded-2xl border border-cyan-500/10">
-                            <button onClick={() => navigate('/messages')} className="p-2.5 bg-cyan-500 text-[#0a0f3c] rounded-xl active:scale-90 transition-all shadow-lg"><MessageSquare size={16} /></button>
-                            <span className="text-[11px] font-black italic text-white">{post.profiles?.first_name} (الراعي)</span>
+                        {/* عرض راعي الحجز (إذا لم يكن هو المستخدم الحالي) */}
+                        {!isOwner && post.profiles && (
+                          <div className="flex items-center justify-between bg-cyan-500/5 p-3 rounded-2xl border border-cyan-500/10 transition-all hover:bg-cyan-500/10">
+                            <button onClick={() => openChat(post.profiles.id)} className="p-2.5 bg-cyan-500 text-[#0a0f3c] rounded-xl active:scale-90 transition-all shadow-lg"><MessageSquare size={16} /></button>
+                            <div className="flex items-center gap-3">
+                               <span className="text-[11px] font-black italic text-white">{post.profiles.first_name} (الراعي)</span>
+                               <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-black italic border border-cyan-500/20">{post.profiles.first_name?.[0]}</div>
+                            </div>
                           </div>
                         )}
-                        {post.faz3a_participants?.map((p: any) => (
-                          <div key={p.participant_id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5">
-                            <button onClick={() => navigate('/messages')} className="p-2.5 bg-white/10 text-cyan-400 rounded-xl active:scale-90 transition-all border border-white/10"><MessageSquare size={16} /></button>
-                            <span className="text-[11px] font-black italic text-gray-300">{p.profiles?.first_name} (فزيع)</span>
-                          </div>
-                        ))}
+
+                        {/* عرض الفزيعة المنضمين */}
+                        {post.faz3a_participants?.map((p: any) => {
+                          const isMe = p.participant_id === currentUserId;
+                          return (
+                            <div key={p.participant_id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5 transition-all hover:bg-white/10">
+                              {!isMe ? (
+                                <button onClick={() => openChat(p.participant_id)} className="p-2.5 bg-white/10 text-cyan-400 rounded-xl active:scale-90 transition-all border border-white/10 hover:bg-cyan-500 hover:text-[#0a0f3c]"><MessageSquare size={16} /></button>
+                              ) : <div className="w-10" />} 
+                              <div className="flex items-center gap-3">
+                                <span className="text-[11px] font-black italic text-gray-300">{p.profiles?.first_name} {isMe ? "(أنت)" : "(فزيع)"}</span>
+                                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-gray-400 text-xs font-black italic border border-white/10">{p.profiles?.first_name?.[0]}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
                      </div>
                   </div>
                 </div>
