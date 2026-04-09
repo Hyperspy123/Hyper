@@ -19,13 +19,12 @@ import Account from './pages/Account';
 import Settings from './pages/Settings';
 import Personal from './pages/Personal';
 import Contact from './pages/Contact';
-import Faz3a from './pages/Faz3a';
 import Notifications from './pages/Notifications';
 import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
 import Community from './pages/Community'; 
 import Chat from './pages/Chat'; 
-import Messages from './pages/Messages'; // استيراد صفحة مركز الرسائل ✅
+import Messages from './pages/Messages'; 
 
 const queryClient = new QueryClient();
 
@@ -56,7 +55,7 @@ const App = () => {
       <div 
         className="fixed inset-0 pointer-events-none z-[1] opacity-40 mix-blend-screen" 
         style={{ 
-          backgroundImage: `url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEVfX19fX19fX19fX19fX19fX19fX19fX19fX198mS8+AAAAB3RSTlMAVTY2NjY2S8N8YQAAAAlwSFlzAAALEwAACxMBAJqcGAAAAClJREFUKJFjYBgFIMDIwMAAAsYGBuYGBuYGBuYGBuYGBuYGBuYGBuYGBgYArp8Cx8HUnHkAAAAASUVORK5CYII=')`,
+          backgroundImage: `url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEVfX19fX19fX19fX19fX19fX19fX19fX19fX198mS8+AAAAB3RSTlMAVTY2NjY2S8N8YQAAAAlwSFlzAAALEwAACxMBAJqcGAAAAClJREFUKJFjYBgFIMDIwMAAAsYGBuYGBuYGBuYGBuYGBuYGBuYGBuYGBuYGBgYArp8Cx8HUnHkAAAAASUVORK5CYII=')`,
           backgroundRepeat: 'repeat',
           backgroundSize: '100px 100px'
         }} 
@@ -98,9 +97,11 @@ const App = () => {
                       <Route path="/my-bookings" element={<MyBookings />} />
                       <Route path="/rewards" element={<Rewards />} />
                       <Route path="/tournaments" element={<Tournaments />} />
-                      <Route path="/faz3a" element={<Faz3a />} />
+                      
+                      {/* تم إزالة مسار الفزعة من هنا 🗑️ */}
+                      
                       <Route path="/community" element={<Community />} />
-                      <Route path="/messages" element={<Messages />} /> {/* مسار مركز الرسائل ✅ */}
+                      <Route path="/messages" element={<Messages />} /> 
                       <Route path="/chat/:challengeId" element={<Chat />} />
                       
                       {/* الإعدادات والحساب */}
