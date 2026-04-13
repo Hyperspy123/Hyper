@@ -5,21 +5,20 @@ import en from './locales/en.json';
 import ar from './locales/ar.json';
 
 i18n
-  .use(LanguageDetector) // يكتشف لغة المتصفح تلقائياً إذا لم توجد لغة محفوظة
+  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
       en: { translation: en.translation || en },
       ar: { translation: ar.translation || ar }
     },
-    lng: localStorage.getItem('i18nextLng') || 'ar',
+    lng: typeof window !== 'undefined' ? (localStorage.getItem('i18nextLng') || 'ar') : 'ar',
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false
     }
   });
 
-// ✅ تصدير الـ Provider الذي يستخدمه App.tsx
 export const I18nProvider = ({ children }: { children: React.ReactNode }) => {
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 };
