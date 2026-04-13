@@ -2,9 +2,9 @@ import i18n from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
-// استيراد الملفات مباشرة
-import en from './locales/en.json';
-import ar from './locales/ar.json';
+// استيراد باستخدام المسار النسبي المباشر (تأكد من وجود الملفات فعلياً في هذا المسار)
+import en from './locales/en.json' assert { type: 'json' };
+import ar from './locales/ar.json' assert { type: 'json' };
 
 i18n
   .use(LanguageDetector)
@@ -14,7 +14,7 @@ i18n
       en: { translation: en },
       ar: { translation: ar }
     },
-    lng: typeof window !== 'undefined' ? (localStorage.getItem('i18nextLng') || 'ar') : 'ar',
+    lng: 'ar', 
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false
