@@ -8,7 +8,7 @@ export default function Chat() {
   const { challengeId } = useParams();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUserId] = useState<any>(null);
   const [opponent, setOpponent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -18,7 +18,7 @@ export default function Chat() {
     const initChat = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return navigate('/auth');
-      setCurrentUser(user);
+      setCurrentUserId(user);
 
       const { data: challenge } = await supabase
         .from('challenges')

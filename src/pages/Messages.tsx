@@ -1,90 +1,77 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { MessageSquare, ChevronLeft, User, Loader2 } from 'lucide-react';
+import { ChevronRight, MessageSquare, Loader2, User } from 'lucide-react';
 
 export default function Messages() {
+  const navigate = useNavigate();
   const [chats, setChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchMyChats() {
+    const fetchChats = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return navigate('/auth');
+      setCurrentUserId(user.id);
 
-      // تعديل السطر 35 لاستخدام استعلام متوافق ✅
-      const { data, error } = await supabase
+      // جلب جميع التحديات المقبولة (التي تعتبر غرف شات)
+      const { data } = await supabase
         .from('challenges')
         .select(`
-          id,
-          sender_id,
-          receiver_id,
-          sender:profiles!challenges_sender_id_fkey(first_name, current_rank),
-          receiver:profiles!challenges_receiver_id_fkey(first_name, current_rank)
+          id, court_name, match_time,
+          challenger:challenger_id(id, first_name),
+          challenged:challenged_id(id, first_name)
         `)
         .eq('status', 'accepted')
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("Chat fetch error:", error.message);
-      }
-
-      if (data) {
-        const formattedChats = (data as any[]).map((chat) => {
-          const isSender = chat.sender_id === user.id;
-          // إذا كنت أنت المرسل، نريد بيانات المستلم، والعكس صحيح
-          const otherUser = isSender ? chat.receiver : chat.sender;
-          return { 
-            id: chat.id, 
-            first_name: otherUser?.first_name || 'لاعب بادل',
-            current_rank: otherUser?.current_rank || 'ROOKIE'
-          };
-        });
-        setChats(formattedChats);
-      }
+        .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`);
+        
+      setChats(data || []);
       setLoading(false);
-    }
-    fetchMyChats();
-  }, []);
+    };
+    fetchChats();
+  }, [navigate]);
+
+  if (loading) return <div className="min-h-screen bg-[#05081d] flex items-center justify-center"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>;
 
   return (
-    <div className="min-h-screen bg-[#05081d] text-white pb-32 text-right font-sans" dir="rtl">
+    <div className="min-h-screen bg-[#05081d] text-white font-sans pb-24" dir="rtl">
       <Header />
-      <main className="pt-28 px-6 max-w-lg mx-auto">
-        <h1 className="text-3xl font-[1000] italic mb-8 uppercase">الرسائل <span className="text-cyan-400">CHATS</span></h1>
+      <div className="p-6 flex items-center justify-between mt-4">
+        <h1 className="text-3xl font-[1000] italic tracking-tighter uppercase flex items-center gap-3">الرسائل <MessageSquare className="text-cyan-400" /></h1>
+        <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
+          <ChevronRight size={22} className="rotate-180" />
+        </button>
+      </div>
 
-        <div className="space-y-4">
-          {loading ? (
-            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" /></div>
-          ) : chats.length > 0 ? (
-            chats.map((chat) => (
+      <main className="px-6 max-w-lg mx-auto space-y-4">
+        {chats.length === 0 ? (
+          <div className="text-center text-gray-500 mt-20 font-black text-sm border border-white/5 p-10 rounded-[30px] bg-white/5">
+            لا توجد محادثات حالياً.<br/>اقبل تحدي لتبدأ التنسيق! 🎾
+          </div>
+        ) : (
+          chats.map(chat => {
+            // تحديد من هو الخصم
+            const opponent = chat.challenger.id === currentUserId ? chat.challenged : chat.challenger;
+            return (
               <button 
-                key={chat.id}
+                key={chat.id} 
                 onClick={() => navigate(`/chat/${chat.id}`)}
-                className="w-full p-5 rounded-[30px] bg-[#0a0f3c]/60 border border-white/5 flex items-center justify-between hover:border-cyan-500/30 transition-all active:scale-95 shadow-xl"
+                className="w-full bg-[#0a0f3c] border border-white/10 p-5 rounded-[25px] flex items-center gap-4 active:scale-95 transition-all text-right shadow-lg hover:border-cyan-500/30"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20">
-                    <User size={24} />
-                  </div>
-                  <div className="text-right">
-                    <h4 className="font-black italic text-white text-lg leading-none mb-1">{chat.first_name}</h4>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter italic">{chat.current_rank} • تحدي قائم ⚔️</p>
-                  </div>
+                <div className="w-14 h-14 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-500/20">
+                  <User size={24} />
                 </div>
-                <ChevronLeft size={18} className="text-gray-600" />
+                <div className="flex-1">
+                  <h4 className="font-black text-lg text-white">{opponent.first_name}</h4>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase italic mt-1">{chat.court_name}</p>
+                </div>
+                <ChevronRight size={20} className="text-gray-500 rotate-180" />
               </button>
-            ))
-          ) : (
-            <div className="text-center py-20 bg-white/5 rounded-[40px] border border-dashed border-white/10 opacity-30">
-              <MessageSquare size={48} className="mx-auto mb-4" />
-              <p className="text-[10px] font-black uppercase tracking-widest leading-none">لا توجد محادثات نشطة</p>
-            </div>
-          )}
-        </div>
+            )
+          })
+        )}
       </main>
     </div>
   );

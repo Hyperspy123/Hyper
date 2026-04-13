@@ -32,12 +32,15 @@ export default function Community() {
     if (!user) return;
     setCurrentUserId(user.id);
 
+    // 1. جلب اللاعبين
     const { data: profiles } = await supabase.from('profiles').select('*').eq('is_public', true).neq('id', user.id);
     setPlayers(profiles || []);
 
+    // 2. جلب الملاعب
     const { data: courtsData } = await supabase.from('courts').select('*');
     setCourts(courtsData || []);
 
+    // 3. جلب كل التحديات
     const { data: challenges } = await supabase
       .from('challenges')
       .select(`
@@ -111,7 +114,7 @@ export default function Community() {
       <Header />
       <main className="pt-28 px-6 max-w-lg mx-auto space-y-10">
         
-        {/* 1. قسم مين يتحداك */}
+        {/* 1. قسم مين يتحداك (طلبات معلقة) */}
         {incomingChallenges.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-xl font-black italic flex items-center gap-2 justify-end">مين يتحداك؟ <Zap size={18} className="text-cyan-400 fill-cyan-400" /></h2>
@@ -132,7 +135,7 @@ export default function Community() {
           </section>
         )}
 
-        {/* 2. قسم مبارياتك القادمة */}
+        {/* 2. قسم مبارياتك القادمة (تم القبول) */}
         {acceptedChallenges.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-xl font-black italic flex items-center gap-2 justify-end text-purple-400">مبارياتك القادمة <Swords size={18} /></h2>
@@ -237,11 +240,12 @@ export default function Community() {
                 </p>
               </div>
 
+              {/* ✅ الزر المعدل: انتقل للشات */}
               <button 
                 onClick={() => navigate(`/chat/${selectedMatch.match.id}`)} 
                 className="w-full py-4 bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-[20px] font-[1000] text-sm uppercase italic active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] flex items-center justify-center gap-2"
               >
-                دخول غرفة التنسيق 💬
+                انتقل للشات 💬
               </button>
             </div>
 
