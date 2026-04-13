@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
 import { User, Swords, Search, Loader2, Calendar, MapPin, X, Check, Zap, Clock, ChevronRight, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Community() {
+  const navigate = useNavigate(); // إضافة الهوك الخاص بالتنقل
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [incomingChallenges, setIncomingChallenges] = useState<any[]>([]);
@@ -233,12 +235,23 @@ export default function Community() {
               <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-purple-500/20 rounded-full blur-[40px] -translate-y-1/2" />
             </div>
 
-            <button onClick={() => setSelectedMatch(null)} className="w-full mt-8 py-5 bg-white/5 border border-white/10 text-white rounded-[25px] font-black text-xs uppercase italic active:scale-95 transition-all">إغلاق البطاقة</button>
+            {/* ✅ زر التواصل مع الخصم */}
+            <button 
+              onClick={() => {
+                navigate(`/chat/${selectedMatch.match.id}`);
+              }} 
+              className="w-full mt-8 py-5 bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-[25px] font-[1000] text-sm uppercase italic active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] flex items-center justify-center gap-2"
+            >
+              رسالة للخصم 💬
+            </button>
+
+            {/* زر الإغلاق */}
+            <button onClick={() => setSelectedMatch(null)} className="w-full mt-3 py-5 bg-white/5 border border-white/10 text-white rounded-[25px] font-black text-xs uppercase italic active:scale-95 transition-all">إغلاق البطاقة</button>
           </div>
         </div>
       )}
 
-      {/* مودال التحدي المباشر (إنشاء تحدي) - لم يتغير فيه شيء */}
+      {/* مودال التحدي المباشر (إنشاء تحدي) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-[#05081d]/90 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-10">
           <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl relative">
