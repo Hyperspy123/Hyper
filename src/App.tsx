@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { I18nProvider } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // Components & Pages
 import BottomNav from '@/components/BottomNav';
@@ -25,33 +26,43 @@ import NotFound from './pages/NotFound';
 import Community from './pages/Community'; 
 import Chat from './pages/Chat'; 
 import Messages from './pages/Messages'; 
+import Language from './pages/Language';
 
 const queryClient = new QueryClient();
 
-const App = () => {
+const AppContent = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { i18n } = useTranslation();
 
   useEffect(() => {
+    // 1. ضبط اللغة والاتجاه عند التشغيل بناءً على المخزن
+    const savedLng = localStorage.getItem('i18nextLng') || 'ar';
+    if (i18n.language !== savedLng) {
+      i18n.changeLanguage(savedLng);
+    }
+    document.documentElement.dir = savedLng === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = savedLng;
+
+    // 2. إدارة الجلسة (Session)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
+
     return () => subscription.unsubscribe();
-  }, []);
+  }, [i18n]);
 
   const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-[#02040a] text-white relative overflow-x-hidden font-sans selection:bg-cyan-500/30">
-      
-      {/* 1. الأنوار المموجة (Glows) */}
       <div className="fixed top-[-10%] left-[-10%] w-[600px] h-[600px] bg-cyan-500/25 blur-[120px] rounded-full pointer-events-none z-0 animate-pulse" />
       <div className="fixed top-[20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-indigo-500/20 blur-[110px] rounded-full pointer-events-none z-0" />
       
-      {/* 2. النجوم (Stardust) */}
       <div 
         className="fixed inset-0 pointer-events-none z-[1] opacity-40 mix-blend-screen" 
         style={{ 
@@ -61,7 +72,6 @@ const App = () => {
         }} 
       />
       
-      {/* 3. طبقة المحتوى */}
       <div className="relative z-10 w-full min-h-screen bg-transparent">
         {children}
       </div>
@@ -76,55 +86,57 @@ const App = () => {
   );
 
   return (
+    <BrowserRouter>
+      <BackgroundWrapper>
+        <div className="pb-32 bg-transparent">
+          <Routes>
+            {!session ? (
+              <>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="*" element={<Navigate to="/auth" replace />} />
+              </>
+            ) : (
+              <>
+                <Route path="/" element={<Index />} />
+                <Route path="/book/:id" element={<BookCourt />} />
+                <Route path="/my-bookings" element={<MyBookings />} />
+                <Route path="/rewards" element={<Rewards />} />
+                <Route path="/tournaments" element={<Tournaments />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/messages" element={<Messages />} /> 
+                <Route path="/chat/:challengeId" element={<Chat />} />
+                <Route path="/account" element={<Account />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/profile" element={<Personal />} /> 
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/support" element={<Contact />} /> 
+                <Route path="/language" element={<Language />} /> 
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="*" element={<NotFound />} />
+              </>
+            )}
+          </Routes>
+        </div>
+        
+        {session && (
+          <div className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-8 pointer-events-none">
+            <div className="pointer-events-auto max-w-lg mx-auto">
+              <BottomNav />
+            </div>
+          </div>
+        )}
+      </BackgroundWrapper>
+    </BrowserRouter>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <I18nProvider>
           <Toaster position="top-center" richColors />
-          <BrowserRouter>
-            <BackgroundWrapper>
-              <div className="pb-32 bg-transparent">
-                <Routes>
-                  {!session ? (
-                    <>
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="*" element={<Navigate to="/auth" replace />} />
-                    </>
-                  ) : (
-                    <>
-                      {/* المسارات الأساسية */}
-                      <Route path="/" element={<Index />} />
-                      <Route path="/book/:id" element={<BookCourt />} />
-                      <Route path="/my-bookings" element={<MyBookings />} />
-                      <Route path="/rewards" element={<Rewards />} />
-                      <Route path="/tournaments" element={<Tournaments />} />
-                      
-                      <Route path="/community" element={<Community />} />
-                      <Route path="/messages" element={<Messages />} /> 
-                      <Route path="/chat/:challengeId" element={<Chat />} />
-                      
-                      {/* الإعدادات والحساب (تم ضبط المسارات هنا ✅) */}
-                      <Route path="/account" element={<Account />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/profile" element={<Personal />} /> 
-                      <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/support" element={<Contact />} /> 
-                      <Route path="/auth/callback" element={<AuthCallback />} />
-                      
-                      <Route path="*" element={<NotFound />} />
-                    </>
-                  )}
-                </Routes>
-              </div>
-              
-              {session && (
-                <div className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-8 pointer-events-none">
-                  <div className="pointer-events-auto max-w-lg mx-auto">
-                    <BottomNav />
-                  </div>
-                </div>
-              )}
-            </BackgroundWrapper>
-          </BrowserRouter>
+          <AppContent />
         </I18nProvider>
       </TooltipProvider>
     </QueryClientProvider>
