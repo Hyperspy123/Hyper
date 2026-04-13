@@ -238,7 +238,7 @@ export default function Personal() {
           </button>
         </div>
 
-      </main>
+      </main> 
     </div>
   );
 }

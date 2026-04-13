@@ -169,7 +169,7 @@ export default function Auth() {
             onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')} 
             className="text-[10px] font-black text-gray-500 hover:text-cyan-400 transition-colors uppercase tracking-[0.2em] italic"
           >
-            {mode === 'signup' ? 'لديك حساب؟ سجل دخولك' : 'ليس لديك حساب؟ سجل الآن'}
+            {mode === 'signup' ? 'لديك حساب؟ سجل دخولك' : 'ليس لديك حساب؟ سجل الآن'} 
           </button>
         </div>
       </div>
