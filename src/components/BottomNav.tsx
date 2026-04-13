@@ -5,7 +5,7 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // المصفوفة النظيفة 100% بدون "فزعة" 🗑️
+  // مصفوفة العناصر: (الرئيسية، حجوزاتي، المجتمع، فعاليات، مكافآتي)
   const navItems = [
     { 
       icon: Home, 
@@ -55,7 +55,7 @@ export default function BottomNav() {
               {item.label}
             </span>
             
-            {/* Active Indicator Dot */}
+            {/* مؤشر العنصر النشط */}
             {isActive && (
               <div className="absolute -bottom-2 w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
             )}
