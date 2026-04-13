@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { User, Swords, Search, Loader2, Calendar, MapPin, X, Check, Zap, Clock, ChevronRight } from 'lucide-react';
+import { User, Swords, Search, Loader2, Calendar, MapPin, X, Check, Zap, Clock, ChevronRight, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Community() {
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [incomingChallenges, setIncomingChallenges] = useState<any[]>([]);
+  const [acceptedChallenges, setAcceptedChallenges] = useState<any[]>([]);
   const [courts, setCourts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // إعدادات المودال والخطوات
+  // حالات المودال والخطوات (لإنشاء تحدي)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
@@ -20,47 +22,71 @@ export default function Community() {
   const [selectedTime, setSelectedTime] = useState('');
   const [isSending, setIsSending] = useState(false);
 
+  // حالة شاشة المواجهة (VS)
+  const [selectedMatch, setSelectedMatch] = useState<any>(null);
+
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    setCurrentUserId(user.id);
+
+    // 1. جلب اللاعبين
     const { data: profiles } = await supabase.from('profiles').select('*').eq('is_public', true).neq('id', user.id);
-    const { data: challenges } = await supabase.from('challenges').select('*, profiles:challenger_id (first_name)').eq('challenged_id', user.id).eq('status', 'pending');
-    const { data: courtsData } = await supabase.from('courts').select('*');
-    
     setPlayers(profiles || []);
-    setIncomingChallenges(challenges || []);
+
+    // 2. جلب الملاعب
+    const { data: courtsData } = await supabase.from('courts').select('*');
     setCourts(courtsData || []);
+
+    // 3. جلب كل التحديات (المرسلة لي، والمقبولة) مع بيانات الطرفين
+    const { data: challenges } = await supabase
+      .from('challenges')
+      .select(`
+        *,
+        challenger:challenger_id (id, first_name, current_rank, total_matches),
+        challenged:challenged_id (id, first_name, current_rank, total_matches)
+      `)
+      .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`);
+
+    if (challenges) {
+      // الطلبات اللي تنتظر موافقتي
+      setIncomingChallenges(challenges.filter(c => c.challenged_id === user.id && c.status === 'pending'));
+      // المباريات المقبولة (سواء أنا تحديت أو هو تحداني)
+      setAcceptedChallenges(challenges.filter(c => c.status === 'accepted'));
+    }
+
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // تحديث لحظي
+  useEffect(() => {
+    const channel = supabase.channel('live_challenges')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, () => fetchData())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchData]);
+
   const handleSendChallenge = async () => {
     setIsSending(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // ✅ ضبط صيغة الوقت ليقبلها السيرفر مع التايم زون
     const startTimeISO = `${selectedDate}T${selectedTime}:00+03:00`;
 
     const { error } = await supabase.from('challenges').insert([{
-      challenger_id: user?.id,
+      challenger_id: currentUserId,
       challenged_id: selectedPlayer.id,
       court_name: selectedCourt.name,
       match_time: startTimeISO,
-      players_count: 2, // إضافة احتياطية
+      players_count: 2,
       status: 'pending'
     }]);
 
     if (!error) {
       toast.success(`تم إرسال التحدي لـ ${selectedPlayer.first_name} 🔥`);
       setIsModalOpen(false);
-      setStep(1);
-      setSelectedDate('');
-      setSelectedTime('');
+      setStep(1); setSelectedDate(''); setSelectedTime('');
     } else {
-      // 🛠️ يظهر رسالة الخطأ الدقيقة عشان نعرف المشكلة لو تكررت
       toast.error(`حدث خطأ: ${error.message}`);
-      console.error("Challenge Error:", error);
     }
     setIsSending(false);
   };
@@ -74,37 +100,29 @@ export default function Community() {
   };
 
   const days = [0, 1, 2, 3].map(i => {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    return { 
-      iso: d.toISOString().split('T')[0], 
-      label: i === 0 ? "اليوم" : d.toLocaleDateString('ar-EG', { weekday: 'short' }) 
-    };
+    const d = new Date(); d.setDate(d.getDate() + i);
+    return { iso: d.toISOString().split('T')[0], label: i === 0 ? "اليوم" : d.toLocaleDateString('ar-EG', { weekday: 'short' }) };
   });
 
-  // ✅ تعديل الأوقات عشان تعرض AM/PM للعميل، وتحفظ كـ 24 ساعة في السيرفر
   const timeSlots = [
-    { value: "16:00", label: "04:00 PM" },
-    { value: "17:30", label: "05:30 PM" },
-    { value: "19:00", label: "07:00 PM" },
-    { value: "20:30", label: "08:30 PM" },
-    { value: "22:00", label: "10:00 PM" },
-    { value: "23:30", label: "11:30 PM" },
+    { value: "16:00", label: "04:00 PM" }, { value: "17:30", label: "05:30 PM" },
+    { value: "19:00", label: "07:00 PM" }, { value: "20:30", label: "08:30 PM" },
+    { value: "22:00", label: "10:00 PM" }, { value: "23:30", label: "11:30 PM" },
   ];
 
   return (
     <div className="min-h-screen bg-[#05081d] text-white pb-32 text-right font-sans" dir="rtl">
       <Header />
-      <main className="pt-28 px-6 max-w-lg mx-auto space-y-8">
+      <main className="pt-28 px-6 max-w-lg mx-auto space-y-10">
         
-        {/* قسم مين يتحداك */}
+        {/* 1. قسم مين يتحداك (طلبات معلقة) */}
         {incomingChallenges.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-xl font-black italic flex items-center gap-2 justify-end">مين يتحداك؟ <Zap size={18} className="text-cyan-400 fill-cyan-400" /></h2>
             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
               {incomingChallenges.map(ch => (
-                <div key={ch.id} className="min-w-[280px] bg-cyan-500 text-[#0a0f3c] p-6 rounded-[35px] shadow-xl">
-                  <h4 className="font-black text-sm">{ch.profiles?.first_name} يبيك بمباراة!</h4>
+                <div key={ch.id} className="min-w-[280px] bg-cyan-500 text-[#0a0f3c] p-6 rounded-[35px] shadow-xl border border-cyan-400/50">
+                  <h4 className="font-black text-sm">{ch.challenger?.first_name} يبيك بمباراة!</h4>
                   <p className="text-[10px] font-black opacity-70 mt-1 uppercase italic">
                     {ch.court_name} | {new Date(ch.match_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}
                   </p>
@@ -118,7 +136,32 @@ export default function Community() {
           </section>
         )}
 
-        {/* قائمة اللاعبين */}
+        {/* 2. قسم مبارياتك القادمة (تم القبول) 🔥 */}
+        {acceptedChallenges.length > 0 && (
+          <section className="space-y-4">
+            <h2 className="text-xl font-black italic flex items-center gap-2 justify-end text-purple-400">مبارياتك القادمة <Swords size={18} /></h2>
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              {acceptedChallenges.map(match => {
+                const isChallenger = match.challenger_id === currentUserId;
+                const opponent = isChallenger ? match.challenged : match.challenger;
+                
+                return (
+                  <button key={match.id} onClick={() => setSelectedMatch({ match, opponent, isChallenger })} className="min-w-[280px] bg-[#1a0b2e] border border-purple-500/30 p-5 rounded-[30px] shadow-xl shadow-purple-900/20 active:scale-95 transition-all group text-right flex items-center justify-between">
+                    <div>
+                      <h4 className="font-black text-sm text-purple-300">ضد {opponent?.first_name}</h4>
+                      <p className="text-[10px] font-black text-gray-400 mt-1 uppercase italic">{new Date(match.match_time).toLocaleDateString('ar-EG')} - {new Date(match.match_time).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
+                      <ShieldAlert size={20} />
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* 3. قائمة اللاعبين (البحث) */}
         <section className="space-y-6">
           <h1 className="text-3xl font-[1000] italic uppercase">المجتمع <span className="text-cyan-400">PLAYERS</span></h1>
           <div className="relative">
@@ -143,17 +186,67 @@ export default function Community() {
         </section>
       </main>
 
-      {/* مودال التحدي المباشر */}
+      {/* مودال المواجهة الكبرى (VS Screen) ⚔️ */}
+      {selectedMatch && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-[#05081d]/95 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
+          <div className="w-full max-w-md relative">
+            <button onClick={() => setSelectedMatch(null)} className="absolute -top-12 left-0 text-white/50 hover:text-white p-2"><X size={28}/></button>
+            
+            <div className="text-center mb-10 space-y-2">
+              <h2 className="text-4xl font-[1000] italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 uppercase tracking-widest">المواجهة الكبرى</h2>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{selectedMatch.match.court_name} | {new Date(selectedMatch.match.match_time).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+
+            <div className="flex items-center justify-between bg-[#0a0f3c]/80 border border-white/10 p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+              {/* لاعب 1 (أنت) */}
+              <div className="flex flex-col items-center gap-3 z-10 w-1/3">
+                <div className="w-20 h-20 bg-cyan-500/20 rounded-[25px] border-2 border-cyan-500 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+                  <User size={32} className="text-cyan-400" />
+                </div>
+                <div className="text-center">
+                  <h4 className="font-black text-sm text-white">أنت</h4>
+                  <p className="text-[9px] font-black text-cyan-400 uppercase mt-1">{selectedMatch.isChallenger ? selectedMatch.match.challenger.current_rank : selectedMatch.match.challenged.current_rank}</p>
+                </div>
+              </div>
+
+              {/* أيقونة VS */}
+              <div className="z-10 flex flex-col items-center animate-pulse">
+                <div className="bg-gradient-to-br from-purple-500 to-cyan-500 p-3 rounded-full shadow-[0_0_30px_rgba(168,85,247,0.5)]">
+                  <Swords size={28} className="text-white" />
+                </div>
+                <span className="text-[12px] font-[1000] italic mt-2 text-white">VS</span>
+              </div>
+
+              {/* لاعب 2 (الخصم) */}
+              <div className="flex flex-col items-center gap-3 z-10 w-1/3">
+                <div className="w-20 h-20 bg-purple-500/20 rounded-[25px] border-2 border-purple-500 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+                  <User size={32} className="text-purple-400" />
+                </div>
+                <div className="text-center">
+                  <h4 className="font-black text-sm text-white">{selectedMatch.opponent.first_name}</h4>
+                  <p className="text-[9px] font-black text-purple-400 uppercase mt-1">{selectedMatch.opponent.current_rank}</p>
+                </div>
+              </div>
+
+              {/* تأثيرات في الخلفية */}
+              <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-[40px] -translate-y-1/2" />
+              <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-purple-500/20 rounded-full blur-[40px] -translate-y-1/2" />
+            </div>
+
+            <button onClick={() => setSelectedMatch(null)} className="w-full mt-8 py-5 bg-white/5 border border-white/10 text-white rounded-[25px] font-black text-xs uppercase italic active:scale-95 transition-all">إغلاق البطاقة</button>
+          </div>
+        </div>
+      )}
+
+      {/* مودال التحدي المباشر (إنشاء تحدي) - لم يتغير فيه شيء */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-[#05081d]/90 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-10">
           <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl relative">
             <button onClick={() => { setIsModalOpen(false); setStep(1); }} className="absolute top-6 left-6 text-gray-500"><X size={24}/></button>
-            
             <div className="mb-8 text-right">
               <h3 className="text-3xl font-[1000] italic text-white leading-none">تحدي <span className="text-cyan-400">{selectedPlayer?.first_name}</span></h3>
               <p className="text-[10px] font-black text-gray-500 mt-2 uppercase italic tracking-widest">{step === 1 ? 'الخطوة 1: اختر الملعب' : 'الخطوة 2: حدد الموعد'}</p>
             </div>
-
             {step === 1 ? (
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {courts.map(court => (
