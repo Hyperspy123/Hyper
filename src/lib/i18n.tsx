@@ -1,44 +1,19 @@
 import i18n from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
 
-// ✅ دمج الترجمة مباشرة داخل الكود لتجنب مشاكل المسارات في Vercel
-const resources = {
-  en: {
-    translation: {
-      "community": "COMMUNITY",
-      "players": "PLAYERS",
-      "book_now": "BOOK NOW",
-      "my_bookings": "MY BOOKINGS",
-      "profile": "PROFILE",
-      "language": "LANGUAGE",
-      "support": "SUPPORT",
-      "logout": "LOGOUT",
-      "change_lang_desc": "The entire app interface will change"
-    }
-  },
-  ar: {
-    translation: {
-      "community": "المجتمع",
-      "players": "اللاعبين",
-      "book_now": "احجز الآن",
-      "my_bookings": "حجوزاتي",
-      "profile": "الملف الشخصي",
-      "language": "اللغة",
-      "support": "الدعم الفني",
-      "logout": "تسجيل الخروج",
-      "change_lang_desc": "سيتم تغيير واجهة التطبيق بالكامل"
-    }
-  }
-};
-
+// إعداد بسيط جداً بدون ملفات خارجية
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    resources,
-    lng: typeof window !== 'undefined' ? (localStorage.getItem('i18nextLng') || 'ar') : 'ar',
-    fallbackLng: 'en',
+    resources: {
+      ar: {
+        translation: {
+          // يمكنك تركها فارغة أو إضافة كلمات بسيطة هنا مستقبلاً
+        }
+      }
+    },
+    lng: 'ar',
+    fallbackLng: 'ar',
     interpolation: {
       escapeValue: false
     }

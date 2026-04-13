@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { I18nProvider } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
 // Components & Pages
 import BottomNav from '@/components/BottomNav';
@@ -26,25 +25,19 @@ import NotFound from './pages/NotFound';
 import Community from './pages/Community'; 
 import Chat from './pages/Chat'; 
 import Messages from './pages/Messages'; 
-import Language from './pages/Language';
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { i18n } = useTranslation();
 
   useEffect(() => {
-    // 1. ضبط اللغة والاتجاه عند التشغيل بناءً على المخزن
-    const savedLng = localStorage.getItem('i18nextLng') || 'ar';
-    if (i18n.language !== savedLng) {
-      i18n.changeLanguage(savedLng);
-    }
-    document.documentElement.dir = savedLng === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.lang = savedLng;
+    // إجبار الاتجاه على العربي دائماً بعد إلغاء تعدد اللغات
+    document.documentElement.dir = 'rtl';
+    document.documentElement.lang = 'ar';
 
-    // 2. إدارة الجلسة (Session)
+    // إدارة الجلسة (Supabase Session)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
@@ -55,7 +48,7 @@ const AppContent = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [i18n]);
+  }, []);
 
   const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-[#02040a] text-white relative overflow-x-hidden font-sans selection:bg-cyan-500/30">
@@ -110,7 +103,6 @@ const AppContent = () => {
                 <Route path="/profile" element={<Personal />} /> 
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/support" element={<Contact />} /> 
-                <Route path="/language" element={<Language />} /> 
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="*" element={<NotFound />} />
               </>
