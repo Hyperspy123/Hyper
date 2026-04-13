@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Calendar, Clock, ChevronLeft, Loader2, Trash2 } from 'lucide-react';
+import { Calendar, Clock, ChevronLeft, Loader2, Trash2, Swords } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -25,49 +25,105 @@ export default function MyBookings() {
         return;
       }
 
-      const { data, error } = await supabase
+      // 1. جلب الحجوزات العادية
+      const { data: normalBookings, error: normalError } = await supabase
         .from('bookings')
         .select(`*, courts (name, image_url)`)
-        .eq('user_id', user.id)
-        .order('start_time', { ascending: true });
+        .eq('user_id', user.id);
 
-      if (error) throw error;
-      setBookings(data || []);
+      if (normalError) throw normalError;
+
+      // 2. جلب التحديات المقبولة
+      const { data: challengeBookings, error: challengeError } = await supabase
+        .from('challenges')
+        .select(`*, challenger:challenger_id(id, first_name), challenged:challenged_id(id, first_name)`)
+        .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`);
+
+      if (challengeError) throw challengeError;
+
+      // 3. جلب صور الملاعب عشان نعرضها للتحديات
+      const { data: courtsData } = await supabase.from('courts').select('name, image_url');
+
+      // 4. توحيد ودمج البيانات في مصفوفة واحدة
+      const mergedBookings: any[] = [];
+
+      // إضافة الحجوزات العادية
+      normalBookings?.forEach(b => {
+        mergedBookings.push({
+          id: b.id,
+          type: 'normal',
+          court_name: b.courts?.name,
+          image_url: b.courts?.image_url,
+          start_time: b.start_time,
+          status: b.status,
+        });
+      });
+
+      // إضافة التحديات (وتحويل حالتها عشان تطابق نظام التبويبات)
+      challengeBookings?.forEach(c => {
+        const court = courtsData?.find(crt => crt.name === c.court_name);
+        const isChallenger = c.challenger_id === user.id;
+        const opponentName = isChallenger ? c.challenged?.first_name : c.challenger?.first_name;
+
+        // نعرض التحديات المقبولة كحجوزات مؤكدة، والمرفوضة كملغاة
+        const mappedStatus = c.status === 'accepted' ? 'confirmed' : (c.status === 'rejected' || c.status === 'cancelled') ? 'cancelled' : c.status;
+
+        mergedBookings.push({
+          id: c.id,
+          type: 'challenge',
+          court_name: c.court_name,
+          image_url: court?.image_url,
+          start_time: c.match_time,
+          status: mappedStatus,
+          opponent_name: opponentName
+        });
+      });
+
+      // 5. ترتيب الكل من الأقرب للأبعد زمنياً
+      mergedBookings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+      setBookings(mergedBookings);
     } catch (error: any) {
+      console.error(error);
       toast.error("فشل في جلب الحجوزات");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    const confirmCancel = window.confirm("هل أنت متأكد من إلغاء هذا الحجز؟");
+  const handleCancelBooking = async (booking: any) => {
+    const confirmCancel = window.confirm("هل أنت متأكد من إلغاء هذا الموعد؟");
     if (!confirmCancel) return;
 
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'cancelled' })
-        .eq('id', bookingId);
-
-      if (error) throw error;
+      if (booking.type === 'challenge') {
+        // إلغاء التحدي
+        const { error } = await supabase.from('challenges').update({ status: 'cancelled' }).eq('id', booking.id);
+        if (error) throw error;
+        toast.success("تم إلغاء التحدي وإشعار الخصم 🛑");
+      } else {
+        // إلغاء الحجز العادي
+        const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', booking.id);
+        if (error) throw error;
+        toast.success("تم إلغاء الحجز بنجاح 🛑");
+      }
       
-      setBookings(prev => prev.map(b => 
-        b.id === bookingId ? { ...b, status: 'cancelled' } : b
-      ));
+      // تحديث الواجهة فوراً
+      setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
       
-      toast.error("تم إلغاء الحجز بنجاح 🛑");
     } catch (error: any) {
-      toast.error("فشل في إلغاء الحجز");
+      toast.error("فشل في الإلغاء");
     }
   };
 
+  // فلترة حسب التبويب
   const filteredBookings = bookings.filter(b => {
     const now = new Date();
     const bookingDate = new Date(b.start_time);
+    
     if (activeTab === 'current') return bookingDate >= now && b.status === 'confirmed';
     if (activeTab === 'previous') return bookingDate < now && b.status === 'confirmed';
-    if (activeTab === 'cancelled') return b.status === 'cancelled' || b.status === 'converted';
+    if (activeTab === 'cancelled') return b.status === 'cancelled';
     return false;
   });
 
@@ -105,16 +161,28 @@ export default function MyBookings() {
         ) : (
           <div className="grid gap-6">
             {filteredBookings.length > 0 ? filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border border-white/10 space-y-6 shadow-2xl relative overflow-hidden group">
+              <div key={booking.id} className={`bg-white/5 backdrop-blur-2xl rounded-[35px] p-7 border space-y-6 shadow-2xl relative overflow-hidden group ${booking.type === 'challenge' ? 'border-purple-500/30' : 'border-white/10'}`}>
+                
+                {/* بادج التحدي */}
+                {booking.type === 'challenge' && (
+                  <div className="absolute top-5 left-5 bg-gradient-to-r from-purple-600 to-purple-400 text-white px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest flex items-center gap-1 shadow-[0_0_20px_rgba(168,85,247,0.5)]">
+                    <Swords size={12} /> تحدي
+                  </div>
+                )}
+
                 <div className="flex items-center gap-5 text-right">
                   <div className="w-16 h-16 rounded-[22px] overflow-hidden border border-white/10 bg-[#0a0f3c]">
-                    <img src={booking.courts?.image_url} className="w-full h-full object-cover" />
+                    <img src={booking.image_url} className="w-full h-full object-cover" />
                   </div>
                   <div className="text-right">
-                    <h3 className="font-black text-xl italic leading-none mb-1 text-white">{booking.courts?.name}</h3>
-                    <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest opacity-60">
-                        ID: {booking.id.slice(0,8).toUpperCase()}
-                    </div>
+                    <h3 className="font-black text-xl italic leading-none mb-1 text-white">{booking.court_name}</h3>
+                    {booking.type === 'challenge' ? (
+                      <p className="text-[10px] font-black text-purple-400 mt-1 uppercase italic">ضد: {booking.opponent_name}</p>
+                    ) : (
+                      <div className="text-cyan-400 text-[9px] font-black uppercase tracking-widest opacity-60">
+                          ID: {booking.id.slice(0,8).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -130,16 +198,16 @@ export default function MyBookings() {
                 {activeTab === 'current' && (
                   <div className="pt-2">
                     <button 
-                      onClick={() => handleCancelBooking(booking.id)}
+                      onClick={() => handleCancelBooking(booking)}
                       className="w-full py-4.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-[24px] font-[1000] text-[10px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg"
                     >
-                      <Trash2 size={15} /> إلغاء الحجز النهائي
+                      <Trash2 size={15} /> {booking.type === 'challenge' ? 'إلغاء التحدي' : 'إلغاء الحجز النهائي'}
                     </button>
                   </div>
                 )}
               </div>
             )) : (
-              <p className="text-center opacity-20 py-20 italic font-black uppercase tracking-widest text-gray-500 leading-none">لا توجد حجوزات <br/> في هذا القسم</p>
+              <p className="text-center opacity-20 py-20 italic font-black uppercase tracking-widest text-gray-500 leading-none">لا توجد مواعيد <br/> في هذا القسم</p>
             )}
           </div>
         )}

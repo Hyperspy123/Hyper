@@ -10,7 +10,6 @@ export default function BookCourt() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // الاستماع لبيانات التحدي القادمة من صفحة المجتمع
   const challengeInfo = location.state as { isChallengeMode?: boolean, opponentId?: string, opponentName?: string };
 
   const [court, setCourt] = useState<any>(null);
@@ -18,6 +17,7 @@ export default function BookCourt() {
   const [bookingInProgress, setBookingInProgress] = useState(false);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [viewerCount, setViewerCount] = useState(1);
+  const [isCheckingTime, setIsCheckingTime] = useState(false); // حالة تحميل الأوقات
   
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
@@ -36,31 +36,53 @@ export default function BookCourt() {
 
   const durations = [{ label: "60 Min", value: 60 }, { label: "90 Min", value: 90 }, { label: "120 Min", value: 120 }];
 
-  const fetchBookedSlots = useCallback(async (date: string) => {
-    if (!cleanId || !date) return;
+  // 🔥 الدالة المعدلة: تبحث في החجوزات العادية + التحديات عشان تمنع التعارض
+  const fetchBookedSlots = useCallback(async (date: string, courtName: string) => {
+    if (!cleanId || !date || !courtName) return;
+    setIsCheckingTime(true);
     
     const startOfDay = `${date}T00:00:00+03:00`;
     const endOfDay = `${date}T23:59:59+03:00`;
+    const taken: string[] = [];
 
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('start_time')
-      .eq('court_id', cleanId)
-      .eq('status', 'confirmed')
-      .gte('start_time', startOfDay)
-      .lte('start_time', endOfDay);
+    try {
+      // 1. جلب الحجوزات العادية
+      const { data: normalBookings } = await supabase
+        .from('bookings')
+        .select('start_time')
+        .eq('court_id', cleanId)
+        .eq('status', 'confirmed')
+        .gte('start_time', startOfDay)
+        .lte('start_time', endOfDay);
 
-    if (!error && data) {
-      const times = data.map(b => {
-        const d = new Date(b.start_time);
-        return d.toLocaleTimeString('en-GB', { 
-          hour: '2-digit', 
-          minute: '2-digit', 
-          hour12: false,
-          timeZone: 'Asia/Riyadh' 
+      if (normalBookings) {
+        normalBookings.forEach(b => {
+           const d = new Date(b.start_time);
+           const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Riyadh' });
+           taken.push(timeStr);
         });
-      });
-      setBookedSlots(times);
+      }
+
+      // 2. جلب أوقات التحديات (المقبولة والمعلقة) لنفس الملعب واليوم
+      const { data: challenges } = await supabase
+        .from('challenges')
+        .select('match_time')
+        .eq('court_name', courtName)
+        .in('status', ['accepted', 'pending']);
+
+      if (challenges) {
+        challenges.forEach(ch => {
+           const datePart = ch.match_time.split('T')[0];
+           const timePart = ch.match_time.split('T')[1]?.substring(0, 5); // "16:00"
+           if (datePart === date && timePart) taken.push(timePart);
+        });
+      }
+
+      setBookedSlots(taken);
+    } catch (err) {
+      console.error("Error fetching booked slots:", err);
+    } finally {
+      setIsCheckingTime(false);
     }
   }, [cleanId]);
 
@@ -74,6 +96,14 @@ export default function BookCourt() {
     };
     fetchCourt();
   }, [cleanId]);
+
+  // تحديث الأوقات عند تغيير التاريخ (مع إرسال اسم الملعب)
+  useEffect(() => {
+    if (selectedDate && court?.name) {
+      fetchBookedSlots(selectedDate, court.name);
+      setSelectedTime('');
+    }
+  }, [selectedDate, court?.name, fetchBookedSlots]);
 
   useEffect(() => {
     if (!cleanId) return;
@@ -97,7 +127,7 @@ export default function BookCourt() {
       .channel('booking-updates')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'bookings' }, 
-        () => { if (selectedDate) fetchBookedSlots(selectedDate); }
+        () => { if (selectedDate && court?.name) fetchBookedSlots(selectedDate, court.name); }
       )
       .subscribe();
 
@@ -105,14 +135,7 @@ export default function BookCourt() {
       supabase.removeChannel(presenceChannel);
       supabase.removeChannel(bookingChannel);
     };
-  }, [cleanId, selectedDate, fetchBookedSlots]);
-
-  useEffect(() => {
-    if (selectedDate) {
-      fetchBookedSlots(selectedDate);
-      setSelectedTime('');
-    }
-  }, [selectedDate, fetchBookedSlots]);
+  }, [cleanId, selectedDate, court?.name, fetchBookedSlots]);
 
   const handleConfirm = async () => {
     if (!selectedDate || !selectedTime) { 
@@ -127,7 +150,6 @@ export default function BookCourt() {
     try {
       const startTimeISO = `${selectedDate}T${selectedTime}:00+03:00`;
       
-      // 🔥 المنطق الجديد: إذا كان المستخدم في وضع التحدي
       if (challengeInfo?.isChallengeMode) {
         const { error: challengeError } = await supabase.from('challenges').insert([{
           challenger_id: user.id,
@@ -144,7 +166,6 @@ export default function BookCourt() {
         return;
       }
 
-      // 💳 المنطق القديم: حجز فعلي
       const startDate = new Date(startTimeISO);
       const endDate = new Date(startDate.getTime() + duration * 60000);
 
@@ -225,7 +246,6 @@ export default function BookCourt() {
           </div>
         </div>
 
-        {/* إخفاء مدة اللعب في وضع التحدي لتبسيط العملية */}
         {!challengeInfo?.isChallengeMode && (
           <section className="space-y-4">
             <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest"><span>مدة اللعب</span><Timer size={14} /></div>
@@ -250,15 +270,30 @@ export default function BookCourt() {
           </div>
         </section>
 
-        <section className="space-y-4">
+        {/* 🔥 منطقة اختيار الوقت مع Loader */}
+        <section className="space-y-4 relative">
           <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest"><span>اختر الوقت</span><Clock size={14} /></div>
+          
+          {isCheckingTime && (
+            <div className="absolute inset-0 z-10 bg-[#0a0f3c]/60 backdrop-blur-sm flex items-center justify-center rounded-2xl">
+              <Loader2 className="animate-spin text-cyan-400" size={24} />
+            </div>
+          )}
+
           <div className="grid grid-cols-3 gap-3">
             {timeSlots.map((slot) => {
               const isBooked = bookedSlots.includes(slot.id);
               return (
-                <button key={slot.id} disabled={isBooked} onClick={() => setSelectedTime(slot.id)} className={`py-5 rounded-2xl border-2 font-black text-xs transition-all relative overflow-hidden flex items-center justify-center ${isBooked ? 'bg-gray-950 border-white/5 text-gray-700 opacity-40' : selectedTime === slot.id ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-[#14224d] border-white/5 text-gray-400'}`}>
-                  {isBooked && <Lock size={12} className="absolute top-2 right-2 opacity-30" />}
-                  {slot.label}
+                <button 
+                  key={slot.id} 
+                  disabled={isBooked || isCheckingTime} 
+                  onClick={() => setSelectedTime(slot.id)} 
+                  className={`py-5 rounded-2xl border-2 font-black text-xs transition-all relative overflow-hidden flex items-center justify-center 
+                    ${isBooked ? 'bg-gray-950 border-white/5 text-red-500/70 opacity-50 cursor-not-allowed' 
+                    : selectedTime === slot.id ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' 
+                    : 'bg-[#14224d] border-white/5 text-gray-400'}`}
+                >
+                  {isBooked ? <span className="flex items-center gap-1 text-[10px]"><Lock size={12} /> محجوز</span> : slot.label}
                 </button>
               );
             })}
@@ -267,7 +302,7 @@ export default function BookCourt() {
 
         <button 
           onClick={handleConfirm} 
-          disabled={!selectedDate || !selectedTime || bookingInProgress} 
+          disabled={!selectedDate || !selectedTime || bookingInProgress || isCheckingTime} 
           className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] text-xl shadow-lg flex items-center justify-center gap-3 active:scale-95 disabled:opacity-20 transition-all mt-6 uppercase italic"
         >
           {bookingInProgress ? (
