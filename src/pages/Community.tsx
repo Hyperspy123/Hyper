@@ -30,12 +30,15 @@ export default function Community() {
     if (!user) return;
     setCurrentUserId(user.id);
 
+    // 1. جلب اللاعبين
     const { data: profiles } = await supabase.from('profiles').select('*').eq('is_public', true).neq('id', user.id);
     setPlayers(profiles || []);
 
+    // 2. جلب الملاعب
     const { data: courtsData } = await supabase.from('courts').select('*');
     setCourts(courtsData || []);
 
+    // 3. جلب كل التحديات
     const { data: challenges } = await supabase
       .from('challenges')
       .select(`
@@ -93,22 +96,22 @@ export default function Community() {
     }
   };
 
-  // 🔥 دالة إرسال التحديثات الجاهزة للخصم عبر الإشعارات
+  // 🔥 دالة إرسال التحديثات السريعة (بدون الشات القديم)
   const sendQuickStatus = async (statusMessage: string) => {
     if (!selectedMatch) return;
     const opponentId = selectedMatch.opponent.id;
     
-    // نستخدم جدول الإشعارات (notifications) اللي موجود عندك مسبقاً
     const { error } = await supabase.from('notifications').insert([{
       user_id: opponentId,
       title: 'تحديث من خصمك ⚔️',
-      message: `خصمك يقول: ${statusMessage}`,
+      message: statusMessage,
     }]);
 
     if (!error) {
-      toast.success("تم إرسال التحديث لخصمك بنجاح!");
+      toast.success("تم إرسال التحديث لخصمك بنجاح! 🚀");
     } else {
-      toast.error("حدث خطأ في الإرسال");
+      toast.error(`حدث خطأ: ${error.message}`);
+      console.error("Notification Error:", error);
     }
   };
 
