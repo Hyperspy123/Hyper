@@ -36,11 +36,12 @@ export default function BookCourt() {
 
   const durations = [{ label: "60 Min", value: 60 }, { label: "90 Min", value: 90 }, { label: "120 Min", value: 120 }];
 
-  // 🔥 الدالة المعدلة: تبحث في החجوزات العادية + التحديات عشان تمنع التعارض
+  // 🔥 الدالة المعدلة: تحول كل الأوقات لتوقيت الرياض عشان يطابق الأزرار بدقة
   const fetchBookedSlots = useCallback(async (date: string, courtName: string) => {
     if (!cleanId || !date || !courtName) return;
     setIsCheckingTime(true);
     
+    // تحديد بداية ونهاية اليوم بتوقيت السعودية عشان نجيب كل حجوزات وتحديات هذا اليوم فقط
     const startOfDay = `${date}T00:00:00+03:00`;
     const endOfDay = `${date}T23:59:59+03:00`;
     const taken: string[] = [];
@@ -58,23 +59,27 @@ export default function BookCourt() {
       if (normalBookings) {
         normalBookings.forEach(b => {
            const d = new Date(b.start_time);
+           // تحويل الوقت لتوقيت الرياض بصيغة 24 ساعة (مثال: 16:00)
            const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Riyadh' });
            taken.push(timeStr);
         });
       }
 
-      // 2. جلب أوقات التحديات (المقبولة والمعلقة) لنفس الملعب واليوم
+      // 2. جلب التحديات (المقبولة والمعلقة)
       const { data: challenges } = await supabase
         .from('challenges')
         .select('match_time')
         .eq('court_name', courtName)
-        .in('status', ['accepted', 'pending']);
+        .in('status', ['accepted', 'pending'])
+        .gte('match_time', startOfDay) // جلب تحديات نفس اليوم فقط
+        .lte('match_time', endOfDay);
 
       if (challenges) {
         challenges.forEach(ch => {
-           const datePart = ch.match_time.split('T')[0];
-           const timePart = ch.match_time.split('T')[1]?.substring(0, 5); // "16:00"
-           if (datePart === date && timePart) taken.push(timePart);
+           const d = new Date(ch.match_time);
+           // تحويل وقت التحدي لتوقيت الرياض عشان يطابق الأزرار بالضبط
+           const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Riyadh' });
+           taken.push(timeStr);
         });
       }
 
