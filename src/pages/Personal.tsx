@@ -257,7 +257,7 @@ export default function Personal() {
         </div>
 
         <button 
-          onClick={() => supabase.auth.signOut().then(() => navigate('/auth'))}
+          onClick={() => supabase.auth.signOut().then(() => navigate('/auth'))} 
           className="w-full py-5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-[25px] font-black italic flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
           تسجيل الخروج
