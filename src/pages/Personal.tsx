@@ -1,172 +1,160 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Users, Zap, Award, ChevronLeft, Target, TrendingUp, Trophy, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Trophy, Zap, ChevronRight, Loader2, Settings, ShieldCheck, Medal, Star, Flame, Crown, Swords, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-// دليل التصنيفات الكامل (نفس مسمياتك وأرقامك)
-const RANKS_GUIDE = [
-  { range: '0 - 10', title: 'مستجد (Rookie)', icon: '🥚', color: 'text-gray-400', min: 0, max: 10 },
-  { range: '11 - 50', title: 'هايب (Hype)', icon: '⚡', color: 'text-cyan-400', min: 11, max: 50 },
-  { range: '51 - 150', title: 'برنس (Prince)', icon: '👑', color: 'text-purple-400', min: 51, max: 150 },
-  { range: '151 - 300', title: 'كينج (King)', icon: '🦁', color: 'text-yellow-500', min: 151, max: 300 },
-  { range: '301 - 499', title: 'أسطورة (Legend)', icon: '🌌', color: 'text-indigo-400', min: 301, max: 499 },
-  { range: '500+', title: 'هايبر (HYPER)', icon: '💫', color: 'text-pink-500', min: 500, max: 9999 },
-];
-
-export default function Personal() {
-  const navigate = useNavigate();
+export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // جلب بيانات المستخدم الحقيقية
   useEffect(() => {
-    async function getProfile() {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-        if (data) setProfile(data);
-      }
-      setLoading(false);
-    }
-    getProfile();
+    fetchProfile();
   }, []);
 
-  const matchesPlayed = profile?.total_matches || 0;
+  const fetchProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
 
-  // حساب اللقب الحالي بناءً على عدد المباريات الحقيقي
-  const currentRank = [...RANKS_GUIDE].reverse().find(r => matchesPlayed >= r.min) || RANKS_GUIDE[0];
-  const nextRank = RANKS_GUIDE[RANKS_GUIDE.indexOf(currentRank) + 1];
-  
-  // حساب النسبة المئوية للتقدم للقب القادم
-  const calculateProgress = () => {
-    if (!nextRank) return 100;
-    const rangeSize = nextRank.min - currentRank.min;
-    const progressInRange = matchesPlayed - currentRank.min;
-    const percentage = (progressInRange / rangeSize) * 100;
-    return Math.min(Math.max(percentage, 5), 100); 
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (data) setProfile(data);
+    setLoading(false);
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#05081d] flex items-center justify-center">
-      <Loader2 className="text-cyan-400 animate-spin" size={40} />
-    </div>
-  );
+  // 🔥 نظام الرانك مع أيقونات فخمة وتأثيرات متوهجة
+  const getRankInfo = (matches: number) => {
+    if (matches < 50) return { name: 'ROOKIE', Icon: Medal, color: 'text-blue-400', bg: 'bg-blue-500/10', glow: 'shadow-blue-500/30', next: 50 };
+    if (matches < 100) return { name: 'PRO', Icon: Star, color: 'text-emerald-400', bg: 'bg-emerald-500/10', glow: 'shadow-emerald-500/30', next: 100 };
+    if (matches < 150) return { name: 'ELITE', Icon: Flame, color: 'text-orange-400', bg: 'bg-orange-500/10', glow: 'shadow-orange-500/30', next: 150 };
+    if (matches < 200) return { name: 'PRINCE', Icon: Crown, color: 'text-purple-400', bg: 'bg-purple-500/10', glow: 'shadow-purple-500/30', next: 200 };
+    if (matches < 250) return { name: 'KING', Icon: Swords, color: 'text-yellow-400', bg: 'bg-yellow-500/10', glow: 'shadow-yellow-500/30', next: 250 };
+    if (matches < 300) return { name: 'LEGEND', Icon: Sparkles, color: 'text-indigo-400', bg: 'bg-indigo-500/10', glow: 'shadow-indigo-500/30', next: 300 };
+    return { name: 'HYPE', Icon: Zap, color: 'text-cyan-400', bg: 'bg-cyan-500/10', glow: 'shadow-cyan-500/40', next: 300 };
+  };
+
+  if (loading) return <div className="min-h-screen bg-[#05081d] flex items-center justify-center"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>;
+
+  const rank = getRankInfo(profile?.total_matches || 0);
+  const RankIcon = rank.Icon;
+  const progress = Math.min(100, ((profile?.total_matches || 0) % 50 / 50) * 100);
+  const matchesToNext = rank.next - (profile?.total_matches || 0);
 
   return (
-    <div className="min-h-screen bg-[#05081d] text-white pb-32" dir="rtl">
+    <div className="min-h-screen bg-[#05081d] text-white font-sans pb-32" dir="rtl">
       <Header />
-
-      <div className="pt-24 max-w-lg mx-auto px-6">
-        {/* Page Header */}
-        <div className="flex items-center gap-3 mb-8">
-            <button onClick={() => navigate(-1)} className="p-2 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
-                <ChevronLeft size={20} className="rotate-180" />
-            </button>
-            <h1 className="text-3xl font-[1000] italic tracking-tighter uppercase leading-none text-cyan-400">شخصي <span className='text-white'>Profile</span></h1>
-        </div>
-
-        {/* 1. نظام المستوى (الخيارات الثلاثة) */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 mb-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/10 blur-[50px] rounded-full -ml-16 -mt-16" />
-          <h3 className="text-[10px] font-black text-gray-400 mb-6 flex items-center gap-2 uppercase tracking-[0.2em] relative z-10">
-            <Target size={14} className="text-cyan-400" /> مهارة اللعب المحددة
-          </h3>
-          <div className="grid grid-cols-1 gap-3 relative z-10">
-            {['beginner', 'intermediate', 'pro'].map((lvl) => (
-                <div 
-                    key={lvl}
-                    className={`flex items-center justify-between p-6 rounded-3xl border-2 transition-all ${
-                        profile?.skill_level === lvl 
-                        ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10 shadow-lg' 
-                        : 'bg-black/20 border-white/5 text-gray-600'
-                    }`}
-                >
-                    <span className="text-xl font-black uppercase">
-                        {lvl === 'beginner' ? 'مبتدئ' : lvl === 'intermediate' ? 'متوسط' : 'محترف'}
-                    </span>
-                    {profile?.skill_level === lvl && <Zap size={20} className="fill-cyan-400" />}
-                </div>
-            ))}
+      
+      <main className="p-6 max-w-md mx-auto pt-24 space-y-8">
+        
+        {/* هيدر الملف الشخصي */}
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="relative">
+            <div className="w-28 h-28 bg-gradient-to-tr from-cyan-500 to-purple-500 rounded-[35px] p-1 shadow-[0_0_30px_rgba(34,211,238,0.3)]">
+              <div className="w-full h-full bg-[#0a0f3c] rounded-[32px] flex items-center justify-center">
+                <User size={50} className="text-gray-500" />
+              </div>
+            </div>
+            <div className="absolute -bottom-2 -right-2 bg-cyan-500 p-2 rounded-xl border-4 border-[#05081d] text-[#0a0f3c]">
+              <ShieldCheck size={20} />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-3xl font-[1000] italic uppercase tracking-tighter">{profile?.first_name}</h1>
+            <p className="text-gray-500 font-bold text-xs uppercase tracking-widest">{profile?.email}</p>
           </div>
         </div>
 
-        {/* 2. نظام التصنيف الديناميكي (البطاقة الحالية) */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 mb-6 relative overflow-hidden shadow-xl border-b-yellow-500/20">
-            <div className="absolute bottom-0 right-0 w-32 h-32 bg-yellow-500/10 blur-[50px] rounded-full -mr-16 -mb-16" />
-            <h3 className="text-[10px] font-black text-gray-400 mb-6 flex items-center gap-2 uppercase tracking-[0.2em] relative z-10">
-                <Award size={14} className="text-yellow-400" /> لقبك الفعلي • Live Rank
-            </h3>
-            <div className="flex items-center gap-5 mb-6 relative z-10">
-                <div className="text-6xl drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]">{currentRank.icon}</div>
-                <div className='flex-1'>
-                    <span className="block text-[8px] font-black text-gray-500 uppercase tracking-widest">التصنيف الحالي</span>
-                    <span className={`text-2xl font-[1000] tracking-tight italic uppercase ${currentRank.color}`}>
-                        {profile?.current_rank || currentRank.title}
-                    </span>
-                    <div className="flex items-center gap-1.5 mt-1 text-xs text-yellow-400 font-[1000] italic">
-                        <TrendingUp size={14} /> {matchesPlayed} مباراة ملعوبة
-                    </div>
+        {/* كرت الرانك المطور بالأيقونات المتوهجة */}
+        <div className={`bg-[#0a0f3c] border border-white/10 rounded-[40px] p-8 shadow-2xl relative overflow-hidden group shadow-lg ${rank.glow}`}>
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+            <RankIcon size={120} />
+          </div>
+          
+          <div className="relative z-10 space-y-6">
+            <div className="flex justify-between items-end">
+              <div className="flex items-center gap-4">
+                {/* صندوق الأيقونة الفخم */}
+                <div className={`w-14 h-14 rounded-[20px] ${rank.bg} border border-white/10 flex items-center justify-center relative overflow-hidden`}>
+                  <div className={`absolute inset-0 blur-xl opacity-40 ${rank.bg.replace('/10', '')}`} />
+                  <RankIcon size={28} className={`${rank.color} relative z-10 drop-shadow-[0_0_8px_currentColor]`} />
                 </div>
+                <div>
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] block mb-0.5">المستوى الحالي</span>
+                  <h2 className={`text-3xl font-[1000] italic uppercase leading-none ${rank.color} drop-shadow-[0_0_10px_currentColor]`}>
+                    {rank.name}
+                  </h2>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="block text-2xl font-[1000] italic leading-none">{profile?.total_matches || 0}</span>
+                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">مباراة ملعوبة</span>
+              </div>
             </div>
-            
-            {/* الشريط الملون */}
-            <div className="relative z-10 bg-black/40 rounded-full h-3 border border-white/5 p-0.5 overflow-hidden shadow-inner">
+
+            {/* شريط التقدم */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase">
+                <span className={rank.color}>التقدم للرانك التالي</span>
+                <span className="text-gray-400">{profile?.total_matches >= 300 ? 'MAX LEVEL' : `باقي ${matchesToNext} مباريات`}</span>
+              </div>
+              <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 relative">
                 <div 
-                    className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(234,179,8,0.5)]"
-                    style={{ width: `${calculateProgress()}%` }}
-                />
-            </div>
-            
-            {nextRank && (
-                <p className="text-center mt-3 text-[10px] text-gray-400 font-black uppercase tracking-wider relative z-10">
-                    تبقى <span className="text-white">{nextRank.min - matchesPlayed}</span> مباريات للوصول لـ <span className={nextRank.color}>{nextRank.title}</span>
-                </p>
-            )}
-        </div>
-
-        {/* 3. دليل التصنيفات الشامل */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 mb-6 shadow-xl relative overflow-hidden">
-            <h3 className="text-[10px] font-black text-gray-400 mb-6 flex items-center gap-2 uppercase tracking-[0.2em]">
-                <Trophy size={14} className="text-cyan-400" /> دليل ترقيات هايب • Hype Guide
-            </h3>
-            <div className="space-y-2">
-                <div className="flex items-center px-4 py-2 text-[8px] font-black text-gray-600 uppercase tracking-widest border-b border-white/5">
-                    <span className="w-10">الرمز</span>
-                    <span className="flex-1">اللقب</span>
-                    <span className="w-20 text-left">النطاق</span>
+                  className={`h-full ${rank.bg.replace('/10', '')} transition-all duration-1000 relative`}
+                  style={{ width: `${profile?.total_matches >= 300 ? 100 : progress}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20 w-full animate-pulse" />
                 </div>
-                {RANKS_GUIDE.map((rank, index) => {
-                    const isUnlocked = matchesPlayed >= rank.min;
-                    const isCurrent = currentRank.title === rank.title;
-                    return (
-                        <div 
-                            key={index} 
-                            className={`flex items-center px-4 py-4 rounded-2xl transition-all duration-500 border ${
-                                isCurrent ? 'bg-cyan-500/10 border-cyan-500/30' : isUnlocked ? 'bg-white/5 border-white/5' : 'opacity-20 grayscale border-transparent'
-                            }`}
-                        >
-                            <span className="w-10 text-xl">{rank.icon}</span>
-                            <span className={`flex-1 text-xs font-black italic uppercase ${isUnlocked ? rank.color : 'text-gray-500'}`}>
-                                {rank.title}
-                                {isCurrent && <span className="mr-2 text-[8px] text-cyan-400 animate-pulse">(أنت هنا)</span>}
-                            </span>
-                            <span className="w-20 text-left text-[10px] font-black text-gray-400">
-                                {rank.range}
-                            </span>
-                        </div>
-                    );
-                })}
+              </div>
             </div>
+          </div>
         </div>
 
-        <p className="text-center mt-8 text-[8px] font-black text-gray-700 uppercase tracking-[0.5em]">Hype Padel Community ID • Verified</p>
-      </div>
+        {/* معلومات التواصل */}
+        <div className="space-y-3">
+          <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] pr-4">المعلومات الشخصية</h3>
+          <div className="bg-white/5 rounded-[30px] border border-white/5 overflow-hidden">
+            <div className="p-5 flex items-center gap-4 border-b border-white/5">
+              <div className="p-3 bg-white/5 rounded-2xl text-cyan-400"><Mail size={18} /></div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-500 font-black uppercase">البريد الإلكتروني</p>
+                <p className="font-bold text-sm">{profile?.email}</p>
+              </div>
+            </div>
+            <div className="p-5 flex items-center gap-4">
+              <div className="p-3 bg-white/5 rounded-2xl text-cyan-400"><Phone size={18} /></div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-500 font-black uppercase">رقم الجوال</p>
+                <p className="font-bold text-sm">{profile?.phone_number || 'غير مسجل'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* أزرار الإعدادات */}
+        <div className="grid grid-cols-2 gap-4">
+          <button className="p-6 bg-white/5 rounded-[30px] border border-white/5 flex flex-col items-center gap-3 active:scale-95 transition-all group hover:bg-white/10">
+            <div className="p-3 bg-cyan-500/10 rounded-2xl text-cyan-400 group-hover:bg-cyan-500 group-hover:text-[#0a0f3c] transition-all">
+              <Settings size={22} />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest">تعديل الحساب</span>
+          </button>
+          <button onClick={() => navigate('/support')} className="p-6 bg-white/5 rounded-[30px] border border-white/5 flex flex-col items-center gap-3 active:scale-95 transition-all group hover:bg-white/10">
+            <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-all">
+              <Zap size={22} />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest">الدعم الفني</span>
+          </button>
+        </div>
+
+      </main>
     </div>
   );
 }
