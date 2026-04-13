@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { ChevronRight, Clock, Zap, CalendarDays, Timer, Loader2, Lock, Users } from 'lucide-react';
+import { ChevronRight, Clock, Zap, CalendarDays, Timer, Loader2, Lock, Users, Swords } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function BookCourt() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // الاستماع لبيانات التحدي القادمة من صفحة المجتمع
+  const challengeInfo = location.state as { isChallengeMode?: boolean, opponentId?: string, opponentName?: string };
+
   const [court, setCourt] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bookingInProgress, setBookingInProgress] = useState(false);
@@ -121,6 +126,25 @@ export default function BookCourt() {
 
     try {
       const startTimeISO = `${selectedDate}T${selectedTime}:00+03:00`;
+      
+      // 🔥 المنطق الجديد: إذا كان المستخدم في وضع التحدي
+      if (challengeInfo?.isChallengeMode) {
+        const { error: challengeError } = await supabase.from('challenges').insert([{
+          challenger_id: user.id,
+          challenged_id: challengeInfo.opponentId,
+          court_name: court.name,
+          match_time: startTimeISO,
+          status: 'pending'
+        }]);
+
+        if (challengeError) throw challengeError;
+
+        toast.success(`تم إرسال طلب التحدي لـ ${challengeInfo.opponentName} 🔥`);
+        setTimeout(() => navigate('/community'), 1200);
+        return;
+      }
+
+      // 💳 المنطق القديم: حجز فعلي
       const startDate = new Date(startTimeISO);
       const endDate = new Date(startDate.getTime() + duration * 60000);
 
@@ -135,15 +159,11 @@ export default function BookCourt() {
       if (bookingError) throw bookingError;
 
       toast.success("تم الحجز بنجاح! رانكك في تطور مستمر 🎾🚀");
-
-      // 🔥 التعديل هنا: التوجيه لصفحة "حجوزاتي" بدلاً من المكافآت
-      setTimeout(() => {
-        navigate('/my-bookings'); 
-      }, 1000);
+      setTimeout(() => navigate('/my-bookings'), 1000);
 
     } catch (error: any) {
       console.error(error);
-      toast.error("عذراً، هذا الوقت قد يكون حُجز للتو");
+      toast.error(challengeInfo?.isChallengeMode ? "فشل إرسال التحدي" : "عذراً، هذا الوقت قد يكون حُجز للتو");
     } finally {
       setBookingInProgress(false);
     }
@@ -170,6 +190,14 @@ export default function BookCourt() {
   return (
     <div className="min-h-screen bg-[#0a0f3c] text-white font-sans pb-24" dir="rtl">
       <Header />
+      
+      {/* تنبيه وضع التحدي */}
+      {challengeInfo?.isChallengeMode && (
+        <div className="bg-cyan-500 text-[#0a0f3c] px-6 py-2 text-center font-black text-[10px] uppercase italic animate-bounce shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+          أنت الآن في وضع التحدي: اختر موعداً لتحدي {challengeInfo.opponentName} ⚔️
+        </div>
+      )}
+
       <div className="px-6 mt-4 flex justify-end">
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-500 ${viewerCount > 1 ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-white/5 border-white/10 opacity-60'}`}>
           <div className={`w-1.5 h-1.5 rounded-full ${viewerCount > 1 ? 'bg-cyan-400 animate-pulse' : 'bg-gray-500'}`} />
@@ -177,12 +205,16 @@ export default function BookCourt() {
           <Users size={12} className="text-cyan-400" />
         </div>
       </div>
+
       <div className="p-4 flex items-center justify-between">
-        <h1 className="text-2xl font-[1000] italic tracking-tighter uppercase">تأكيد الحجز</h1>
+        <h1 className="text-2xl font-[1000] italic tracking-tighter uppercase">
+          {challengeInfo?.isChallengeMode ? 'تفاصيل التحدي' : 'تأكيد الحجز'}
+        </h1>
         <button onClick={() => navigate(-1)} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
           <ChevronRight size={22} className="rotate-180" />
         </button>
       </div>
+
       <main className="px-6 max-w-md mx-auto space-y-8 text-right">
         <div className="bg-[#14224d] rounded-[35px] p-6 border border-white/10 flex items-center gap-5 shadow-2xl relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -192,14 +224,19 @@ export default function BookCourt() {
             <span className="bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full font-black text-xs border border-cyan-500/20">{court?.price_per_hour} SAR / ساعة</span>
           </div>
         </div>
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest"><span>مدة اللعب</span><Timer size={14} /></div>
-          <div className="grid grid-cols-3 gap-3">
-            {durations.map((d) => (
-              <button key={d.value} onClick={() => setDuration(d.value)} className={`py-4 rounded-2xl border-2 font-black text-[11px] transition-all duration-300 ${duration === d.value ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg' : 'bg-[#14224d] border-white/5 text-gray-400'}`}>{d.label}</button>
-            ))}
-          </div>
-        </section>
+
+        {/* إخفاء مدة اللعب في وضع التحدي لتبسيط العملية */}
+        {!challengeInfo?.isChallengeMode && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest"><span>مدة اللعب</span><Timer size={14} /></div>
+            <div className="grid grid-cols-3 gap-3">
+              {durations.map((d) => (
+                <button key={d.value} onClick={() => setDuration(d.value)} className={`py-4 rounded-2xl border-2 font-black text-[11px] transition-all duration-300 ${duration === d.value ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg' : 'bg-[#14224d] border-white/5 text-gray-400'}`}>{d.label}</button>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest"><span>اختر التاريخ</span><CalendarDays size={14} /></div>
           <div className="grid grid-cols-4 gap-2">
@@ -212,6 +249,7 @@ export default function BookCourt() {
             ))}
           </div>
         </section>
+
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest"><span>اختر الوقت</span><Clock size={14} /></div>
           <div className="grid grid-cols-3 gap-3">
@@ -226,8 +264,20 @@ export default function BookCourt() {
             })}
           </div>
         </section>
-        <button onClick={handleConfirm} disabled={!selectedDate || !selectedTime || bookingInProgress} className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] text-xl shadow-lg flex items-center justify-center gap-3 active:scale-95 disabled:opacity-20 transition-all mt-6 uppercase italic">
-          {bookingInProgress ? <Loader2 className="animate-spin" /> : <>تأكيد الحجز الآن <Zap size={22} className="fill-[#0a0f3c]" /></>}
+
+        <button 
+          onClick={handleConfirm} 
+          disabled={!selectedDate || !selectedTime || bookingInProgress} 
+          className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] text-xl shadow-lg flex items-center justify-center gap-3 active:scale-95 disabled:opacity-20 transition-all mt-6 uppercase italic"
+        >
+          {bookingInProgress ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <>
+              {challengeInfo?.isChallengeMode ? 'إرسال طلب التحدي' : 'تأكيد الحجز الآن'} 
+              {challengeInfo?.isChallengeMode ? <Swords size={22} fill="currentColor" /> : <Zap size={22} className="fill-[#0a0f3c]" />}
+            </>
+          )}
         </button>
       </main>
     </div>
