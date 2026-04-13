@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
-// أضفنا Loader2 هنا في قائمة الاستيراد
-import { Mail, Lock, Zap, User, ChevronLeft, Send, LogIn, CheckCircle2, ShieldCheck, Calendar, Loader2 } from 'lucide-react';
+import { Mail, Lock, Zap, User, ChevronLeft, Send, LogIn, CheckCircle2, ShieldCheck, Calendar, Loader2, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AuthMode = 'signin' | 'signup' | 'reset';
@@ -13,6 +12,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState(''); // ✅ State جديد لرقم الجوال
   const [gender, setGender] = useState<'ذكر' | 'أنثى'>('ذكر');
   const [birthDate, setBirthDate] = useState('');
   const [mode, setMode] = useState<AuthMode>('signin');
@@ -25,8 +25,10 @@ export default function Auth() {
     try {
       if (mode === 'signup') {
         if (!birthDate) throw new Error("يرجى تحديد تاريخ الميلاد");
+        if (!phone) throw new Error("يرجى إدخال رقم الجوال");
         
-        const { error } = await supabase.auth.signUp({ 
+        // 1. إنشاء الحساب في Supabase Auth
+        const { data, error } = await supabase.auth.signUp({ 
           email, 
           password,
           options: {
@@ -35,10 +37,27 @@ export default function Auth() {
               last_name: lastName,
               gender: gender,
               birth_date: birthDate,
+              phone: phone, // حفظه في Auth metadata
             }
           }
         });
+        
         if (error) throw error;
+
+        // 2. إدخال البيانات في جدول profiles (تأكد أن العمود اسمه phone في Supabase)
+        if (data.user) {
+          const { error: profileError } = await supabase.from('profiles').insert([
+            { 
+              id: data.user.id, 
+              first_name: firstName, 
+              phone: phone, // ✅ حفظ رقم الجوال في الجدول
+              current_rank: 'ROOKIE', // الرانك الابتدائي
+              is_public: true 
+            }
+          ]);
+          if (profileError) console.error("Profile Error:", profileError);
+        }
+
         toast.success("تم إنشاء الحساب! افحص بريدك لتفعيله 🔥");
         setMode('signin');
       } 
@@ -56,7 +75,6 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-[#05081d] flex flex-col justify-center px-6 text-white font-sans py-12 relative overflow-hidden" dir="rtl">
-      {/* خلفية جمالية */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
         <div className="absolute -top-[10%] -right-[10%] w-[300px] h-[300px] bg-cyan-500/10 blur-[100px] rounded-full" />
         <div className="absolute -bottom-[10%] -left-[10%] w-[300px] h-[300px] bg-pink-500/5 blur-[100px] rounded-full" />
@@ -78,11 +96,23 @@ export default function Auth() {
           {mode === 'signup' && (
             <>
               <div className="flex gap-3">
-                <input type="text" placeholder="الاسم" className="w-1/2 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-                <input type="text" placeholder="العائلة" className="w-1/2 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                <input type="text" placeholder="الاسم" className="w-1/2 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                <input type="text" placeholder="العائلة" className="w-1/2 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
               </div>
 
-              {/* اختيار الجنس */}
+              {/* حقل رقم الجوال الجديد ✅ */}
+              <div className="relative">
+                <Phone className="absolute right-4 top-4 text-gray-500" size={16} />
+                <input 
+                  type="tel" 
+                  placeholder="رقم الجوال (05xxxxxxxx)" 
+                  className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" 
+                  value={phone} 
+                  onChange={(e) => setPhone(e.target.value)} 
+                  required 
+                />
+              </div>
+
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -100,7 +130,6 @@ export default function Auth() {
                 </button>
               </div>
 
-              {/* تاريخ الميلاد */}
               <div className="relative">
                 <Calendar className="absolute right-4 top-4 text-gray-500" size={16} />
                 <input 
