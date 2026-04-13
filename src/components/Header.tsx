@@ -41,6 +41,28 @@ export default function Header() {
     navigate('/auth');
   };
 
+  // 🔥 دالة فحص التحديات قبل فتح الشات
+  const handleChatClick = async () => {
+    if (!user) return;
+
+    // نفحص إذا اللاعب عنده أي تحدي حالته "accepted"
+    const { data: matches } = await supabase
+      .from('challenges')
+      .select('id')
+      .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`)
+      .eq('status', 'accepted');
+
+    if (matches && matches.length > 0) {
+      // إذا عنده مباراة مقبولة، نوديه لصفحة المحادثات
+      navigate('/messages'); 
+    } else {
+      // إذا ما عنده، نطلّع له رسالة التحميس 💬
+      toast.error("اقبل تحدي أو تحدى أحد للتمكن من المراسلة 💬", {
+        style: { background: '#0a0f3c', color: '#22d3ee', border: '1px solid #22d3ee' }
+      });
+    }
+  };
+
   // 🔥 حسابات الرانك والتقدم الجديدة
   const matches = profile?.total_matches || 0;
   const currentRank = RANKS_LADDER.find(r => matches >= r.min && matches <= r.max) || RANKS_LADDER[0];
@@ -86,7 +108,8 @@ export default function Header() {
         {/* الأيقونات العلوية والمنيو (اليمين) */}
         <div className="flex items-center gap-3" dir="ltr">
           
-          <button onClick={() => navigate('/messages')} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-white/10 active:scale-90 transition-all">
+          {/* 💬 زر الشات المحدث */}
+          <button onClick={handleChatClick} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-white/10 active:scale-90 transition-all">
             <MessageSquare size={20} />
           </button>
 
