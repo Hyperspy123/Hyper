@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { User, Swords, Search, Loader2, Calendar, MapPin, X, Check, Zap, Clock, ChevronRight, ShieldAlert, Navigation } from 'lucide-react';
+import { User, Swords, Search, Loader2, Calendar, MapPin, X, Check, Zap, Clock, ChevronRight, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Community() {
+  const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [incomingChallenges, setIncomingChallenges] = useState<any[]>([]);
@@ -30,15 +32,12 @@ export default function Community() {
     if (!user) return;
     setCurrentUserId(user.id);
 
-    // 1. جلب اللاعبين
     const { data: profiles } = await supabase.from('profiles').select('*').eq('is_public', true).neq('id', user.id);
     setPlayers(profiles || []);
 
-    // 2. جلب الملاعب
     const { data: courtsData } = await supabase.from('courts').select('*');
     setCourts(courtsData || []);
 
-    // 3. جلب كل التحديات
     const { data: challenges } = await supabase
       .from('challenges')
       .select(`
@@ -96,25 +95,6 @@ export default function Community() {
     }
   };
 
-  // 🔥 دالة إرسال التحديثات السريعة (بدون الشات القديم)
-  const sendQuickStatus = async (statusMessage: string) => {
-    if (!selectedMatch) return;
-    const opponentId = selectedMatch.opponent.id;
-    
-    const { error } = await supabase.from('notifications').insert([{
-      user_id: opponentId,
-      title: 'تحديث من خصمك ⚔️',
-      message: statusMessage,
-    }]);
-
-    if (!error) {
-      toast.success("تم إرسال التحديث لخصمك بنجاح! 🚀");
-    } else {
-      toast.error(`حدث خطأ: ${error.message}`);
-      console.error("Notification Error:", error);
-    }
-  };
-
   const days = [0, 1, 2, 3].map(i => {
     const d = new Date(); d.setDate(d.getDate() + i);
     return { iso: d.toISOString().split('T')[0], label: i === 0 ? "اليوم" : d.toLocaleDateString('ar-EG', { weekday: 'short' }) };
@@ -131,7 +111,7 @@ export default function Community() {
       <Header />
       <main className="pt-28 px-6 max-w-lg mx-auto space-y-10">
         
-        {/* 1. قسم مين يتحداك (طلبات معلقة) */}
+        {/* 1. قسم مين يتحداك */}
         {incomingChallenges.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-xl font-black italic flex items-center gap-2 justify-end">مين يتحداك؟ <Zap size={18} className="text-cyan-400 fill-cyan-400" /></h2>
@@ -152,7 +132,7 @@ export default function Community() {
           </section>
         )}
 
-        {/* 2. قسم مبارياتك القادمة (تم القبول) */}
+        {/* 2. قسم مبارياتك القادمة */}
         {acceptedChallenges.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-xl font-black italic flex items-center gap-2 justify-end text-purple-400">مبارياتك القادمة <Swords size={18} /></h2>
@@ -202,7 +182,7 @@ export default function Community() {
         </section>
       </main>
 
-      {/* 🔥 مودال المواجهة الكبرى (VS Screen) مع التعليمات والتأكيد 🔥 */}
+      {/* 🔥 مودال المواجهة الكبرى (VS Screen) 🔥 */}
       {selectedMatch && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-[#05081d]/95 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
           <div className="w-full max-w-md relative overflow-y-auto max-h-[90vh] pb-8 custom-scrollbar">
@@ -245,7 +225,7 @@ export default function Community() {
               <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-purple-500/20 rounded-full blur-[40px] -translate-y-1/2" />
             </div>
 
-            {/* ✅ صندوق التعليمات والتأكيد الجاهز */}
+            {/* ✅ صندوق التعليمات وزر التوجه لغرفة الشات المغلقة */}
             <div className="mt-6 bg-[#14224d]/80 rounded-[30px] p-6 border border-white/10 space-y-5">
               <div className="text-center space-y-2">
                 <div className="flex items-center justify-center gap-2 text-cyan-400">
@@ -257,18 +237,12 @@ export default function Community() {
                 </p>
               </div>
 
-              <div className="h-px w-full bg-white/5" />
-
-              <div className="space-y-3">
-                <p className="text-[10px] text-gray-400 font-black text-center uppercase">أرسل تحديث سريع لخصمك</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => sendQuickStatus("في طريقي للملعب 🚗")} className="py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[11px] font-black active:scale-95 transition-all text-white">في الطريق 🚗</button>
-                  <button onClick={() => sendQuickStatus("وصلت الملعب 📍")} className="py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[11px] font-black active:scale-95 transition-all text-white">وصلت الملعب 📍</button>
-                  <button onClick={() => sendQuickStatus("جاهز للتحدي.. وينك؟ 🔥")} className="col-span-2 py-4 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-2xl text-[12px] font-[1000] active:scale-95 transition-all uppercase italic flex items-center justify-center gap-2">
-                    <Navigation size={16}/> تأكيد الحضور والجاهزية
-                  </button>
-                </div>
-              </div>
+              <button 
+                onClick={() => navigate(`/chat/${selectedMatch.match.id}`)} 
+                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-[20px] font-[1000] text-sm uppercase italic active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] flex items-center justify-center gap-2"
+              >
+                دخول غرفة التنسيق 💬
+              </button>
             </div>
 
             <button onClick={() => setSelectedMatch(null)} className="w-full mt-4 py-5 bg-white/5 border border-white/10 text-white rounded-[25px] font-black text-xs uppercase italic active:scale-95 transition-all">إغلاق البطاقة</button>
