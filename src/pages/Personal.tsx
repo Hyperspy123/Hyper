@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { User, Mail, Phone, Trophy, Zap, Loader2, ShieldCheck, Medal, Star, Flame, Crown, Swords, Sparkles, Lock, CheckCircle2, Save, X, Edit2 } from 'lucide-react';
+import { User, Mail, Phone, Trophy, Zap, Loader2, ShieldCheck, Medal, Star, Flame, Crown, Swords, Sparkles, Lock, CheckCircle2, Save, Edit2, Calendar, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -38,7 +38,13 @@ export default function Personal() {
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
 
     if (data) {
-      setProfile(data);
+      // دمج بيانات Auth مع بيانات الجدول عشان نضمن ظهور الإيميل والجنس وتاريخ الميلاد
+      setProfile({
+        ...data,
+        email: user.email,
+        gender: data.gender || user.user_metadata?.gender,
+        birth_date: data.birth_date || user.user_metadata?.birth_date
+      });
       setFormData({ first_name: data.first_name || '', phone: data.phone || '' });
     }
     setLoading(false);
@@ -92,11 +98,12 @@ export default function Personal() {
                 value={formData.first_name}
                 onChange={(e) => setFormData({...formData, first_name: e.target.value})}
                 className="bg-white/5 border border-cyan-500/50 rounded-xl px-4 py-2 text-center text-2xl font-[1000] italic w-full outline-none"
+                placeholder="الاسم المستعار"
               />
             ) : (
               <h1 className="text-3xl font-[1000] italic uppercase tracking-tighter">{profile?.first_name}</h1>
             )}
-            <p className="text-gray-500 font-bold text-xs mt-1">{profile?.email}</p>
+            <p className="text-cyan-400 font-bold text-xs mt-1 uppercase tracking-widest">{currentRank.name} PLAYER</p>
           </div>
         </div>
 
@@ -184,35 +191,66 @@ export default function Personal() {
           </div>
         </div>
 
-        {/* معلومات التواصل والتعديل */}
+        {/* 📋 البيانات الشخصية (مع التعديل) */}
         <div className="bg-white/5 rounded-[40px] border border-white/5 p-8 space-y-6">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">إعدادات الحساب</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">البيانات الشخصية</h3>
             <button onClick={() => setIsEditing(!isEditing)} className="text-cyan-400 text-[10px] font-black uppercase underline">
-              {isEditing ? 'إلغاء' : 'تعديل'}
+              {isEditing ? 'إلغاء التعديل' : 'تعديل البيانات'}
             </button>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
+          <div className="space-y-0 divide-y divide-white/5">
+            {/* الإيميل (للقراءة فقط) */}
+            <div className="flex items-center gap-4 py-4 first:pt-0">
+              <div className="p-3 bg-white/5 rounded-2xl text-gray-400"><Mail size={18} /></div>
+              <div className="flex-1">
+                <p className="text-[9px] text-gray-500 font-black uppercase">البريد الإلكتروني</p>
+                <p className="font-bold text-sm text-gray-300">{profile?.email || 'غير متوفر'}</p>
+              </div>
+            </div>
+
+            {/* الجوال (قابل للتعديل) */}
+            <div className="flex items-center gap-4 py-4">
               <div className="p-3 bg-white/5 rounded-2xl text-cyan-400"><Phone size={18} /></div>
               <div className="flex-1">
-                <p className="text-[10px] text-gray-500 font-black uppercase">رقم الجوال</p>
+                <p className="text-[9px] text-gray-500 font-black uppercase">رقم الجوال</p>
                 {isEditing ? (
                   <input 
                     value={formData.phone}
                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     className="bg-transparent border-b border-cyan-500/50 text-white font-bold w-full outline-none py-1"
+                    dir="ltr"
+                    style={{ textAlign: 'right' }}
                   />
                 ) : (
-                  <p className="font-bold text-sm">{profile?.phone || '05xxxxxxxx'}</p>
+                  <p className="font-bold text-sm">{profile?.phone || 'غير مسجل'}</p>
                 )}
+              </div>
+            </div>
+
+            {/* الجنس (للقراءة فقط) - تم تعديل الأيقونة هنا إلى Users */}
+            <div className="flex items-center gap-4 py-4">
+              <div className="p-3 bg-white/5 rounded-2xl text-purple-400"><Users size={18} /></div>
+              <div className="flex-1">
+                <p className="text-[9px] text-gray-500 font-black uppercase">الجنس</p>
+                <p className="font-bold text-sm text-gray-300">{profile?.gender || 'غير محدد'}</p>
+              </div>
+            </div>
+
+            {/* تاريخ الميلاد (للقراءة فقط) */}
+            <div className="flex items-center gap-4 py-4">
+              <div className="p-3 bg-white/5 rounded-2xl text-emerald-400"><Calendar size={18} /></div>
+              <div className="flex-1">
+                <p className="text-[9px] text-gray-500 font-black uppercase">تاريخ الميلاد</p>
+                <p className="font-bold text-sm text-gray-300">{profile?.birth_date || 'غير محدد'}</p>
               </div>
             </div>
           </div>
 
+          {/* زر الحفظ يظهر فقط وقت التعديل */}
           {isEditing && (
-            <button onClick={handleUpdateProfile} disabled={updating} className="w-full py-4 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black uppercase italic shadow-lg shadow-cyan-500/20 active:scale-95 transition-all">
+            <button onClick={handleUpdateProfile} disabled={updating} className="w-full py-4 mt-2 bg-cyan-500 text-[#0a0f3c] rounded-2xl font-black uppercase italic shadow-lg shadow-cyan-500/20 active:scale-95 transition-all">
               {updating ? 'جاري الحفظ...' : 'حفظ التغييرات'}
             </button>
           )}
