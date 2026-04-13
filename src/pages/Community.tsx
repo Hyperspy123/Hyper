@@ -24,6 +24,10 @@ export default function Community() {
   const [selectedTime, setSelectedTime] = useState('');
   const [isSending, setIsSending] = useState(false);
 
+  // 🔥 حالات جديدة للتحقق من الأوقات المحجوزة
+  const [bookedTimes, setBookedTimes] = useState<string[]>([]);
+  const [isCheckingTime, setIsCheckingTime] = useState(false);
+
   // حالة شاشة المواجهة (VS)
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
 
@@ -32,22 +36,15 @@ export default function Community() {
     if (!user) return;
     setCurrentUserId(user.id);
 
-    // 1. جلب اللاعبين
     const { data: profiles } = await supabase.from('profiles').select('*').eq('is_public', true).neq('id', user.id);
     setPlayers(profiles || []);
 
-    // 2. جلب الملاعب
     const { data: courtsData } = await supabase.from('courts').select('*');
     setCourts(courtsData || []);
 
-    // 3. جلب كل التحديات
     const { data: challenges } = await supabase
       .from('challenges')
-      .select(`
-        *,
-        challenger:challenger_id (id, first_name, current_rank, total_matches),
-        challenged:challenged_id (id, first_name, current_rank, total_matches)
-      `)
+      .select(`*, challenger:challenger_id (id, first_name, current_rank, total_matches), challenged:challenged_id (id, first_name, current_rank, total_matches)`)
       .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`);
 
     if (challenges) {
@@ -66,6 +63,60 @@ export default function Community() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
+
+  // 🔥 دالة التحقق من الأوقات المحجوزة (تشتغل تلقائياً إذا اختار يوم وملعب)
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      if (!selectedCourt || !selectedDate) return;
+      setIsCheckingTime(true);
+      setBookedTimes([]);
+      setSelectedTime(''); // تصفير الوقت لو غير اليوم
+
+      try {
+        const taken: string[] = [];
+
+        // 1. جلب أوقات التحديات المحجوزة
+        const { data: challenges } = await supabase
+          .from('challenges')
+          .select('match_time')
+          .eq('court_name', selectedCourt.name)
+          .in('status', ['accepted', 'pending']); // حتى المعلق نمنع حجزه عشان ما يصير تعارض
+
+        if (challenges) {
+          challenges.forEach(ch => {
+             const datePart = ch.match_time.split('T')[0];
+             const timePart = ch.match_time.split('T')[1]?.substring(0, 5); // "16:00"
+             if (datePart === selectedDate && timePart) {
+               taken.push(timePart);
+             }
+          });
+        }
+
+        // 2. جلب الحجوزات العادية من الرئيسية
+        // ⚠️ ملاحظة: افترضت أن جدولك اسمه bookings وعمود التاريخ date وعمود الوقت time
+        // إذا اختلفت الأسماء عندك، بس عدلها في السطور اللي تحت:
+        const { data: bookings } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('court_name', selectedCourt.name) // أو court_id إذا كنت تستخدم ID
+          .eq('date', selectedDate); // عدل اسم عمود التاريخ
+
+        if (bookings) {
+          bookings.forEach(b => {
+             if (b.time) taken.push(b.time.substring(0, 5)); // عدل اسم عمود الوقت
+          });
+        }
+
+        setBookedTimes(taken);
+      } catch (err) {
+        console.error("Error fetching slots:", err);
+      } finally {
+        setIsCheckingTime(false);
+      }
+    };
+
+    fetchBookedSlots();
+  }, [selectedCourt, selectedDate]);
 
   const handleSendChallenge = async () => {
     setIsSending(true);
@@ -114,7 +165,7 @@ export default function Community() {
       <Header />
       <main className="pt-28 px-6 max-w-lg mx-auto space-y-10">
         
-        {/* 1. قسم مين يتحداك (طلبات معلقة) */}
+        {/* 1. قسم مين يتحداك */}
         {incomingChallenges.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-xl font-black italic flex items-center gap-2 justify-end">مين يتحداك؟ <Zap size={18} className="text-cyan-400 fill-cyan-400" /></h2>
@@ -135,7 +186,7 @@ export default function Community() {
           </section>
         )}
 
-        {/* 2. قسم مبارياتك القادمة (تم القبول) */}
+        {/* 2. قسم مبارياتك القادمة */}
         {acceptedChallenges.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-xl font-black italic flex items-center gap-2 justify-end text-purple-400">مبارياتك القادمة <Swords size={18} /></h2>
@@ -185,7 +236,7 @@ export default function Community() {
         </section>
       </main>
 
-      {/* 🔥 مودال المواجهة الكبرى (VS Screen) 🔥 */}
+      {/* مودال المواجهة الكبرى (VS Screen) */}
       {selectedMatch && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-[#05081d]/95 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
           <div className="w-full max-w-md relative overflow-y-auto max-h-[90vh] pb-8 custom-scrollbar">
@@ -206,14 +257,12 @@ export default function Community() {
                   <p className="text-[8px] font-black text-cyan-400 uppercase mt-1">{selectedMatch.isChallenger ? selectedMatch.match.challenger.current_rank : selectedMatch.match.challenged.current_rank}</p>
                 </div>
               </div>
-
               <div className="z-10 flex flex-col items-center animate-pulse">
                 <div className="bg-gradient-to-br from-purple-500 to-cyan-500 p-3 rounded-full shadow-[0_0_30px_rgba(168,85,247,0.5)]">
                   <Swords size={24} className="text-white" />
                 </div>
                 <span className="text-[10px] font-[1000] italic mt-2 text-white">VS</span>
               </div>
-
               <div className="flex flex-col items-center gap-3 z-10 w-1/3">
                 <div className="w-16 h-16 bg-purple-500/20 rounded-[20px] border-2 border-purple-500 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)]">
                   <User size={28} className="text-purple-400" />
@@ -223,12 +272,10 @@ export default function Community() {
                   <p className="text-[8px] font-black text-purple-400 uppercase mt-1">{selectedMatch.opponent.current_rank}</p>
                 </div>
               </div>
-
               <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-[40px] -translate-y-1/2" />
               <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-purple-500/20 rounded-full blur-[40px] -translate-y-1/2" />
             </div>
 
-            {/* ✅ صندوق التعليمات وزر التوجه لغرفة الشات المغلقة */}
             <div className="mt-6 bg-[#14224d]/80 rounded-[30px] p-6 border border-white/10 space-y-5">
               <div className="text-center space-y-2">
                 <div className="flex items-center justify-center gap-2 text-cyan-400">
@@ -239,26 +286,20 @@ export default function Community() {
                   للتأكد من خصمك، توجه لمسؤول الحجز في <span className="text-white font-black">{selectedMatch.match.court_name}</span> وأعطه اسمك. بمجرد وصول خصمك، سيوجهكم المسؤول للملعب.
                 </p>
               </div>
-
-              {/* ✅ الزر المعدل: انتقل للشات */}
-              <button 
-                onClick={() => navigate(`/chat/${selectedMatch.match.id}`)} 
-                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-[20px] font-[1000] text-sm uppercase italic active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] flex items-center justify-center gap-2"
-              >
+              <button onClick={() => navigate(`/chat/${selectedMatch.match.id}`)} className="w-full py-4 bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-[20px] font-[1000] text-sm uppercase italic active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] flex items-center justify-center gap-2">
                 انتقل للشات 💬
               </button>
             </div>
-
             <button onClick={() => setSelectedMatch(null)} className="w-full mt-4 py-5 bg-white/5 border border-white/10 text-white rounded-[25px] font-black text-xs uppercase italic active:scale-95 transition-all">إغلاق البطاقة</button>
           </div>
         </div>
       )}
 
-      {/* مودال التحدي المباشر (إنشاء تحدي) */}
+      {/* مودال إنشاء التحدي */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-[#05081d]/90 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-10">
           <div className="bg-[#0a0f3c] border border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl relative">
-            <button onClick={() => { setIsModalOpen(false); setStep(1); }} className="absolute top-6 left-6 text-gray-500"><X size={24}/></button>
+            <button onClick={() => { setIsModalOpen(false); setStep(1); setBookedTimes([]); setSelectedDate(''); setSelectedTime(''); }} className="absolute top-6 left-6 text-gray-500"><X size={24}/></button>
             <div className="mb-8 text-right">
               <h3 className="text-3xl font-[1000] italic text-white leading-none">تحدي <span className="text-cyan-400">{selectedPlayer?.first_name}</span></h3>
               <p className="text-[10px] font-black text-gray-500 mt-2 uppercase italic tracking-widest">{step === 1 ? 'الخطوة 1: اختر الملعب' : 'الخطوة 2: حدد الموعد'}</p>
@@ -286,14 +327,38 @@ export default function Community() {
                     ))}
                   </div>
                 </div>
-                <div className="space-y-4">
+
+                {/* 🔥 الأوقات المحجوزة والمتاحة */}
+                <div className="space-y-4 relative">
                   <p className="text-[10px] font-black text-gray-400 text-right uppercase italic px-2 flex justify-end gap-2 items-center">اختر الوقت <Clock size={12} className="text-cyan-400"/></p>
+                  
+                  {isCheckingTime && (
+                    <div className="absolute inset-0 z-10 bg-[#0a0f3c]/60 backdrop-blur-sm flex items-center justify-center rounded-2xl mt-6">
+                      <Loader2 className="animate-spin text-cyan-400" size={24} />
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-3 gap-2">
-                    {timeSlots.map(t => (
-                      <button key={t.value} onClick={() => setSelectedTime(t.value)} className={`py-4 rounded-2xl font-black text-[12px] border-2 transition-all active:scale-95 ${selectedTime === t.value ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-[#14224d] border-white/5 text-gray-500'}`}>{t.label}</button>
-                    ))}
+                    {timeSlots.map(t => {
+                      const isBooked = bookedTimes.includes(t.value);
+                      return (
+                        <button 
+                          key={t.value} 
+                          disabled={isBooked || isCheckingTime}
+                          onClick={() => setSelectedTime(t.value)} 
+                          className={`py-4 rounded-2xl font-black text-[12px] border-2 transition-all active:scale-95 
+                            ${isBooked ? 'bg-red-500/10 border-red-500/20 text-red-500 cursor-not-allowed opacity-50' 
+                            : selectedTime === t.value ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' 
+                            : 'bg-[#14224d] border-white/5 text-gray-500'}`
+                          }
+                        >
+                          {isBooked ? 'محجوز 🚫' : t.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
+
                 <div className="flex gap-3">
                    <button onClick={() => setStep(1)} className="flex-1 py-5 bg-white/5 text-gray-400 rounded-3xl font-black text-xs uppercase italic active:scale-95 transition-all">رجوع</button>
                    <button onClick={handleSendChallenge} disabled={!selectedDate || !selectedTime || isSending} className="flex-[2] py-5 bg-cyan-500 text-[#0a0f3c] rounded-3xl font-[1000] text-xs uppercase italic active:scale-95 disabled:opacity-50 transition-all shadow-xl shadow-cyan-500/20">
