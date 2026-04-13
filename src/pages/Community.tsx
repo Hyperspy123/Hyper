@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { User, Swords, Search, Loader2, Calendar, MapPin, X, Check, Zap, Clock, ChevronRight, ShieldAlert } from 'lucide-react';
+import { User, Swords, Search, Loader2, Calendar, MapPin, X, Check, Zap, Clock, ChevronRight, ShieldAlert, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Community() {
-  const navigate = useNavigate(); // إضافة الهوك الخاص بالتنقل
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [incomingChallenges, setIncomingChallenges] = useState<any[]>([]);
@@ -32,15 +30,12 @@ export default function Community() {
     if (!user) return;
     setCurrentUserId(user.id);
 
-    // 1. جلب اللاعبين
     const { data: profiles } = await supabase.from('profiles').select('*').eq('is_public', true).neq('id', user.id);
     setPlayers(profiles || []);
 
-    // 2. جلب الملاعب
     const { data: courtsData } = await supabase.from('courts').select('*');
     setCourts(courtsData || []);
 
-    // 3. جلب كل التحديات (المرسلة لي، والمقبولة) مع بيانات الطرفين
     const { data: challenges } = await supabase
       .from('challenges')
       .select(`
@@ -51,9 +46,7 @@ export default function Community() {
       .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`);
 
     if (challenges) {
-      // الطلبات اللي تنتظر موافقتي
       setIncomingChallenges(challenges.filter(c => c.challenged_id === user.id && c.status === 'pending'));
-      // المباريات المقبولة (سواء أنا تحديت أو هو تحداني)
       setAcceptedChallenges(challenges.filter(c => c.status === 'accepted'));
     }
 
@@ -62,7 +55,6 @@ export default function Community() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // تحديث لحظي
   useEffect(() => {
     const channel = supabase.channel('live_challenges')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, () => fetchData())
@@ -98,6 +90,25 @@ export default function Community() {
     if (!error) {
       toast.success(status === 'accepted' ? "تم قبول التحدي! موعدنا الملعب 🎾" : "تم الرفض");
       fetchData();
+    }
+  };
+
+  // 🔥 دالة إرسال التحديثات الجاهزة للخصم عبر الإشعارات
+  const sendQuickStatus = async (statusMessage: string) => {
+    if (!selectedMatch) return;
+    const opponentId = selectedMatch.opponent.id;
+    
+    // نستخدم جدول الإشعارات (notifications) اللي موجود عندك مسبقاً
+    const { error } = await supabase.from('notifications').insert([{
+      user_id: opponentId,
+      title: 'تحديث من خصمك ⚔️',
+      message: `خصمك يقول: ${statusMessage}`,
+    }]);
+
+    if (!error) {
+      toast.success("تم إرسال التحديث لخصمك بنجاح!");
+    } else {
+      toast.error("حدث خطأ في الإرسال");
     }
   };
 
@@ -138,7 +149,7 @@ export default function Community() {
           </section>
         )}
 
-        {/* 2. قسم مبارياتك القادمة (تم القبول) 🔥 */}
+        {/* 2. قسم مبارياتك القادمة (تم القبول) */}
         {acceptedChallenges.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-xl font-black italic flex items-center gap-2 justify-end text-purple-400">مبارياتك القادمة <Swords size={18} /></h2>
@@ -163,7 +174,7 @@ export default function Community() {
           </section>
         )}
 
-        {/* 3. قائمة اللاعبين (البحث) */}
+        {/* 3. قائمة اللاعبين */}
         <section className="space-y-6">
           <h1 className="text-3xl font-[1000] italic uppercase">المجتمع <span className="text-cyan-400">PLAYERS</span></h1>
           <div className="relative">
@@ -188,65 +199,76 @@ export default function Community() {
         </section>
       </main>
 
-      {/* مودال المواجهة الكبرى (VS Screen) ⚔️ */}
+      {/* 🔥 مودال المواجهة الكبرى (VS Screen) مع التعليمات والتأكيد 🔥 */}
       {selectedMatch && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-[#05081d]/95 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
-          <div className="w-full max-w-md relative">
-            <button onClick={() => setSelectedMatch(null)} className="absolute -top-12 left-0 text-white/50 hover:text-white p-2"><X size={28}/></button>
+          <div className="w-full max-w-md relative overflow-y-auto max-h-[90vh] pb-8 custom-scrollbar">
+            <button onClick={() => setSelectedMatch(null)} className="absolute -top-4 left-0 text-white/50 hover:text-white p-2 z-10"><X size={28}/></button>
             
-            <div className="text-center mb-10 space-y-2">
+            <div className="text-center mb-6 mt-6 space-y-2">
               <h2 className="text-4xl font-[1000] italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 uppercase tracking-widest">المواجهة الكبرى</h2>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{selectedMatch.match.court_name} | {new Date(selectedMatch.match.match_time).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{selectedMatch.match.court_name} | {new Date(selectedMatch.match.match_time).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
 
-            <div className="flex items-center justify-between bg-[#0a0f3c]/80 border border-white/10 p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
-              {/* لاعب 1 (أنت) */}
+            <div className="flex items-center justify-between bg-[#0a0f3c]/80 border border-white/10 p-6 rounded-[40px] shadow-2xl relative overflow-hidden">
               <div className="flex flex-col items-center gap-3 z-10 w-1/3">
-                <div className="w-20 h-20 bg-cyan-500/20 rounded-[25px] border-2 border-cyan-500 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.3)]">
-                  <User size={32} className="text-cyan-400" />
+                <div className="w-16 h-16 bg-cyan-500/20 rounded-[20px] border-2 border-cyan-500 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+                  <User size={28} className="text-cyan-400" />
                 </div>
                 <div className="text-center">
-                  <h4 className="font-black text-sm text-white">أنت</h4>
-                  <p className="text-[9px] font-black text-cyan-400 uppercase mt-1">{selectedMatch.isChallenger ? selectedMatch.match.challenger.current_rank : selectedMatch.match.challenged.current_rank}</p>
+                  <h4 className="font-black text-xs text-white">أنت</h4>
+                  <p className="text-[8px] font-black text-cyan-400 uppercase mt-1">{selectedMatch.isChallenger ? selectedMatch.match.challenger.current_rank : selectedMatch.match.challenged.current_rank}</p>
                 </div>
               </div>
 
-              {/* أيقونة VS */}
               <div className="z-10 flex flex-col items-center animate-pulse">
                 <div className="bg-gradient-to-br from-purple-500 to-cyan-500 p-3 rounded-full shadow-[0_0_30px_rgba(168,85,247,0.5)]">
-                  <Swords size={28} className="text-white" />
+                  <Swords size={24} className="text-white" />
                 </div>
-                <span className="text-[12px] font-[1000] italic mt-2 text-white">VS</span>
+                <span className="text-[10px] font-[1000] italic mt-2 text-white">VS</span>
               </div>
 
-              {/* لاعب 2 (الخصم) */}
               <div className="flex flex-col items-center gap-3 z-10 w-1/3">
-                <div className="w-20 h-20 bg-purple-500/20 rounded-[25px] border-2 border-purple-500 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)]">
-                  <User size={32} className="text-purple-400" />
+                <div className="w-16 h-16 bg-purple-500/20 rounded-[20px] border-2 border-purple-500 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+                  <User size={28} className="text-purple-400" />
                 </div>
                 <div className="text-center">
-                  <h4 className="font-black text-sm text-white">{selectedMatch.opponent.first_name}</h4>
-                  <p className="text-[9px] font-black text-purple-400 uppercase mt-1">{selectedMatch.opponent.current_rank}</p>
+                  <h4 className="font-black text-xs text-white">{selectedMatch.opponent.first_name}</h4>
+                  <p className="text-[8px] font-black text-purple-400 uppercase mt-1">{selectedMatch.opponent.current_rank}</p>
                 </div>
               </div>
 
-              {/* تأثيرات في الخلفية */}
               <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-[40px] -translate-y-1/2" />
               <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-purple-500/20 rounded-full blur-[40px] -translate-y-1/2" />
             </div>
 
-            {/* ✅ زر التواصل مع الخصم */}
-            <button 
-              onClick={() => {
-                navigate(`/chat/${selectedMatch.match.id}`);
-              }} 
-              className="w-full mt-8 py-5 bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-[25px] font-[1000] text-sm uppercase italic active:scale-95 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] flex items-center justify-center gap-2"
-            >
-              رسالة للخصم 💬
-            </button>
+            {/* ✅ صندوق التعليمات والتأكيد الجاهز */}
+            <div className="mt-6 bg-[#14224d]/80 rounded-[30px] p-6 border border-white/10 space-y-5">
+              <div className="text-center space-y-2">
+                <div className="flex items-center justify-center gap-2 text-cyan-400">
+                  <ShieldAlert size={18} />
+                  <h4 className="font-black text-xs uppercase italic tracking-widest">تعليمات الحضور</h4>
+                </div>
+                <p className="text-[11px] font-bold text-gray-300 leading-relaxed">
+                  للتأكد من خصمك، توجه لمسؤول الحجز في <span className="text-white font-black">{selectedMatch.match.court_name}</span> وأعطه اسمك. بمجرد وصول خصمك، سيوجهكم المسؤول للملعب.
+                </p>
+              </div>
 
-            {/* زر الإغلاق */}
-            <button onClick={() => setSelectedMatch(null)} className="w-full mt-3 py-5 bg-white/5 border border-white/10 text-white rounded-[25px] font-black text-xs uppercase italic active:scale-95 transition-all">إغلاق البطاقة</button>
+              <div className="h-px w-full bg-white/5" />
+
+              <div className="space-y-3">
+                <p className="text-[10px] text-gray-400 font-black text-center uppercase">أرسل تحديث سريع لخصمك</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => sendQuickStatus("في طريقي للملعب 🚗")} className="py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[11px] font-black active:scale-95 transition-all text-white">في الطريق 🚗</button>
+                  <button onClick={() => sendQuickStatus("وصلت الملعب 📍")} className="py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[11px] font-black active:scale-95 transition-all text-white">وصلت الملعب 📍</button>
+                  <button onClick={() => sendQuickStatus("جاهز للتحدي.. وينك؟ 🔥")} className="col-span-2 py-4 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-2xl text-[12px] font-[1000] active:scale-95 transition-all uppercase italic flex items-center justify-center gap-2">
+                    <Navigation size={16}/> تأكيد الحضور والجاهزية
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button onClick={() => setSelectedMatch(null)} className="w-full mt-4 py-5 bg-white/5 border border-white/10 text-white rounded-[25px] font-black text-xs uppercase italic active:scale-95 transition-all">إغلاق البطاقة</button>
           </div>
         </div>
       )}
