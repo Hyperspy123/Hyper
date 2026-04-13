@@ -4,6 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Zap, Menu, X, User, CreditCard, Headphones, Globe, Trash2, Bell, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
+// 🔥 توحيد مسار الرانكات مع الملف الشخصي
+const RANKS_LADDER = [
+  { id: 1, name: 'ROOKIE', min: 0, max: 49 },
+  { id: 2, name: 'PRO', min: 50, max: 99 },
+  { id: 3, name: 'ELITE', min: 100, max: 149 },
+  { id: 4, name: 'PRINCE', min: 150, max: 199 },
+  { id: 5, name: 'KING', min: 200, max: 249 },
+  { id: 6, name: 'LEGEND', min: 250, max: 299 },
+  { id: 7, name: 'HYPE', min: 300, max: 9999 },
+];
+
 export default function Header() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -11,14 +22,8 @@ export default function Header() {
   const [unreadCount, setUnreadCount] = useState(0); 
   const navigate = useNavigate();
 
-  const getRankProgress = (matches: number) => {
-    if (matches < 11) return { next: 'HYPE ⚡', min: 0, max: 11 };
-    if (matches < 51) return { next: 'PRINCE 👑', min: 11, max: 51 };
-    if (matches < 151) return { next: 'KING 🦁', min: 51, max: 151 };
-    return { next: 'LEGEND 🌌', min: 151, max: 301 };
-  };
-
   const fetchProfile = useCallback(async (userId: string) => {
+    // جلب عدد المباريات لمعرفة الرانك الحقيقي
     const { data } = await supabase.from('profiles').select('first_name, current_rank, total_matches').eq('id', userId).single();
     if (data) setProfile(data);
   }, []);
@@ -36,8 +41,17 @@ export default function Header() {
     navigate('/auth');
   };
 
-  const progress = profile ? getRankProgress(profile.total_matches) : { next: '', min: 0, max: 1 };
-  const percentage = profile ? Math.min(100, ((profile.total_matches - progress.min) / (progress.max - progress.min)) * 100) : 0;
+  // 🔥 حسابات الرانك والتقدم الجديدة
+  const matches = profile?.total_matches || 0;
+  const currentRank = RANKS_LADDER.find(r => matches >= r.min && matches <= r.max) || RANKS_LADDER[0];
+  const isMaxLevel = matches >= 300;
+  
+  // حساب النسبة المئوية الدقيقة للشريط
+  const progressPercentage = isMaxLevel 
+    ? 100 
+    : Math.min(100, ((matches - currentRank.min) / (currentRank.max - currentRank.min + 1)) * 100);
+    
+  const matchesToNext = isMaxLevel ? 0 : (currentRank.max + 1) - matches;
 
   return (
     <>
@@ -51,11 +65,19 @@ export default function Header() {
             <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(34,211,238,0.4)]"><Zap size={16} className="text-[#0a0f3c] fill-[#0a0f3c]" /></div>
             <h1 className="text-xl font-[1000] italic tracking-tighter text-white uppercase leading-none">HYPE</h1>
           </div>
+          
+          {/* 🔥 شريط التقدم الموحد */}
           {profile && (
             <div className="w-32 space-y-1">
-              <div className="flex justify-between text-[7px] font-black uppercase italic text-cyan-400/70"><span>{profile.current_rank}</span><span>باقي {progress.max - profile.total_matches}</span></div>
+              <div className="flex justify-between text-[7px] font-black uppercase italic text-cyan-400/70">
+                <span>{currentRank.name}</span>
+                <span>{isMaxLevel ? 'MAX' : `باقي ${matchesToNext}`}</span>
+              </div>
               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                <div className="h-full bg-cyan-500 shadow-[0_0_8px_rgba(34,211,238,0.6)]" style={{ width: `${percentage}%` }}/>
+                <div 
+                  className="h-full bg-cyan-500 shadow-[0_0_8px_rgba(34,211,238,0.6)] transition-all duration-1000" 
+                  style={{ width: `${progressPercentage}%` }}
+                />
               </div>
             </div>
           )}
@@ -64,23 +86,20 @@ export default function Header() {
         {/* الأيقونات العلوية والمنيو (اليمين) */}
         <div className="flex items-center gap-3" dir="ltr">
           
-          {/* ✅ زر الرسائل المنفصل */}
           <button onClick={() => navigate('/messages')} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-white/10 active:scale-90 transition-all">
             <MessageSquare size={20} />
           </button>
 
-          {/* ✅ زر التنبيهات المنفصل */}
           <button onClick={() => navigate('/notifications')} className="relative p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-white/10 active:scale-90 transition-all">
             <Bell size={20} />
             {unreadCount > 0 && <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0f3c] animate-pulse" />}
           </button>
 
-          {/* زر القائمة المنسدلة (المنيو) */}
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-2.5 rounded-xl border transition-all duration-300 relative z-[140] active:scale-95 ${isMenuOpen ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-cyan-400'}`}>
             {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          {/* ✅ المنيو النظيف والمختصر بدون تكرار */}
+          {/* المنيو */}
           <div className={`absolute top-24 left-6 w-[240px] bg-[#0a0f3c]/95 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300 z-[140] overflow-hidden ${isMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'}`} style={{ transformOrigin: 'top left' }}>
             <div className="p-4 space-y-1" dir="rtl">
               {[
@@ -97,7 +116,6 @@ export default function Header() {
               
               <div className="h-px bg-white/5 my-2 mx-4" />
 
-              {/* زر حذف الحساب */}
               <button onClick={() => {
                 toast.error('لحذف حسابك نهائياً، يرجى التواصل مع الدعم الفني');
                 setIsMenuOpen(false);
