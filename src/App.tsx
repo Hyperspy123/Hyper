@@ -98,18 +98,16 @@ const App = () => {
                       <Route path="/rewards" element={<Rewards />} />
                       <Route path="/tournaments" element={<Tournaments />} />
                       
-                      {/* تم إزالة مسار الفزعة من هنا 🗑️ */}
-                      
                       <Route path="/community" element={<Community />} />
                       <Route path="/messages" element={<Messages />} /> 
                       <Route path="/chat/:challengeId" element={<Chat />} />
                       
-                      {/* الإعدادات والحساب */}
+                      {/* الإعدادات والحساب (تم ضبط المسارات هنا ✅) */}
                       <Route path="/account" element={<Account />} />
                       <Route path="/settings" element={<Settings />} />
-                      <Route path="/personal" element={<Personal />} />
+                      <Route path="/profile" element={<Personal />} /> 
                       <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/support" element={<Contact />} /> 
                       <Route path="/auth/callback" element={<AuthCallback />} />
                       
                       <Route path="*" element={<NotFound />} />
