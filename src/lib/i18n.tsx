@@ -1,6 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+
+// استيراد الملفات مباشرة
 import en from './locales/en.json';
 import ar from './locales/ar.json';
 
@@ -9,8 +11,8 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      en: { translation: en.translation || en },
-      ar: { translation: ar.translation || ar }
+      en: { translation: en },
+      ar: { translation: ar }
     },
     lng: typeof window !== 'undefined' ? (localStorage.getItem('i18nextLng') || 'ar') : 'ar',
     fallbackLng: 'en',
