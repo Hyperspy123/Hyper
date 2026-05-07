@@ -87,8 +87,9 @@ export default function Personal() {
         <div className="flex flex-col items-center text-center space-y-4">
           <div className="relative">
             <div className="w-28 h-28 bg-gradient-to-tr from-cyan-500 to-purple-500 rounded-[35px] p-1 shadow-[0_0_30px_rgba(34,211,238,0.3)]">
+              {/* 🔥 اللمسة السحرية: الأفاتار صار يتغير لونه وشكله مع الرانك 🔥 */}
               <div className="w-full h-full bg-[#0a0f3c] rounded-[32px] flex items-center justify-center overflow-hidden">
-                <User size={50} className="text-gray-600" />
+                <CurrentIcon size={50} className={currentRank.color} />
               </div>
             </div>
           </div>
@@ -229,7 +230,7 @@ export default function Personal() {
               </div>
             </div>
 
-            {/* الجنس (للقراءة فقط) - تم تعديل الأيقونة هنا إلى Users */}
+            {/* الجنس (للقراءة فقط) */}
             <div className="flex items-center gap-4 py-4">
               <div className="p-3 bg-white/5 rounded-2xl text-purple-400"><Users size={18} /></div>
               <div className="flex-1">
@@ -264,5 +265,5 @@ export default function Personal() {
         </button>
       </main>
     </div>
-  );// test update
-} 
+  );
+}
