@@ -1,31 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Search, Swords, Shield, Zap, X, CheckCircle2, Flame, Loader2, Calendar, Clock, MapPin } from 'lucide-react';
+import { Search, Swords, Zap, X, CheckCircle2, Send, Calendar, ShieldAlert, MessageSquare, MapPin, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
-const HYPE_MESSAGES = [
-  "جاهز للخسارة؟ 😈", "الوعد في الملعب 🎾", "لا تتأخر ⏰", 
-  "جهّز مضربك 🔥", "الشبكة لي اليوم 🕸️", "بالتوفيق يا وحش 💪"
-];
+// 🛑 فلتر الكلمات (تقدر تزيدها براحتك)
+const BAD_WORDS = ['غبي', 'حمار', 'زفت', 'كلب', 'تافه', 'طز'];
+const filterMessage = (text: string) => {
+  let filtered = text;
+  BAD_WORDS.forEach(word => {
+    const regex = new RegExp(word, 'gi');
+    filtered = filtered.replace(regex, '🎾🎾🎾');
+  });
+  return filtered;
+};
 
 export default function Community() {
   const [activeTab, setActiveTab] = useState<'players' | 'lobbies'>('players');
   const [activeLobby, setActiveLobby] = useState<any>(null);
-  
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [lobbies, setLobbies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // حالات التفاوض (الملعب والزمان)
+  // حالات الشات والتفاوض
+  const [chatInput, setChatInput] = useState('');
+  const [showProposalForm, setShowProposalForm] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // التمرير التلقائي لأسفل الشات
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeLobby?.chat_history]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -40,7 +53,8 @@ export default function Community() {
       .from('challenges')
       .select(`*, challenger:challenger_id(id, first_name, play_level), challenged:challenged_id(id, first_name, play_level)`)
       .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`)
-      .neq('status', 'cancelled').neq('status', 'rejected'); 
+      .neq('status', 'cancelled').neq('status', 'rejected')
+      .order('created_at', { ascending: false });
 
     if (challengesData) {
       const formattedLobbies = challengesData.map(ch => {
@@ -50,6 +64,7 @@ export default function Community() {
           ...ch,
           opponent_name: opponent?.first_name || 'لاعب',
           opponent_level: opponent?.play_level || 'مبتدئ',
+          chat_history: ch.chat_history || []
         };
       });
       setLobbies(formattedLobbies);
@@ -57,75 +72,92 @@ export default function Community() {
     setLoading(false);
   };
 
-  // 🔥 1. إرسال طلب تحدي "فارغ" فقط (انتظار القبول)
+  // 1. إرسال طلب التحدي
   const handleSendChallengeRequest = async (player: any) => {
     try {
       const { error } = await supabase.from('challenges').insert([{
-        challenger_id: currentUser.id,
-        challenged_id: player.id,
-        status: 'pending', // حالة الانتظار
-        negotiation_status: 'none' // لم يبدأ التنسيق بعد
+        challenger_id: currentUser.id, challenged_id: player.id,
+        status: 'pending', negotiation_status: 'none', chat_history: []
       }]);
       if (error) throw error;
-      toast.success(`تم إرسال طلب التحدي لـ ${player.first_name} 🎾`);
+      toast.success(`تم إرسال التحدي لـ ${player.first_name} 🎾`);
       fetchData();
-    } catch (error) {
-      toast.error("فشل إرسال التحدي");
-    }
+    } catch (error) { toast.error("فشل إرسال التحدي"); }
   };
 
-  // 🔥 2. قبول التحدي (فتح غرفة التنسيق)
+  // 2. قبول التحدي وفتح الشات
   const handleAcceptChallengeRequest = async (challengeId: string) => {
     try {
+      const welcomeMsg = { sender: 'system', text: 'تم قبول التحدي! تقدرون تنسقون الموعد الآن 🔥', type: 'system', timestamp: new Date().toISOString() };
       const { error } = await supabase.from('challenges').update({
-        status: 'accepted',
-        negotiation_status: 'pending' // الآن ننتقل لمرحلة التنسيق
+        status: 'accepted', negotiation_status: 'pending', chat_history: [welcomeMsg]
       }).eq('id', challengeId);
       if (error) throw error;
-      toast.success("قبلت التحدي! الآن حددوا الملعب والوقت ⚡");
+      toast.success("قبلت التحدي! الشات مفتوح للتنسيق ⚡");
       fetchData();
       setActiveLobby(null);
-    } catch (error) {
-      toast.error("فشل قبول التحدي");
-    }
+    } catch (error) { toast.error("فشل قبول التحدي"); }
   };
 
-  // 🔥 3. إرسال اقتراح (بعد ما صار التحدي Accepted)
-  const handleSendProposal = async () => {
-    if (!selectedCourt || !selectedDate || !selectedTime) {
-      toast.error("حدد الملعب والوقت أولاً!"); return;
-    }
-    try {
-      const matchTimestamp = `${selectedDate} ${selectedTime}`;
-      const { error } = await supabase.from('challenges').update({
-        proposed_court: selectedCourt,
-        proposed_time: matchTimestamp,
-        proposed_by: currentUser.id,
-        negotiation_status: 'negotiating'
-      }).eq('id', activeLobby.id);
-      if (error) throw error;
-      toast.success("تم إرسال تفاصيل الملعب والوقت 🔄");
-      setActiveLobby(null);
-      fetchData();
-    } catch (error) {
-      toast.error("خطأ في الإرسال");
-    }
+  // 3. إرسال رسالة عادية في الشات
+  const handleSendMessage = async () => {
+    if (!chatInput.trim()) return;
+    const cleanText = filterMessage(chatInput);
+    if (cleanText !== chatInput) toast.error("خل روحك رياضية يا كابتن! تم تعديل كلمتك 🎾", { icon: '🚨' });
+
+    const newMsg = { sender: currentUser.id, text: cleanText, type: 'text', timestamp: new Date().toISOString() };
+    const updatedHistory = [...(activeLobby.chat_history || []), newMsg];
+    
+    // التحديث المحلي الفوري (للسرعة)
+    setActiveLobby({ ...activeLobby, chat_history: updatedHistory });
+    setChatInput('');
+
+    // الرفع لـ Supabase
+    await supabase.from('challenges').update({ chat_history: updatedHistory }).eq('id', activeLobby.id);
+    fetchData();
   };
 
-  const handleFinalConfirmMatch = async () => {
+  // 4. إرسال كرت "اقتراح موعد" داخل الشات
+  const handleSendProposalCard = async () => {
+    if (!selectedCourt || !selectedDate || !selectedTime) { toast.error("حدد الملعب والوقت!"); return; }
+    
+    const matchTimestamp = `${selectedDate} ${selectedTime}`;
+    const proposalMsg = { 
+      sender: currentUser.id, type: 'proposal', 
+      court: selectedCourt, time: matchTimestamp, 
+      text: `وش رايك نلعب في ${selectedCourt}؟`,
+      timestamp: new Date().toISOString() 
+    };
+    
+    const updatedHistory = [...(activeLobby.chat_history || []), proposalMsg];
+    
     try {
-      const { error } = await supabase.from('challenges').update({
-        negotiation_status: 'agreed',
-        court_name: activeLobby.proposed_court,
-        match_time: activeLobby.proposed_time
+      await supabase.from('challenges').update({
+        proposed_court: selectedCourt, proposed_time: matchTimestamp, proposed_by: currentUser.id,
+        negotiation_status: 'negotiating', chat_history: updatedHistory
       }).eq('id', activeLobby.id);
-      if (error) throw error;
-      toast.success("تم تأكيد الحجز النهائي! الوعد بالملعب 💥");
-      setActiveLobby(null);
+      
+      toast.success("تم إرسال العرض في الشات! 🎾");
+      setShowProposalForm(false);
+      setActiveLobby({ ...activeLobby, chat_history: updatedHistory, negotiation_status: 'negotiating', proposed_by: currentUser.id, proposed_court: selectedCourt, proposed_time: matchTimestamp });
       fetchData();
-    } catch (error) {
-      toast.error("خطأ في التأكيد");
-    }
+    } catch (error) { toast.error("خطأ في الإرسال"); }
+  };
+
+  // 5. الموافقة على الكرت وتأكيد الحجز (يقفل الشات)
+  const handleConfirmProposalCard = async (court: string, time: string) => {
+    const confirmMsg = { sender: 'system', text: `تم تأكيد المباراة في ${court}! 💥`, type: 'system', timestamp: new Date().toISOString() };
+    const updatedHistory = [...(activeLobby.chat_history || []), confirmMsg];
+
+    try {
+      await supabase.from('challenges').update({
+        negotiation_status: 'agreed', court_name: court, match_time: time, chat_history: updatedHistory
+      }).eq('id', activeLobby.id);
+      
+      toast.success("تم تأكيد الحجز وتم إغلاق الشات! 🔒");
+      setActiveLobby({ ...activeLobby, negotiation_status: 'agreed', chat_history: updatedHistory });
+      fetchData();
+    } catch (error) { toast.error("خطأ في التأكيد"); }
   };
 
   return (
@@ -135,11 +167,12 @@ export default function Community() {
         
         {/* التبويبات */}
         <div className="flex bg-[#0a0f3c]/60 backdrop-blur-3xl p-1.5 rounded-[24px] border border-white/10 shadow-2xl">
-          <button onClick={() => setActiveTab('players')} className={`flex-1 py-3.5 rounded-[18px] font-black text-[10px] uppercase transition-all duration-300 ${activeTab === 'players' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400'}`}>اللاعبين</button>
+          <button onClick={() => setActiveTab('players')} className={`flex-1 py-3.5 rounded-[18px] font-black text-[10px] uppercase transition-all duration-300 ${activeTab === 'players' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400'}`}>اللاعبين المتاحين</button>
           <button onClick={() => setActiveTab('lobbies')} className={`flex-1 py-3.5 rounded-[18px] font-black text-[10px] uppercase transition-all duration-300 ${activeTab === 'lobbies' ? 'bg-purple-500 text-white' : 'text-gray-400'}`}>غرف المبارزة</button>
         </div>
 
-        {activeTab === 'players' ? (
+        {/* قائمة اللاعبين */}
+        {activeTab === 'players' && (
           <div className="space-y-4">
             {players.map(player => (
               <div key={player.id} className="bg-white/5 border border-white/10 rounded-3xl p-4 flex items-center justify-between">
@@ -147,23 +180,25 @@ export default function Community() {
                   <h3 className="font-[1000] text-sm text-white">{player.first_name} {player.last_name}</h3>
                   <p className="text-[10px] text-cyan-400 font-bold">{player.play_level}</p>
                 </div>
-                <button onClick={() => handleSendChallengeRequest(player)} className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl text-xs font-black uppercase active:scale-95 transition-all">تحدى 🎾</button>
+                <button onClick={() => handleSendChallengeRequest(player)} className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl text-xs font-black uppercase active:scale-95 transition-all flex items-center gap-1"><Swords size={14}/> تحدى</button>
               </div>
             ))}
           </div>
-        ) : (
+        )}
+
+        {/* قائمة غرف المبارزة */}
+        {activeTab === 'lobbies' && (
           <div className="space-y-4">
             {lobbies.map(lobby => (
-              <div key={lobby.id} onClick={() => setActiveLobby(lobby)} className="bg-[#0a0f3c] border border-purple-500/40 rounded-3xl p-5 cursor-pointer relative overflow-hidden shadow-lg">
-                <div className="flex justify-between items-center relative z-10">
+              <div key={lobby.id} onClick={() => setActiveLobby(lobby)} className="bg-[#0a0f3c] border border-purple-500/40 rounded-3xl p-4 cursor-pointer relative shadow-lg hover:scale-[1.02] transition-transform">
+                <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="font-[1000] text-sm text-white mb-1">{lobby.opponent_name}</h3>
-                    <p className="text-[10px] text-gray-400 font-bold italic">
-                      {lobby.status === 'pending' ? (lobby.challenger_id === currentUser.id ? '⏳ بانتظار قبوله للتحدي' : '⚡ أرسل لك تحدي!') : 
-                       lobby.negotiation_status === 'agreed' ? '✅ مباراة مؤكدة' : '🎾 جاري تنسيق الملعب'}
+                    <h3 className="font-[1000] text-sm text-white">{lobby.opponent_name}</h3>
+                    <p className="text-[10px] text-gray-400 mt-1 font-bold">
+                      {lobby.status === 'pending' ? '⏳ بانتظار القبول' : lobby.negotiation_status === 'agreed' ? '🔒 شات مغلق (تم التأكيد)' : '🟢 الشات مفتوح للتنسيق'}
                     </p>
                   </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${lobby.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-purple-500/20 text-purple-400'}`}><Zap size={18} /></div>
+                  <MessageSquare size={20} className={lobby.negotiation_status === 'agreed' ? 'text-gray-600' : 'text-cyan-400'} />
                 </div>
               </div>
             ))}
@@ -171,81 +206,126 @@ export default function Community() {
         )}
       </main>
 
-      {/* ================= نافذة التحدي / التنسيق ================= */}
+      {/* ================= نافذة غرفة التنسيق والشات الذكي ================= */}
       <div className={`fixed inset-0 z-[200] flex flex-col justify-end transition-all duration-500 ${activeLobby ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-[#05081d]/80 backdrop-blur-sm" onClick={() => setActiveLobby(null)} />
-        <div className={`bg-[#0a0f3c] border-t border-white/10 rounded-t-[40px] w-full max-h-[85vh] flex flex-col relative z-10 transition-transform duration-500 ${activeLobby ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className="absolute inset-0 bg-[#05081d]/90 backdrop-blur-md" onClick={() => setActiveLobby(null)} />
+        <div className={`bg-[#0a0f3c] border-t border-white/10 rounded-t-[40px] w-full h-[90vh] flex flex-col relative z-10 transition-transform duration-500 ${activeLobby ? 'translate-y-0' : 'translate-y-full'}`}>
           
-          <div className="flex justify-center pt-4 pb-2 relative"><div className="w-12 h-1.5 bg-white/20 rounded-full" /></div>
-
-          {activeLobby && (
-            <div className="flex flex-col h-full overflow-hidden p-6 space-y-6">
-              
-              {/* هيدر النافذة */}
-              <div className="text-center">
-                <h2 className="font-[1000] text-xl uppercase italic">{activeLobby.opponent_name}</h2>
-                <span className="text-[10px] font-black text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full uppercase">{activeLobby.opponent_level}</span>
-              </div>
-
-              {/* 🛑 الحالة 1: التحدي لسا Pending (انتظار القبول) */}
-              {activeLobby.status === 'pending' ? (
-                <div className="bg-white/5 rounded-2xl p-6 text-center space-y-4">
-                  <p className="text-xs text-gray-300 font-bold">
-                    {activeLobby.challenger_id === currentUser.id ? "أرسلت طلب التحدي.. بمجرد ما يقبل الخصم راح تقدرون تختارون الملعب والوقت." : "وصلك تحدي جديد! اقبل عشان تبدأون تنسيق الموعد والملعب."}
-                  </p>
-                  {activeLobby.challenged_id === currentUser.id && (
-                    <button onClick={() => handleAcceptChallengeRequest(activeLobby.id)} className="w-full py-4 bg-emerald-500 text-[#0a0f3c] font-black rounded-xl text-xs active:scale-95 transition-all">قبول التحدي 💥</button>
-                  )}
-                </div>
-              ) : activeLobby.negotiation_status === 'agreed' ? (
-                /* ✅ الحالة 2: تم الاتفاق */
-                <div className="text-center py-6 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                  <CheckCircle2 size={40} className="text-emerald-400 mx-auto mb-2" />
-                  <h3 className="font-black text-emerald-400">المباراة مؤكدة</h3>
-                  <p className="text-xs text-white mt-1">{activeLobby.proposed_court} | {new Date(activeLobby.proposed_time).toLocaleString('ar-EG')}</p>
-                </div>
-              ) : (
-                /* 🔄 الحالة 3: مرحلة التنسيق (بعد القبول) */
-                <div className="space-y-4">
-                  <div className="bg-cyan-500/10 border border-cyan-500/20 p-4 rounded-xl text-center">
-                    <p className="text-[10px] font-black text-cyan-400 uppercase mb-2">تنسيق موعد المباراة</p>
-                    {activeLobby.proposed_court ? (
-                      <div className="mb-4">
-                        <p className="text-xs font-bold text-white mb-1">العرض المطروح: {activeLobby.proposed_court}</p>
-                        <p className="text-[10px] text-gray-400" dir="ltr">{new Date(activeLobby.proposed_time).toLocaleString()}</p>
-                        {activeLobby.proposed_by !== currentUser.id && (
-                          <button onClick={handleFinalConfirmMatch} className="w-full mt-3 py-3 bg-emerald-500 text-[#0a0f3c] font-black rounded-xl text-xs">تأكيد هذا الموعد ✅</button>
-                        )}
-                      </div>
-                    ) : <p className="text-xs text-gray-500">لا يوجد اقتراح حالياً.. ابدأ بإرسال أول عرض</p>}
-                  </div>
-
-                  <div className="space-y-3 pt-2">
-                    <p className="text-[10px] font-black text-gray-400 uppercase pr-1">اقتراح موعد/ملعب جديد:</p>
-                    <select className="w-full bg-[#0a0f3c] border border-white/10 p-4 rounded-xl text-xs font-bold text-white outline-none" onChange={(e) => setSelectedCourt(e.target.value)}>
-                      <option value="">اختر الملعب...</option>
-                      <option value="ملعب هايب 1">ملعب هايب 1</option>
-                      <option value="ملعب هايب 2">ملعب هايب 2</option>
-                    </select>
-                    <div className="flex gap-2">
-                      <input type="date" className="flex-1 bg-[#0a0f3c] border border-white/10 p-4 rounded-xl text-xs text-white [&::-webkit-calendar-picker-indicator]:invert" onChange={(e) => setSelectedDate(e.target.value)} />
-                      <input type="time" className="flex-1 bg-[#0a0f3c] border border-white/10 p-4 rounded-xl text-xs text-white [&::-webkit-calendar-picker-indicator]:invert" onChange={(e) => setSelectedTime(e.target.value)} />
-                    </div>
-                    <button onClick={handleSendProposal} className="w-full py-4 bg-cyan-500 text-[#0a0f3c] font-black rounded-xl text-xs shadow-lg shadow-cyan-500/20 active:scale-95">إرسال العرض 🎾</button>
-                  </div>
-                </div>
-              )}
-
-              {/* الشات السريع تحت دائماً */}
-              <div className="p-4 bg-[#05081d] rounded-2xl border border-white/5">
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                  {HYPE_MESSAGES.map((msg, idx) => (
-                    <button key={idx} className="whitespace-nowrap px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-gray-300 active:scale-95">{msg}</button>
-                  ))}
-                </div>
+          {/* الهيدر العلوي للغرفة */}
+          <div className="flex justify-between items-center p-5 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400"><Swords size={20} /></div>
+              <div>
+                <h2 className="font-[1000] text-sm uppercase">{activeLobby?.opponent_name}</h2>
+                <p className="text-[10px] text-gray-400">{activeLobby?.negotiation_status === 'agreed' ? 'تم تأكيد المباراة ✅' : 'جاري التنسيق...'}</p>
               </div>
             </div>
+            <div className="flex gap-2">
+              <button onClick={() => toast.success("تم الإبلاغ للإدارة")} className="p-2 bg-red-500/10 text-red-500 rounded-full"><ShieldAlert size={16} /></button>
+              <button onClick={() => setActiveLobby(null)} className="p-2 bg-white/5 text-gray-400 rounded-full"><X size={16} /></button>
+            </div>
+          </div>
+
+          {/* منطقة الشات الأساسية */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            
+            {/* حالة الانتظار */}
+            {activeLobby?.status === 'pending' ? (
+              <div className="h-full flex flex-col justify-center items-center text-center px-6 opacity-60">
+                <Clock size={40} className="mb-4 text-yellow-500" />
+                <h3 className="font-black text-lg mb-2">التحدي معلق</h3>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  {activeLobby.challenger_id === currentUser?.id ? 'أنتظر خصمك يقبل التحدي عشان يفتح الشات.' : 'خصمك يتحداك! اقبل التحدي عشان تقدرون تسولفون وتنسقون.'}
+                </p>
+                {activeLobby.challenged_id === currentUser?.id && (
+                  <button onClick={() => handleAcceptChallengeRequest(activeLobby.id)} className="mt-6 px-8 py-3 bg-emerald-500 text-[#0a0f3c] font-black rounded-xl text-xs active:scale-95">قبول التحدي 💥</button>
+                )}
+              </div>
+            ) : (
+              /* الرسائل والكروت */
+              activeLobby?.chat_history?.map((msg: any, idx: number) => (
+                <div key={idx} className={`flex ${msg.type === 'system' ? 'justify-center' : msg.sender === currentUser?.id ? 'justify-start' : 'justify-end'}`}>
+                  
+                  {/* رسالة النظام (System) */}
+                  {msg.type === 'system' && (
+                    <span className="bg-white/5 text-gray-400 px-4 py-1.5 rounded-full text-[10px] font-black">{msg.text}</span>
+                  )}
+
+                  {/* رسالة نصية عادية (Text) */}
+                  {msg.type === 'text' && (
+                    <div className={`max-w-[80%] px-4 py-3 rounded-[20px] text-xs font-bold leading-relaxed ${msg.sender === currentUser?.id ? 'bg-cyan-500 text-[#0a0f3c] rounded-br-sm' : 'bg-white/10 text-white rounded-bl-sm'}`}>
+                      {msg.text}
+                    </div>
+                  )}
+
+                  {/* كرت التفاوض (Proposal) */}
+                  {msg.type === 'proposal' && (
+                    <div className={`max-w-[85%] bg-[#05081d] border border-cyan-500/30 p-4 rounded-2xl ${msg.sender === currentUser?.id ? 'rounded-br-sm' : 'rounded-bl-sm'}`}>
+                      <p className="text-[10px] text-gray-400 mb-2 italic">{msg.text}</p>
+                      <div className="bg-white/5 rounded-xl p-3 mb-3">
+                        <div className="flex items-center gap-2 text-cyan-400 mb-1"><MapPin size={14}/> <span className="text-xs font-bold">{msg.court}</span></div>
+                        <div className="flex items-center gap-2 text-emerald-400"><Calendar size={14}/> <span className="text-[10px] font-bold" dir="ltr">{new Date(msg.time).toLocaleString('en-GB', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</span></div>
+                      </div>
+                      {/* الزر يظهر للخصم فقط، ويختفي إذا تم الاتفاق مسبقاً */}
+                      {msg.sender !== currentUser?.id && activeLobby.negotiation_status !== 'agreed' && (
+                        <button onClick={() => handleConfirmProposalCard(msg.court, msg.time)} className="w-full py-2.5 bg-emerald-500 text-[#0a0f3c] rounded-lg text-xs font-black">قبول وتأكيد الحجز ✅</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* منطقة الإدخال (مقفلة إذا لم يتم القبول أو تم الاتفاق النهائي) */}
+          {activeLobby?.status === 'accepted' && (
+            <div className="p-4 bg-[#05081d] border-t border-white/5">
+              
+              {activeLobby.negotiation_status === 'agreed' ? (
+                <div className="text-center p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold">
+                  🔒 تم إغلاق الشات لأن المباراة مؤكدة.
+                </div>
+              ) : (
+                <>
+                  {/* فورم إرسال كرت الاقتراح (يظهر عند الضغط على الزر) */}
+                  {showProposalForm && (
+                    <div className="mb-4 bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                      <p className="text-[10px] font-black text-cyan-400 uppercase">اقتراح موعد كرت:</p>
+                      <select className="w-full bg-[#0a0f3c] border border-white/10 p-3 rounded-xl text-xs font-bold outline-none" onChange={(e) => setSelectedCourt(e.target.value)}>
+                        <option value="">اختر الملعب...</option><option value="ملعب هايب 1">ملعب هايب 1</option><option value="ملعب هايب 2">ملعب هايب 2</option>
+                      </select>
+                      <div className="flex gap-2">
+                        <input type="date" className="flex-1 bg-[#0a0f3c] p-3 rounded-xl text-xs outline-none [&::-webkit-calendar-picker-indicator]:invert" onChange={(e) => setSelectedDate(e.target.value)} />
+                        <input type="time" className="flex-1 bg-[#0a0f3c] p-3 rounded-xl text-xs outline-none [&::-webkit-calendar-picker-indicator]:invert" onChange={(e) => setSelectedTime(e.target.value)} />
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowProposalForm(false)} className="px-4 py-3 bg-white/5 rounded-xl text-xs font-black">إلغاء</button>
+                        <button onClick={handleSendProposalCard} className="flex-1 py-3 bg-cyan-500 text-[#0a0f3c] rounded-xl text-xs font-black">إرسال العرض في الشات 📅</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* شريط الإدخال الأساسي */}
+                  <div className="flex items-center gap-2 relative">
+                    <button onClick={() => setShowProposalForm(!showProposalForm)} className="p-3 bg-white/5 rounded-2xl text-cyan-400 active:scale-95 transition-all"><Calendar size={20} /></button>
+                    <input 
+                      type="text" 
+                      placeholder="اكتب رسالتك..." 
+                      className="flex-1 bg-white/5 border border-white/10 p-3 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all text-white pr-12"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                    />
+                    <button onClick={handleSendMessage} className={`absolute left-2 p-2 rounded-xl transition-all ${chatInput.trim() ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-500 pointer-events-none'}`}>
+                      <Send size={16} className="rotate-180" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
+
         </div>
       </div>
     </div>
