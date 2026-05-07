@@ -1,32 +1,40 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Swords, Zap, X, Calendar, MapPin, Clock, AlertTriangle, CheckCircle2, ShieldAlert, Ban, Loader2 } from 'lucide-react';
+import { Swords, Zap, X, Calendar, MapPin, Clock, AlertTriangle, CheckCircle2, ShieldAlert, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 
-// توليد 7 أيام قادمة
+// 🔥 توليد 7 أيام قادمة
 const getUpcomingDates = () => {
   const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
-    return {
-      value: d.toISOString().split('T')[0],
-      dayName: i === 0 ? 'اليوم' : i === 1 ? 'غداً' : days[d.getDay()],
-      dateNum: d.getDate()
-    };
+    return { value: d.toISOString().split('T')[0], dayName: i === 0 ? 'اليوم' : i === 1 ? 'غداً' : days[d.getDay()], dateNum: d.getDate() };
   });
 };
 
 const COURTS = ['ملعب 1', 'ملعب 2', 'ملعب 3', 'ملعب 4', 'ملعب 5', 'ملعب VIP'];
 const TIMES = [
-  { value: '16:00', label: '04:00 PM' },
-  { value: '18:00', label: '06:00 PM' },
-  { value: '20:00', label: '08:00 PM' },
-  { value: '22:00', label: '10:00 PM' },
-  { value: '00:00', label: '12:00 AM' },
+  { value: '16:00', label: '04:00 PM' }, { value: '18:00', label: '06:00 PM' },
+  { value: '20:00', label: '08:00 PM' }, { value: '22:00', label: '10:00 PM' }, { value: '00:00', label: '12:00 AM' }
 ];
 const DATES = getUpcomingDates();
+
+// 🔥 سلم التصنيفات مع الألوان الفخمة
+const RANKS_LADDER = [
+  { id: 1, name: 'ROOKIE', min: 0, max: 49, color: 'text-gray-400', bg: 'bg-gray-400/10', border: 'border-gray-400/20' },
+  { id: 2, name: 'PRO', min: 50, max: 99, color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-400/20' },
+  { id: 3, name: 'ELITE', min: 100, max: 149, color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20' },
+  { id: 4, name: 'PRINCE', min: 150, max: 199, color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/20' },
+  { id: 5, name: 'KING', min: 200, max: 249, color: 'text-yellow-400', bg: 'bg-yellow-400/10', border: 'border-yellow-400/20' },
+  { id: 6, name: 'LEGEND', min: 250, max: 299, color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-400/20' },
+  { id: 7, name: 'HYPE', min: 300, max: 9999, color: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-400/20' },
+];
+
+const getRankInfo = (matches: number) => {
+  return RANKS_LADDER.find(r => matches >= r.min && matches <= r.max) || RANKS_LADDER[0];
+};
 
 export default function Community() {
   const [activeTab, setActiveTab] = useState<'players' | 'lobbies'>('players');
@@ -34,10 +42,9 @@ export default function Community() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [lobbies, setLobbies] = useState<any[]>([]);
-  const [allBookings, setAllBookings] = useState<any[]>([]); // لتخزين الحجوزات الحالية
+  const [allBookings, setAllBookings] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
 
-  // حالات لوحة التفاوض
   const [selectedCourt, setSelectedCourt] = useState(COURTS[0]);
   const [selectedDate, setSelectedDate] = useState(DATES[0].value);
   const [selectedTime, setSelectedTime] = useState(TIMES[2].value);
@@ -51,18 +58,16 @@ export default function Community() {
     if (!user) return;
     setCurrentUser(user);
 
-    // 1. جلب اللاعبين
     const { data: profilesData } = await supabase.from('profiles').select('*').neq('id', user.id).eq('is_public', true);
     if (profilesData) setPlayers(profilesData);
 
-    // 2. جلب الحجوزات الحالية للتحقق من التوفر
     const { data: bookingsData } = await supabase.from('bookings').select('court_name, start_time');
     if (bookingsData) setAllBookings(bookingsData);
 
-    // 3. جلب التحديات
+    // 🔥 جلب بيانات الخصم شاملة (عدد المباريات عشان نحسب الرانك حقه)
     const { data: challengesData } = await supabase
       .from('challenges')
-      .select(`*, challenger:challenger_id(id, first_name, play_level), challenged:challenged_id(id, first_name, play_level)`)
+      .select(`*, challenger:challenger_id(id, first_name, play_level, total_matches), challenged:challenged_id(id, first_name, play_level, total_matches)`)
       .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`)
       .neq('status', 'cancelled').neq('status', 'rejected')
       .order('created_at', { ascending: false });
@@ -71,14 +76,18 @@ export default function Community() {
       const formattedLobbies = challengesData.map(ch => {
         const isChallenger = ch.challenger_id === user.id;
         const opponent = isChallenger ? ch.challenged : ch.challenger;
-        return { ...ch, opponent_name: opponent?.first_name || 'لاعب', opponent_level: opponent?.play_level || 'مبتدئ' };
+        return { 
+          ...ch, 
+          opponent_name: opponent?.first_name || 'لاعب', 
+          opponent_level: opponent?.play_level || 'مبتدئ',
+          opponent_matches: opponent?.total_matches || 0
+        };
       });
       setLobbies(formattedLobbies);
     }
     setLoading(false);
   };
 
-  // وظيفة التحقق هل الموعد محجوز؟
   const isSlotBooked = (court: string, date: string, time: string) => {
     const checkTime = `${date} ${time}`;
     return allBookings.some(b => b.court_name === court && b.start_time.includes(checkTime));
@@ -115,9 +124,7 @@ export default function Community() {
   };
 
   const handleSendProposal = async () => {
-    if (isSlotBooked(selectedCourt, selectedDate, selectedTime)) {
-      toast.error("هذا الموعد تم حجزه للتو، اختر موعداً آخر"); return;
-    }
+    if (isSlotBooked(selectedCourt, selectedDate, selectedTime)) { toast.error("هذا الموعد تم حجزه للتو، اختر موعداً آخر"); return; }
     const matchTimestamp = `${selectedDate} ${selectedTime}`;
     try {
       await supabase.from('challenges').update({ proposed_court: selectedCourt, proposed_time: matchTimestamp, proposed_by: currentUser.id, negotiation_status: 'negotiating' }).eq('id', activeLobby.id);
@@ -133,27 +140,16 @@ export default function Community() {
   const handleAcceptProposal = async () => {
     const court = activeLobby.proposed_court;
     const time = activeLobby.proposed_time;
-
-    // تأكد مرة أخيرة قبل الحجز
-    if (isSlotBooked(court, activeLobby.proposed_time.split(' ')[0], activeLobby.proposed_time.split(' ')[1])) {
-      toast.error("للأسف، الملعب حُجز أثناء التنسيق!"); return;
-    }
-
+    if (isSlotBooked(court, activeLobby.proposed_time.split(' ')[0], activeLobby.proposed_time.split(' ')[1])) { toast.error("للأسف، الملعب حُجز أثناء التنسيق!"); return; }
     try {
-      // 1. تحديث التحدي
       await supabase.from('challenges').update({ negotiation_status: 'agreed', court_name: court, match_time: time }).eq('id', activeLobby.id);
-      
-      // 2. إنشاء حجز رسمي لكل لاعب (أو حجز مشترك)
       const { error: bookingError } = await supabase.from('bookings').insert([
         { user_id: currentUser.id, court_name: court, start_time: time, status: 'confirmed', type: 'challenge' },
         { user_id: activeLobby.challenger_id === currentUser.id ? activeLobby.challenged_id : activeLobby.challenger_id, court_name: court, start_time: time, status: 'confirmed', type: 'challenge' }
       ]);
-
       if (bookingError) throw bookingError;
-
       const opponentId = activeLobby.challenger_id === currentUser.id ? activeLobby.challenged_id : activeLobby.challenger_id;
       await supabase.from('notifications').insert([{ user_id: opponentId, title: 'اتفاق مؤكد ✅', message: `تم تأكيد المباراة والحجز في ${court}!`, type: 'booking' }]);
-
       toast.success("تم تأكيد المباراة وإضافتها لحجوزاتك! 🎾");
       setActiveLobby({ ...activeLobby, negotiation_status: 'agreed' });
       fetchData();
@@ -171,30 +167,48 @@ export default function Community() {
 
         {activeTab === 'players' ? (
           <div className="space-y-4">
-            {players.map(player => (
-              <div key={player.id} className="bg-white/5 border border-white/10 rounded-3xl p-4 flex items-center justify-between">
-                <div><h3 className="font-[1000] text-sm text-white">{player.first_name} {player.last_name}</h3><p className="text-[10px] text-cyan-400 font-bold">{player.play_level}</p></div>
-                <button onClick={() => handleSendChallengeRequest(player)} className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl text-xs font-black active:scale-95 transition-all flex items-center gap-1"><Swords size={14}/> تحدى</button>
-              </div>
-            ))}
+            {players.map(player => {
+              const rankInfo = getRankInfo(player.total_matches || 0);
+              return (
+                <div key={player.id} className="bg-white/5 border border-white/10 rounded-3xl p-4 flex items-center justify-between hover:bg-white/10 transition-all">
+                  <div>
+                    <h3 className="font-[1000] text-sm text-white mb-1.5">{player.first_name} {player.last_name}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-400 font-bold">{player.play_level}</span>
+                      {/* 🔥 بادج التصنيف الجديد 🔥 */}
+                      <span className={`text-[8px] font-black px-2 py-0.5 rounded-md border tracking-widest ${rankInfo.bg} ${rankInfo.color} ${rankInfo.border}`}>
+                        {rankInfo.name}
+                      </span>
+                    </div>
+                  </div>
+                  <button onClick={() => handleSendChallengeRequest(player)} className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl text-xs font-black active:scale-95 transition-all flex items-center gap-1"><Swords size={14}/> تحدى</button>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="space-y-4">
-            {lobbies.map(lobby => (
-              <div key={lobby.id} onClick={() => {setActiveLobby(lobby); setIsCounterProposing(false);}} className="bg-[#0a0f3c] border border-purple-500/40 rounded-3xl p-4 cursor-pointer relative shadow-lg hover:scale-[1.02] transition-transform">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-[1000] text-sm text-white mb-1">{lobby.opponent_name}</h3>
-                    <div className="flex items-center gap-1">
-                      {lobby.status === 'pending' ? <span className="text-[10px] text-yellow-500 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-full">⏳ بانتظار القبول</span> : 
-                       lobby.negotiation_status === 'agreed' ? <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">✅ تم الحجز</span> : 
-                       <span className="text-[10px] text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-full">⚡ تنسيق الموعد</span>}
+            {lobbies.map(lobby => {
+              const oppRankInfo = getRankInfo(lobby.opponent_matches);
+              return (
+                <div key={lobby.id} onClick={() => {setActiveLobby(lobby); setIsCounterProposing(false);}} className="bg-[#0a0f3c] border border-purple-500/40 rounded-3xl p-4 cursor-pointer relative shadow-lg hover:scale-[1.02] transition-transform">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <h3 className="font-[1000] text-sm text-white">{lobby.opponent_name}</h3>
+                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border tracking-widest ${oppRankInfo.bg} ${oppRankInfo.color} ${oppRankInfo.border}`}>{oppRankInfo.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {lobby.status === 'pending' ? <span className="text-[10px] text-yellow-500 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-full">⏳ بانتظار القبول</span> : 
+                         lobby.negotiation_status === 'agreed' ? <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">✅ تم الحجز</span> : 
+                         <span className="text-[10px] text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-full">⚡ تنسيق الموعد</span>}
+                      </div>
                     </div>
+                    <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400"><Zap size={18} /></div>
                   </div>
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400"><Zap size={18} /></div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
@@ -207,7 +221,13 @@ export default function Community() {
           <div className="flex justify-between items-center p-5 border-b border-white/5">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center border border-white/10"><Swords size={20} className="text-cyan-400" /></div>
-              <div><h2 className="font-[1000] text-sm uppercase text-white">{activeLobby?.opponent_name}</h2><p className="text-[10px] text-gray-400 font-bold">{activeLobby?.opponent_level}</p></div>
+              <div>
+                <h2 className="font-[1000] text-sm uppercase text-white flex items-center gap-2">
+                  {activeLobby?.opponent_name}
+                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border tracking-widest ${getRankInfo(activeLobby?.opponent_matches || 0).bg} ${getRankInfo(activeLobby?.opponent_matches || 0).color} ${getRankInfo(activeLobby?.opponent_matches || 0).border}`}>{getRankInfo(activeLobby?.opponent_matches || 0).name}</span>
+                </h2>
+                <p className="text-[10px] text-gray-400 font-bold mt-1">{activeLobby?.opponent_level}</p>
+              </div>
             </div>
             <button onClick={() => setActiveLobby(null)} className="p-2 bg-white/5 text-gray-400 rounded-full hover:text-white"><X size={18} /></button>
           </div>
@@ -240,7 +260,6 @@ export default function Community() {
 
             (
               <div className="space-y-6">
-                {/* عرض العرض الحالي */}
                 {activeLobby?.negotiation_status === 'negotiating' && !isCounterProposing && (
                   <div className="bg-white/5 border border-white/10 rounded-[24px] p-5">
                     <p className="text-[10px] text-gray-400 font-black tracking-widest uppercase mb-4 text-center">{activeLobby.proposed_by === currentUser?.id ? 'عرضك بانتظار الرد' : 'عرض الخصم'}</p>
@@ -257,7 +276,6 @@ export default function Community() {
                   </div>
                 )}
 
-                {/* لوحة اختيار الموعد الذكية */}
                 {(activeLobby?.negotiation_status === 'pending' || isCounterProposing) && (
                   <div className="bg-white/5 border border-cyan-500/30 rounded-[24px] p-5 space-y-6">
                     <div>
