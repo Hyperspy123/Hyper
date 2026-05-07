@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // 1. اللغات المدعومة
 export type Language = 'ar' | 'en';
 
-// 2. الكلمات اللي بنترجمها (القاموس)
+// 2. القالب الصارم للكلمات (أضفت لك كل كلمات التطبيق المتوقعة)
 interface Translations {
   app_name: string;
   profile: string;
@@ -12,6 +12,23 @@ interface Translations {
   language: string;
   logout: string;
   change_lang: string;
+  // كلمات الصفحة الرئيسية والمجتمع
+  welcome: string;
+  book_now: string;
+  featured_courts: string;
+  community: string;
+  players: string;
+  lobbies: string;
+  challenge: string;
+  rank: string;
+  matches: string;
+  level: string;
+  view_all: string;
+  save_changes: string;
+  phone: string;
+  email: string;
+  gender: string;
+  birth_date: string;
 }
 
 const dictionary: Record<Language, Translations> = {
@@ -23,15 +40,47 @@ const dictionary: Record<Language, Translations> = {
     language: 'اللغة',
     logout: 'تسجيل الخروج',
     change_lang: 'English',
+    welcome: 'أهلاً بك في هايب',
+    book_now: 'احجز ملعبك الآن',
+    featured_courts: 'الملاعب المميزة',
+    community: 'المجتمع',
+    players: 'اللاعبين',
+    lobbies: 'لوحة التنسيق',
+    challenge: 'تحدى',
+    rank: 'التصنيف',
+    matches: 'المباريات',
+    level: 'مستوى اللعب',
+    view_all: 'عرض الكل',
+    save_changes: 'حفظ التغييرات',
+    phone: 'رقم الجوال',
+    email: 'البريد الإلكتروني',
+    gender: 'الجنس',
+    birth_date: 'تاريخ الميلاد',
   },
   en: {
     app_name: 'HYPE',
-    profile: 'Profile',
+    profile: 'My Profile',
     payment: 'Payment Info',
     notifications: 'Notifications',
     language: 'Language',
     logout: 'Log Out',
     change_lang: 'العربية',
+    welcome: 'Welcome to Hype',
+    book_now: 'Book Your Court Now',
+    featured_courts: 'Featured Courts',
+    community: 'Community',
+    players: 'Players',
+    lobbies: 'Lobbies',
+    challenge: 'Challenge',
+    rank: 'Rank',
+    matches: 'Matches',
+    level: 'Play Level',
+    view_all: 'View All',
+    save_changes: 'Save Changes',
+    phone: 'Phone Number',
+    email: 'Email Address',
+    gender: 'Gender',
+    birth_date: 'Birth Date',
   }
 };
 
@@ -47,7 +96,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
   const [lang, setLang] = useState<Language>(() => {
     const saved = localStorage.getItem('hype_lang');
-    return (saved === 'en' || saved === 'ar') ? saved : 'ar';
+    return (saved === 'en' || saved === 'ar') ? (saved as Language) : 'ar';
   });
 
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -59,7 +108,11 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
   }, [lang, dir]);
 
   const toggleLang = () => setLang(prev => (prev === 'ar' ? 'en' : 'ar'));
-  const t = (key: keyof Translations) => dictionary[lang][key];
+  
+  // دالة الترجمة الآمنة
+  const t = (key: keyof Translations): string => {
+    return dictionary[lang][key] || key;
+  };
 
   return (
     <LanguageContext.Provider value={{ lang, toggleLang, t, dir }}>
