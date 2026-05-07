@@ -4,21 +4,34 @@ import Header from '@/components/Header';
 import { Swords, Zap, X, Calendar, MapPin, Clock, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
-// 🔥 توليد الأيام القادمة برمجياً (اليوم، غداً، وهكذا)
+// 🔥 توليد 7 أيام قادمة (أسبوع كامل) مع أسماء الأيام
 const getUpcomingDates = () => {
-  return Array.from({ length: 5 }, (_, i) => {
+  const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  return Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
+    const isToday = i === 0;
+    const isTomorrow = i === 1;
     return {
       value: d.toISOString().split('T')[0],
-      dayName: i === 0 ? 'اليوم' : i === 1 ? 'غداً' : d.toLocaleDateString('ar-EG', { weekday: 'short' }),
+      dayName: isToday ? 'اليوم' : isTomorrow ? 'غداً' : days[d.getDay()],
       dateNum: d.getDate()
     };
   });
 };
 
-const COURTS = ['ملعب هايب 1', 'ملعب هايب 2'];
-const TIMES = ['16:00', '18:00', '20:00', '22:00', '00:00'];
+// 🔥 قائمة الملاعب (شاملة)
+const COURTS = ['ملعب 1', 'ملعب 2', 'ملعب 3', 'ملعب 4', 'ملعب 5', 'ملعب VIP'];
+
+// 🔥 الأوقات بنظام AM / PM (القيمة البرمجية 24h عشان الداتا بيس، والعرض 12h)
+const TIMES = [
+  { value: '16:00', label: '04:00 PM' },
+  { value: '18:00', label: '06:00 PM' },
+  { value: '20:00', label: '08:00 PM' },
+  { value: '22:00', label: '10:00 PM' },
+  { value: '00:00', label: '12:00 AM' },
+];
+
 const DATES = getUpcomingDates();
 
 export default function Community() {
@@ -29,10 +42,10 @@ export default function Community() {
   const [lobbies, setLobbies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // حالات لوحة التفاوض (باستخدام الأزرار)
+  // حالات لوحة التفاوض
   const [selectedCourt, setSelectedCourt] = useState(COURTS[0]);
   const [selectedDate, setSelectedDate] = useState(DATES[0].value);
-  const [selectedTime, setSelectedTime] = useState(TIMES[2]); // افتراضي 8 مساءً
+  const [selectedTime, setSelectedTime] = useState(TIMES[2].value); // افتراضي 08:00 PM
   const [isCounterProposing, setIsCounterProposing] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
@@ -154,7 +167,7 @@ export default function Community() {
       {/* ================= لوحة التفاوض (الـ Dashboard) ================= */}
       <div className={`fixed inset-0 z-[200] flex flex-col justify-end transition-all duration-500 ${activeLobby ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}>
         <div className="absolute inset-0 bg-[#05081d]/95 backdrop-blur-xl" onClick={() => setActiveLobby(null)} />
-        <div className={`bg-[#0a0f3c] border-t border-white/10 rounded-t-[40px] w-full max-h-[90vh] flex flex-col relative z-10 transition-transform duration-500 ${activeLobby ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className={`bg-[#0a0f3c] border-t border-white/10 rounded-t-[40px] w-full max-h-[92vh] flex flex-col relative z-10 transition-transform duration-500 ${activeLobby ? 'translate-y-0' : 'translate-y-full'}`}>
           
           <div className="flex justify-between items-center p-5 border-b border-white/5">
             <div className="flex items-center gap-3">
@@ -195,8 +208,17 @@ export default function Community() {
                   <div className="bg-white/5 border border-white/10 rounded-[24px] p-5">
                     <p className="text-[10px] text-gray-400 font-black tracking-widest uppercase mb-4 text-center">{activeLobby.proposed_by === currentUser?.id ? 'عرضك الحالي للخصم' : 'الخصم يقترح عليك'}</p>
                     <div className="space-y-3 mb-6">
-                      <div className="flex items-center gap-3 bg-[#0a0f3c] p-4 rounded-2xl border border-white/5"><MapPin className="text-cyan-400 flex-none" size={20} /><div><p className="text-[10px] text-gray-500 font-bold">الملعب</p><p className="text-sm font-black text-white">{activeLobby.proposed_court}</p></div></div>
-                      <div className="flex items-center gap-3 bg-[#0a0f3c] p-4 rounded-2xl border border-white/5"><Calendar className="text-emerald-400 flex-none" size={20} /><div><p className="text-[10px] text-gray-500 font-bold">التاريخ والوقت</p><p className="text-sm font-black text-white" dir="ltr">{new Date(activeLobby.proposed_time).toLocaleString('en-GB', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p></div></div>
+                      <div className="flex items-center gap-3 bg-[#0a0f3c] p-4 rounded-2xl border border-white/5">
+                        <MapPin className="text-cyan-400 flex-none" size={20} />
+                        <div><p className="text-[10px] text-gray-500 font-bold">الملعب</p><p className="text-sm font-black text-white">{activeLobby.proposed_court}</p></div>
+                      </div>
+                      <div className="flex items-center gap-3 bg-[#0a0f3c] p-4 rounded-2xl border border-white/5">
+                        <Calendar className="text-emerald-400 flex-none" size={20} />
+                        <div>
+                          <p className="text-[10px] text-gray-500 font-bold">التاريخ والوقت</p>
+                          <p className="text-sm font-black text-white" dir="ltr">{new Date(activeLobby.proposed_time).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true})}</p>
+                        </div>
+                      </div>
                     </div>
                     {activeLobby.proposed_by !== currentUser?.id ? (
                       <div className="flex gap-2">
@@ -212,16 +234,16 @@ export default function Community() {
                 {/* 🔥 نموذج الاقتراح الجديد (بالأزرار الواضحة بدل القوائم) 🔥 */}
                 {(activeLobby?.negotiation_status === 'pending' || isCounterProposing) && (
                   <div className="bg-white/5 border border-cyan-500/30 rounded-[24px] p-5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4"><ShieldAlert className="text-cyan-500/20" size={60} /></div>
+                    <div className="absolute top-0 left-0 p-4 opacity-20"><Calendar size={60} className="text-cyan-500" /></div>
                     <div className="relative z-10 space-y-6">
                       <h3 className="text-sm font-black text-cyan-400 mb-2">{isCounterProposing ? 'اقتراح موعد جديد' : 'ابدأ باقتراح موعد'}</h3>
                       
                       {/* 1. اختيار الملعب */}
                       <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase">1. اختر الملعب</p>
-                        <div className="grid grid-cols-2 gap-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">1. اختر الملعب</p>
+                        <div className="grid grid-cols-3 gap-2">
                           {COURTS.map(court => (
-                            <button key={court} onClick={() => setSelectedCourt(court)} className={`py-3 rounded-xl text-xs font-bold transition-all border ${selectedCourt === court ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-[#0a0f3c] text-white border-white/10 hover:border-white/30'}`}>
+                            <button key={court} onClick={() => setSelectedCourt(court)} className={`py-3 rounded-xl text-[10px] font-black transition-all border ${selectedCourt === court ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]' : 'bg-[#0a0f3c] text-gray-300 border-white/10 hover:border-white/30'}`}>
                               {court}
                             </button>
                           ))}
@@ -230,24 +252,25 @@ export default function Community() {
 
                       {/* 2. اختيار اليوم */}
                       <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase">2. اختر اليوم</p>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">2. اختر اليوم</p>
                         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
                           {DATES.map(date => (
-                            <button key={date.value} onClick={() => setSelectedDate(date.value)} className={`flex-none w-16 py-3 rounded-xl flex flex-col items-center gap-1 transition-all border ${selectedDate === date.value ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-[#0a0f3c] text-white border-white/10 hover:border-white/30'}`}>
+                            <button key={date.value} onClick={() => setSelectedDate(date.value)} className={`flex-none w-[72px] py-3 rounded-xl flex flex-col items-center gap-1 transition-all border ${selectedDate === date.value ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]' : 'bg-[#0a0f3c] text-gray-300 border-white/10 hover:border-white/30'}`}>
                               <span className="text-[10px] font-bold">{date.dayName}</span>
-                              <span className="text-sm font-black">{date.dateNum}</span>
+                              <span className="text-base font-black">{date.dateNum}</span>
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {/* 3. اختيار الوقت */}
+                      {/* 3. اختيار الوقت (AM/PM) */}
                       <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase">3. اختر الوقت</p>
-                        <div className="grid grid-cols-4 gap-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">3. اختر الوقت</p>
+                        <div className="grid grid-cols-3 gap-2">
                           {TIMES.map(time => (
-                            <button key={time} onClick={() => setSelectedTime(time)} className={`py-2.5 rounded-xl text-xs font-black transition-all border ${selectedTime === time ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-[#0a0f3c] text-white border-white/10 hover:border-white/30'}`}>
-                              {time}
+                            <button key={time.value} onClick={() => setSelectedTime(time.value)} className={`py-3 rounded-xl text-xs font-black transition-all border ${selectedTime === time.value ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]' : 'bg-[#0a0f3c] text-gray-300 border-white/10 hover:border-white/30'} flex flex-col items-center justify-center gap-0.5`} dir="ltr">
+                              <span className="text-xs">{time.label.split(' ')[0]}</span>
+                              <span className="text-[9px] text-opacity-80">{time.label.split(' ')[1]}</span>
                             </button>
                           ))}
                         </div>
@@ -255,7 +278,9 @@ export default function Community() {
 
                       <div className="flex gap-2 pt-2">
                         {isCounterProposing && <button onClick={() => setIsCounterProposing(false)} className="px-4 py-4 bg-[#0a0f3c] text-white rounded-xl text-xs font-black">إلغاء</button>}
-                        <button onClick={handleSendProposal} className="flex-1 py-4 bg-cyan-500 text-[#0a0f3c] rounded-xl text-sm font-black shadow-[0_0_15px_rgba(34,211,238,0.3)] active:scale-95 transition-all">إرسال العرض للخصم 🎾</button>
+                        <button onClick={handleSendProposal} className="flex-1 py-4 bg-cyan-500 text-[#0a0f3c] rounded-xl text-sm font-black shadow-[0_0_15px_rgba(34,211,238,0.3)] active:scale-95 transition-all flex justify-center items-center gap-2">
+                          إرسال العرض للخصم <Zap size={16}/>
+                        </button>
                       </div>
                     </div>
                   </div>
