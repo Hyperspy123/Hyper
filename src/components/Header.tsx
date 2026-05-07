@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Zap, Menu, X, User, CreditCard, Headphones, Globe, Trash2, Bell, MessageSquare } from 'lucide-react';
+import { LogOut, Zap, Menu, X, User, CreditCard, Headphones, Globe, Trash2, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
 // 🔥 توحيد مسار الرانكات مع الملف الشخصي
@@ -39,28 +39,6 @@ export default function Header() {
     await supabase.auth.signOut();
     setIsMenuOpen(false);
     navigate('/auth');
-  };
-
-  // 🔥 دالة فحص التحديات قبل فتح الشات
-  const handleChatClick = async () => {
-    if (!user) return;
-
-    // نفحص إذا اللاعب عنده أي تحدي حالته "accepted"
-    const { data: matches } = await supabase
-      .from('challenges')
-      .select('id')
-      .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`)
-      .eq('status', 'accepted');
-
-    if (matches && matches.length > 0) {
-      // إذا عنده مباراة مقبولة، نوديه لصفحة المحادثات
-      navigate('/messages'); 
-    } else {
-      // إذا ما عنده، نطلّع له رسالة التحميس 💬
-      toast.error("اقبل تحدي أو تحدى أحد للتمكن من المراسلة 💬", {
-        style: { background: '#0a0f3c', color: '#22d3ee', border: '1px solid #22d3ee' }
-      });
-    }
   };
 
   // 🔥 حسابات الرانك والتقدم الجديدة
@@ -108,16 +86,13 @@ export default function Header() {
         {/* الأيقونات العلوية والمنيو (اليمين) */}
         <div className="flex items-center gap-3" dir="ltr">
           
-          {/* 💬 زر الشات المحدث */}
-          <button onClick={handleChatClick} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-white/10 active:scale-90 transition-all">
-            <MessageSquare size={20} />
-          </button>
-
+          {/* 🔔 زر الإشعارات */}
           <button onClick={() => navigate('/notifications')} className="relative p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-white/10 active:scale-90 transition-all">
             <Bell size={20} />
             {unreadCount > 0 && <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0f3c] animate-pulse" />}
           </button>
 
+          {/* زر القائمة المنسدلة (المنيو) */}
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-2.5 rounded-xl border transition-all duration-300 relative z-[140] active:scale-95 ${isMenuOpen ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-cyan-400'}`}>
             {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
