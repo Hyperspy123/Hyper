@@ -4,8 +4,10 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { I18nProvider } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
+
+// 🔥 استوردنا المترجم الجديد الخاص بنا باستخدام مسار نسبي لتجنب أي أخطاء 🔥
+import { LanguageProvider } from './context/LanguageContext';
 
 // Components & Pages
 import BottomNav from '@/components/BottomNav';
@@ -33,9 +35,7 @@ const AppContent = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // إجبار الاتجاه على العربي دائماً بعد إلغاء تعدد اللغات
-    document.documentElement.dir = 'rtl';
-    document.documentElement.lang = 'ar';
+    // ❌ تم حذف إجبار الاتجاه العربي من هنا، لأن المترجم الجديد هو اللي بيتحكم فيه تلقائياً
 
     // إدارة الجلسة (Supabase Session)
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -126,10 +126,11 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <I18nProvider>
+        {/* 🔥 استبدلنا النظام القديم بالـ LanguageProvider الجديد 🔥 */}
+        <LanguageProvider>
           <Toaster position="top-center" richColors />
           <AppContent />
-        </I18nProvider>
+        </LanguageProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

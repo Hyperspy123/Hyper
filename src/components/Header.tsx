@@ -1,123 +1,95 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
 import { supabase } from '../LLL';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, Zap, Menu, X, User, CreditCard, Headphones, Globe, Trash2, Bell } from 'lucide-react';
-import { toast } from 'sonner';
-
-const RANKS_LADDER = [
-  { id: 1, name: 'ROOKIE', min: 0, max: 49 },
-  { id: 2, name: 'PRO', min: 50, max: 99 },
-  { id: 3, name: 'ELITE', min: 100, max: 149 },
-  { id: 4, name: 'PRINCE', min: 150, max: 199 },
-  { id: 5, name: 'KING', min: 200, max: 249 },
-  { id: 6, name: 'LEGEND', min: 250, max: 299 },
-  { id: 7, name: 'HYPE', min: 300, max: 9999 },
-];
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Header() {
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0); 
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { lang, toggleLang, t, dir } = useLanguage();
 
-  const fetchUnreadCount = useCallback(async (userId: string) => {
-    const { count } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_read', false);
-    setUnreadCount(count || 0);
-  }, []);
+  const toggleMenu = () => setIsOpen(!isOpen);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
-        fetchUnreadCount(session.user.id);
-
-        // 🔥 الاشتراك في الإشعارات الجديدة (Realtime)
-        const channel = supabase
-          .channel('schema-db-changes')
-          .on('postgres_changes', 
-            { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },
-            () => fetchUnreadCount(session.user.id)
-          )
-          .subscribe();
-
-        return () => { supabase.removeChannel(channel); };
-      }
-    });
-  }, [fetchUnreadCount]);
-
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (data) setProfile(data);
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsMenuOpen(false);
-    navigate('/auth');
-  };
-
-  const matches = profile?.total_matches || 0;
-  const currentRank = RANKS_LADDER.find(r => matches >= r.min && matches <= r.max) || RANKS_LADDER[0];
-  const isMaxLevel = matches >= 300;
-  const progressPercentage = isMaxLevel ? 100 : Math.min(100, ((matches - currentRank.min) / (currentRank.max - currentRank.min + 1)) * 100);
-  const matchesToNext = isMaxLevel ? 0 : (currentRank.max + 1) - matches;
+  const menuItems = [
+    { icon: User, label: t('profile'), path: '/profile' },
+    { icon: Wallet, label: t('payment'), path: '/payment' },
+    { icon: Bell, label: t('notifications'), path: '/notifications' },
+  ];
 
   return (
     <>
-      {isMenuOpen && <div className="fixed inset-0 z-[115] bg-[#05081d]/40 backdrop-blur-md transition-all duration-500" onClick={() => setIsMenuOpen(false)} />}
-      <header className="fixed top-0 left-0 right-0 z-[130] flex items-center justify-between bg-[#0a0f3c]/80 border-b border-white/5 px-6 h-24 backdrop-blur-2xl" dir="rtl">
-        <div className="flex flex-col gap-1.5 text-right">
-          <div className="flex items-center gap-2 cursor-pointer active:scale-95 transition-all justify-end" onClick={() => navigate('/')}>
-            <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(34,211,238,0.4)]"><Zap size={16} className="text-[#0a0f3c] fill-[#0a0f3c]" /></div>
-            <h1 className="text-xl font-[1000] italic tracking-tighter text-white uppercase leading-none">HYPE</h1>
+      <header className="fixed top-0 left-0 right-0 z-[100] px-6 py-4 flex justify-between items-center bg-[#05081d]/80 backdrop-blur-lg border-b border-white/5">
+        <button onClick={toggleMenu} className="p-2 hover:bg-white/5 rounded-xl transition-all">
+          <Menu size={24} className="text-white" />
+        </button>
+        
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.4)]">
+            <span className="text-[#0a0f3c] font-black text-xl italic">H</span>
           </div>
-          {profile && (
-            <div className="w-32 space-y-1">
-              <div className="flex justify-between text-[7px] font-black uppercase italic text-cyan-400/70">
-                <span>{currentRank.name}</span>
-                <span>{isMaxLevel ? 'MAX' : `باقي ${matchesToNext}`}</span>
-              </div>
-              <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                <div className="h-full bg-cyan-500 shadow-[0_0_8px_rgba(34,211,238,0.6)] transition-all duration-1000" style={{ width: `${progressPercentage}%` }} />
-              </div>
-            </div>
-          )}
+          <span className="font-[1000] text-xl tracking-tighter italic uppercase text-white">HYPE</span>
         </div>
 
-        <div className="flex items-center gap-3" dir="ltr">
-          <button onClick={() => navigate('/notifications')} className="relative p-2.5 bg-white/5 rounded-xl border border-white/10 text-cyan-400 hover:bg-white/10 active:scale-90 transition-all">
-            <Bell size={20} />
-            {/* 🔥 النقطة الحمراء تظهر فقط إذا unreadCount > 0 */}
-            {unreadCount > 0 && <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0f3c] animate-pulse" />}
-          </button>
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-2.5 rounded-xl border transition-all duration-300 relative z-[140] active:scale-95 ${isMenuOpen ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-cyan-400'}`}>
-            {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-          {/* المنيو (نفس الكود السابق) */}
-          <div className={`absolute top-24 left-6 w-[240px] bg-[#0a0f3c]/95 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300 z-[140] overflow-hidden ${isMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-4 invisible pointer-events-none'}`} style={{ transformOrigin: 'top left' }}>
-            <div className="p-4 space-y-1" dir="rtl">
-              {[{ icon: User, label: 'ملفي الشخصي', path: '/profile' }, { icon: CreditCard, label: 'معلومات الدفع', path: '/payment' }, { icon: Headphones, label: 'الدعم الفني', path: '/support' }, { icon: Globe, label: 'اللغة', path: '/language' }].map((item) => (
-                <button key={item.path} onClick={() => { navigate(item.path); setIsMenuOpen(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 transition-all group text-right">
-                  <div className="p-2 rounded-xl bg-cyan-400/10 text-cyan-400 group-hover:bg-cyan-400 group-hover:text-[#0a0f3c] transition-all"><item.icon size={18} /></div>
-                  <span className="font-black text-sm text-gray-200 group-hover:text-white">{item.label}</span>
-                </button>
-              ))}
-              <div className="h-px bg-white/5 my-2 mx-4" />
-              <button onClick={handleLogout} className="w-full flex items-center gap-4 p-4 rounded-2xl text-gray-400 hover:bg-white/5 transition-all group text-right">
-                <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/20 transition-all"><LogOut size={18} /></div>
-                <span className="font-black text-sm">تسجيل الخروج</span>
+        <button onClick={() => navigate('/notifications')} className="p-2 hover:bg-white/5 rounded-xl relative transition-all">
+          <Bell size={22} className="text-white" />
+          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#05081d]"></span>
+        </button>
+      </header>
+
+      {/* Side Menu */}
+      <div className={`fixed inset-0 z-[150] transition-all duration-500 ${isOpen ? 'visible' : 'invisible pointer-events-none'}`}>
+        <div className={`absolute inset-0 bg-[#05081d]/90 backdrop-blur-md transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0'}`} onClick={toggleMenu} />
+        
+        <aside 
+          className={`absolute top-0 bottom-0 w-80 bg-[#0a0f3c] border-white/10 shadow-2xl transition-transform duration-500 flex flex-col
+            ${dir === 'rtl' ? (isOpen ? 'right-0' : 'translate-x-full right-0 border-l') : (isOpen ? 'left-0' : '-translate-x-full left-0 border-r')}`}
+        >
+          <div className="p-8 flex justify-between items-center border-b border-white/5">
+            <span className="font-black text-2xl italic text-white uppercase tracking-tighter">{t('app_name')}</span>
+            <button onClick={toggleMenu} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+          </div>
+
+          <nav className="flex-1 p-6 space-y-2">
+            {menuItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => { navigate(item.path); setIsOpen(false); }}
+                className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition-all ${location.pathname === item.path ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+              >
+                <item.icon size={20} />
+                <span className={`flex-1 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>{item.label}</span>
+                {dir === 'rtl' ? <ChevronLeft size={16} opacity={0.5} /> : <ChevronRight size={16} opacity={0.5} />}
+              </button>
+            ))}
+
+            {/* خيار تغيير اللغة */}
+            <div className="pt-4 mt-4 border-t border-white/5">
+              <button
+                onClick={toggleLang}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-gray-400 hover:bg-white/5 hover:text-white transition-all"
+              >
+                <Globe size={20} className="text-purple-400" />
+                <span className={`flex-1 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>{t('change_lang')}</span>
+                <span className="text-[10px] bg-white/5 px-2 py-1 rounded-md border border-white/10 uppercase font-black">
+                  {lang === 'ar' ? 'EN' : 'AR'}
+                </span>
               </button>
             </div>
+          </nav>
+
+          <div className="p-6 border-t border-white/5">
+            <button 
+              onClick={() => supabase.auth.signOut().then(() => navigate('/auth'))}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl font-black text-red-400 hover:bg-red-500/10 transition-all uppercase italic"
+            >
+              <LogOut size={20} />
+              <span>{t('logout')}</span>
+            </button>
           </div>
-        </div>
-      </header>
-      <div className="h-24 w-full pointer-events-none" />
+        </aside>
+      </div>
     </>
   );
 }
