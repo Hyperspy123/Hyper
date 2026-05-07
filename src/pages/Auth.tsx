@@ -9,7 +9,7 @@ type AuthMode = 'signin' | 'signup' | 'reset';
 export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>('signin');
-  const [step, setStep] = useState(1); // للتحكم بخطوات التسجيل
+  const [step, setStep] = useState(1);
   const navigate = useNavigate();
 
   // بيانات المستخدم
@@ -135,13 +135,13 @@ export default function Auth() {
           {mode === 'signup' && step === 1 && (
             <div className="space-y-4 animate-in slide-in-from-left-4 fade-in duration-300">
               <div className="flex gap-3">
-                <input type="text" placeholder="الاسم الأول" className="w-1/2 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-                <input type="text" placeholder="اسم العائلة" className="w-1/2 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                <input type="text" placeholder="الاسم الأول" className="w-1/2 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                <input type="text" placeholder="اسم العائلة" className="w-1/2 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
               </div>
               
               <div className="relative">
                 <Phone className="absolute right-4 top-4 text-gray-500" size={18} />
-                <input type="tel" placeholder="رقم الجوال (05xxxxxxxx)" className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                <input type="tel" placeholder="رقم الجوال (05xxxxxxxx)" className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={phone} onChange={(e) => setPhone(e.target.value)} required />
               </div>
 
               <div className="flex gap-3">
@@ -149,9 +149,19 @@ export default function Auth() {
                 <button type="button" onClick={() => setGender('أنثى')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] border transition-all ${gender === 'أنثى' ? 'bg-purple-500 border-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}>أنثى ♀</button>
               </div>
 
-              <div className="relative">
-                <Calendar className="absolute right-4 top-4 text-gray-500" size={18} />
-                <input type="date" className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all text-white" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required />
+              {/* 🔥 تعديل حقل تاريخ الميلاد ليكون واضح وفخم 🔥 */}
+              <div className="space-y-2 text-right">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block pr-2">تاريخ الميلاد</label>
+                <div className="relative">
+                  <Calendar className="absolute right-4 top-4 text-gray-500 pointer-events-none" size={18} />
+                  <input 
+                    type="date" 
+                    className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all text-white [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-50 hover:[&::-webkit-calendar-picker-indicator]:opacity-100 cursor-pointer" 
+                    value={birthDate} 
+                    onChange={(e) => setBirthDate(e.target.value)} 
+                    required 
+                  />
+                </div>
               </div>
 
               <button type="button" onClick={handleNextStep} className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] text-sm uppercase shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all mt-6">
@@ -164,7 +174,7 @@ export default function Auth() {
           {mode === 'signup' && step === 2 && (
             <div className="space-y-6 animate-in slide-in-from-left-4 fade-in duration-300">
               
-              <div className="space-y-3">
+              <div className="space-y-3 text-right">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Activity size={14} className="text-cyan-400"/> مستواك في البادل</label>
                 <div className="grid grid-cols-2 gap-2">
                   {['مبتدئ', 'متوسط', 'متقدم', 'محترف'].map((level) => (
@@ -175,7 +185,7 @@ export default function Auth() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 text-right">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Hand size={14} className="text-purple-400"/> الجهة المفضلة للعب</label>
                 <div className="grid grid-cols-3 gap-2">
                   {['يمين', 'كلاهما', 'يسار'].map((side) => (
