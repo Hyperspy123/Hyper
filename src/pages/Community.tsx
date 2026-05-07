@@ -4,6 +4,23 @@ import Header from '@/components/Header';
 import { Swords, Zap, X, Calendar, MapPin, Clock, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
+// 🔥 توليد الأيام القادمة برمجياً (اليوم، غداً، وهكذا)
+const getUpcomingDates = () => {
+  return Array.from({ length: 5 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return {
+      value: d.toISOString().split('T')[0],
+      dayName: i === 0 ? 'اليوم' : i === 1 ? 'غداً' : d.toLocaleDateString('ar-EG', { weekday: 'short' }),
+      dateNum: d.getDate()
+    };
+  });
+};
+
+const COURTS = ['ملعب هايب 1', 'ملعب هايب 2'];
+const TIMES = ['16:00', '18:00', '20:00', '22:00', '00:00'];
+const DATES = getUpcomingDates();
+
 export default function Community() {
   const [activeTab, setActiveTab] = useState<'players' | 'lobbies'>('players');
   const [activeLobby, setActiveLobby] = useState<any>(null);
@@ -12,11 +29,11 @@ export default function Community() {
   const [lobbies, setLobbies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // حالات لوحة التفاوض
-  const [selectedCourt, setSelectedCourt] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
-  const [isCounterProposing, setIsCounterProposing] = useState(false); // إذا رفض وبغى يقترح جديد
+  // حالات لوحة التفاوض (باستخدام الأزرار)
+  const [selectedCourt, setSelectedCourt] = useState(COURTS[0]);
+  const [selectedDate, setSelectedDate] = useState(DATES[0].value);
+  const [selectedTime, setSelectedTime] = useState(TIMES[2]); // افتراضي 8 مساءً
+  const [isCounterProposing, setIsCounterProposing] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -40,9 +57,7 @@ export default function Community() {
       const formattedLobbies = challengesData.map(ch => {
         const isChallenger = ch.challenger_id === user.id;
         const opponent = isChallenger ? ch.challenged : ch.challenger;
-        return {
-          ...ch, opponent_name: opponent?.first_name || 'لاعب', opponent_level: opponent?.play_level || 'مبتدئ'
-        };
+        return { ...ch, opponent_name: opponent?.first_name || 'لاعب', opponent_level: opponent?.play_level || 'مبتدئ' };
       });
       setLobbies(formattedLobbies);
     }
@@ -51,9 +66,7 @@ export default function Community() {
 
   const handleSendChallengeRequest = async (player: any) => {
     try {
-      const { error } = await supabase.from('challenges').insert([{
-        challenger_id: currentUser.id, challenged_id: player.id, status: 'pending', negotiation_status: 'none'
-      }]);
+      const { error } = await supabase.from('challenges').insert([{ challenger_id: currentUser.id, challenged_id: player.id, status: 'pending', negotiation_status: 'none' }]);
       if (error) throw error;
       await supabase.from('notifications').insert([{ user_id: player.id, title: 'تحدي جديد ⚔️', message: `طلب تحدي من ${currentUser.first_name}!`, type: 'challenge' }]);
       toast.success(`تم إرسال التحدي لـ ${player.first_name} 🎾`);
@@ -73,17 +86,13 @@ export default function Community() {
   };
 
   const handleSendProposal = async () => {
-    if (!selectedCourt || !selectedDate || !selectedTime) { toast.error("حدد الملعب والوقت أولاً!"); return; }
+    if (!selectedCourt || !selectedDate || !selectedTime) { toast.error("تأكد من تحديد جميع الخيارات!"); return; }
     const matchTimestamp = `${selectedDate} ${selectedTime}`;
     
     try {
-      await supabase.from('challenges').update({
-        proposed_court: selectedCourt, proposed_time: matchTimestamp, proposed_by: currentUser.id, negotiation_status: 'negotiating'
-      }).eq('id', activeLobby.id);
-
+      await supabase.from('challenges').update({ proposed_court: selectedCourt, proposed_time: matchTimestamp, proposed_by: currentUser.id, negotiation_status: 'negotiating' }).eq('id', activeLobby.id);
       const opponentId = activeLobby.challenger_id === currentUser.id ? activeLobby.challenged_id : activeLobby.challenger_id;
       await supabase.from('notifications').insert([{ user_id: opponentId, title: 'عرض جديد 📅', message: `اقترح ${currentUser.first_name} موعداً للمباراة.`, type: 'challenge' }]);
-
       toast.success("تم إرسال العرض للخصم 🎾");
       setIsCounterProposing(false);
       setActiveLobby({ ...activeLobby, negotiation_status: 'negotiating', proposed_by: currentUser.id, proposed_court: selectedCourt, proposed_time: matchTimestamp });
@@ -93,13 +102,9 @@ export default function Community() {
 
   const handleAcceptProposal = async () => {
     try {
-      await supabase.from('challenges').update({ 
-        negotiation_status: 'agreed', court_name: activeLobby.proposed_court, match_time: activeLobby.proposed_time 
-      }).eq('id', activeLobby.id);
-      
+      await supabase.from('challenges').update({ negotiation_status: 'agreed', court_name: activeLobby.proposed_court, match_time: activeLobby.proposed_time }).eq('id', activeLobby.id);
       const opponentId = activeLobby.challenger_id === currentUser.id ? activeLobby.challenged_id : activeLobby.challenger_id;
       await supabase.from('notifications').insert([{ user_id: opponentId, title: 'تم الاتفاق ✅', message: `تم تأكيد موعد المباراة في ${activeLobby.proposed_court}! احجز الآن.`, type: 'booking' }]);
-
       toast.success("تم تأكيد الموعد بينكم! توجه للرئيسية للحجز 🔒");
       setActiveLobby({ ...activeLobby, negotiation_status: 'agreed' });
       fetchData();
@@ -149,9 +154,8 @@ export default function Community() {
       {/* ================= لوحة التفاوض (الـ Dashboard) ================= */}
       <div className={`fixed inset-0 z-[200] flex flex-col justify-end transition-all duration-500 ${activeLobby ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}>
         <div className="absolute inset-0 bg-[#05081d]/95 backdrop-blur-xl" onClick={() => setActiveLobby(null)} />
-        <div className={`bg-[#0a0f3c] border-t border-white/10 rounded-t-[40px] w-full max-h-[85vh] flex flex-col relative z-10 transition-transform duration-500 ${activeLobby ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className={`bg-[#0a0f3c] border-t border-white/10 rounded-t-[40px] w-full max-h-[90vh] flex flex-col relative z-10 transition-transform duration-500 ${activeLobby ? 'translate-y-0' : 'translate-y-full'}`}>
           
-          {/* الهيدر */}
           <div className="flex justify-between items-center p-5 border-b border-white/5">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center border border-white/10"><Swords size={20} className="text-cyan-400" /></div>
@@ -162,97 +166,90 @@ export default function Community() {
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             
-            {/* حالة 1: بانتظار القبول الأساسي للتحدي */}
             {activeLobby?.status === 'pending' ? (
               <div className="text-center py-10 opacity-60">
                 <Clock size={48} className="mb-4 text-yellow-500 mx-auto" />
                 <h3 className="font-black text-xl mb-2 text-white">التحدي معلق</h3>
-                <p className="text-xs text-gray-400 mb-6">
-                  {activeLobby.challenger_id === currentUser?.id ? 'أنتظر خصمك يقبل التحدي عشان تفتح لوحة التنسيق.' : 'خصمك يتحداك! اقبل التحدي للبدء في اختيار الملعب.'}
-                </p>
-                {activeLobby.challenged_id === currentUser?.id && (
-                  <button onClick={() => handleAcceptChallengeRequest(activeLobby)} className="w-full py-4 bg-emerald-500 text-[#0a0f3c] font-black rounded-xl text-sm shadow-[0_0_20px_rgba(16,185,129,0.3)]">قبول التحدي 💥</button>
-                )}
+                <p className="text-xs text-gray-400 mb-6">{activeLobby.challenger_id === currentUser?.id ? 'أنتظر خصمك يقبل التحدي عشان تفتح لوحة التنسيق.' : 'خصمك يتحداك! اقبل التحدي للبدء في اختيار الملعب.'}</p>
+                {activeLobby.challenged_id === currentUser?.id && <button onClick={() => handleAcceptChallengeRequest(activeLobby)} className="w-full py-4 bg-emerald-500 text-[#0a0f3c] font-black rounded-xl text-sm shadow-[0_0_20px_rgba(16,185,129,0.3)]">قبول التحدي 💥</button>}
               </div>
             ) : 
 
-            /* حالة 2: تم الاتفاق (النهاية) */
             activeLobby?.negotiation_status === 'agreed' ? (
               <div className="text-center py-8 bg-emerald-500/10 border border-emerald-500/20 rounded-[32px]">
                 <CheckCircle2 size={56} className="text-emerald-400 mx-auto mb-4" />
                 <h3 className="text-white font-black text-2xl mb-2">اتفاق مؤكد!</h3>
-                <div className="inline-flex items-center gap-2 bg-[#0a0f3c] px-4 py-2 rounded-full border border-white/10 text-cyan-400 text-xs font-bold mb-4">
-                  <MapPin size={14}/> {activeLobby.court_name}
-                </div>
-                <p className="text-xs text-gray-400 px-6 leading-relaxed">
-                  الملعب غير محجوز بعد. توجه لصفحة الملاعب في الرئيسية وأتمم عملية الدفع لضمان حجزك قبل الآخرين.
-                </p>
+                <div className="inline-flex items-center gap-2 bg-[#0a0f3c] px-4 py-2 rounded-full border border-white/10 text-cyan-400 text-xs font-bold mb-4"><MapPin size={14}/> {activeLobby.court_name}</div>
+                <p className="text-xs text-gray-400 px-6 leading-relaxed">الملعب غير محجوز بعد. توجه لصفحة الملاعب في الرئيسية وأتمم عملية الدفع لضمان حجزك.</p>
               </div>
             ) : 
 
-            /* حالة 3: التفاوض النشط (اللوحة الذكية) */
             (
               <div className="space-y-6">
-                
-                {/* تنبيه أمني واضح */}
                 <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 flex gap-3">
                   <AlertTriangle size={20} className="text-yellow-500 flex-none" />
-                  <p className="text-[10px] text-yellow-500/80 font-bold leading-relaxed">
-                    هذا التنسيق مبدئي ولا يضمن حجز الملعب. من يسبق للدفع في الرئيسية يؤكد الحجز.
-                  </p>
+                  <p className="text-[10px] text-yellow-500/80 font-bold leading-relaxed">هذا التنسيق مبدئي ولا يضمن حجز الملعب. من يسبق للدفع في الرئيسية يؤكد الحجز.</p>
                 </div>
 
-                {/* عرض كرت الاقتراح إذا كان موجود */}
                 {activeLobby?.negotiation_status === 'negotiating' && !isCounterProposing && (
                   <div className="bg-white/5 border border-white/10 rounded-[24px] p-5">
-                    <p className="text-[10px] text-gray-400 font-black tracking-widest uppercase mb-4 text-center">
-                      {activeLobby.proposed_by === currentUser?.id ? 'عرضك الحالي للخصم' : 'الخصم يقترح عليك'}
-                    </p>
-                    
+                    <p className="text-[10px] text-gray-400 font-black tracking-widest uppercase mb-4 text-center">{activeLobby.proposed_by === currentUser?.id ? 'عرضك الحالي للخصم' : 'الخصم يقترح عليك'}</p>
                     <div className="space-y-3 mb-6">
-                      <div className="flex items-center gap-3 bg-[#0a0f3c] p-4 rounded-2xl border border-white/5">
-                        <MapPin className="text-cyan-400 flex-none" size={20} />
-                        <div><p className="text-[10px] text-gray-500 font-bold">الملعب</p><p className="text-sm font-black text-white">{activeLobby.proposed_court}</p></div>
-                      </div>
-                      <div className="flex items-center gap-3 bg-[#0a0f3c] p-4 rounded-2xl border border-white/5">
-                        <Calendar className="text-emerald-400 flex-none" size={20} />
-                        <div>
-                          <p className="text-[10px] text-gray-500 font-bold">التاريخ والوقت</p>
-                          <p className="text-sm font-black text-white" dir="ltr">{new Date(activeLobby.proposed_time).toLocaleString('en-GB', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
-                        </div>
-                      </div>
+                      <div className="flex items-center gap-3 bg-[#0a0f3c] p-4 rounded-2xl border border-white/5"><MapPin className="text-cyan-400 flex-none" size={20} /><div><p className="text-[10px] text-gray-500 font-bold">الملعب</p><p className="text-sm font-black text-white">{activeLobby.proposed_court}</p></div></div>
+                      <div className="flex items-center gap-3 bg-[#0a0f3c] p-4 rounded-2xl border border-white/5"><Calendar className="text-emerald-400 flex-none" size={20} /><div><p className="text-[10px] text-gray-500 font-bold">التاريخ والوقت</p><p className="text-sm font-black text-white" dir="ltr">{new Date(activeLobby.proposed_time).toLocaleString('en-GB', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p></div></div>
                     </div>
-
-                    {/* أزرار اتخاذ القرار للخصم */}
                     {activeLobby.proposed_by !== currentUser?.id ? (
                       <div className="flex gap-2">
                         <button onClick={() => setIsCounterProposing(true)} className="flex-1 py-4 bg-[#0a0f3c] border border-white/10 text-white rounded-xl text-xs font-black active:scale-95 transition-all">اقتراح بديل 🔄</button>
                         <button onClick={handleAcceptProposal} className="flex-1 py-4 bg-emerald-500 text-[#0a0f3c] rounded-xl text-xs font-black shadow-[0_0_15px_rgba(16,185,129,0.3)] active:scale-95 transition-all">قبول العرض ✅</button>
                       </div>
                     ) : (
-                      <div className="text-center py-3 bg-[#0a0f3c] rounded-xl border border-white/5">
-                        <span className="text-xs text-gray-500 font-bold animate-pulse">بانتظار رد الخصم...</span>
-                      </div>
+                      <div className="text-center py-3 bg-[#0a0f3c] rounded-xl border border-white/5"><span className="text-xs text-gray-500 font-bold animate-pulse">بانتظار رد الخصم...</span></div>
                     )}
                   </div>
                 )}
 
-                {/* نموذج الاقتراح (يظهر إذا مافيه اقتراح، أو إذا ضغط اقتراح بديل) */}
+                {/* 🔥 نموذج الاقتراح الجديد (بالأزرار الواضحة بدل القوائم) 🔥 */}
                 {(activeLobby?.negotiation_status === 'pending' || isCounterProposing) && (
                   <div className="bg-white/5 border border-cyan-500/30 rounded-[24px] p-5 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4"><ShieldAlert className="text-cyan-500/20" size={60} /></div>
-                    <div className="relative z-10 space-y-4">
+                    <div className="relative z-10 space-y-6">
                       <h3 className="text-sm font-black text-cyan-400 mb-2">{isCounterProposing ? 'اقتراح موعد جديد' : 'ابدأ باقتراح موعد'}</h3>
                       
-                      <div className="space-y-3">
-                        <select className="w-full bg-[#0a0f3c] border border-white/10 p-4 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan-500 transition-all" onChange={(e) => setSelectedCourt(e.target.value)}>
-                          <option value="">اختر الملعب المناسب...</option>
-                          <option value="ملعب هايب 1">ملعب هايب 1</option>
-                          <option value="ملعب هايب 2">ملعب هايب 2</option>
-                        </select>
-                        <div className="flex gap-2">
-                          <input type="date" className="flex-1 bg-[#0a0f3c] border border-white/10 p-4 rounded-xl text-xs font-bold text-white outline-none [&::-webkit-calendar-picker-indicator]:invert" onChange={(e) => setSelectedDate(e.target.value)} />
-                          <input type="time" className="flex-1 bg-[#0a0f3c] border border-white/10 p-4 rounded-xl text-xs font-bold text-white outline-none [&::-webkit-calendar-picker-indicator]:invert" onChange={(e) => setSelectedTime(e.target.value)} />
+                      {/* 1. اختيار الملعب */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase">1. اختر الملعب</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {COURTS.map(court => (
+                            <button key={court} onClick={() => setSelectedCourt(court)} className={`py-3 rounded-xl text-xs font-bold transition-all border ${selectedCourt === court ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-[#0a0f3c] text-white border-white/10 hover:border-white/30'}`}>
+                              {court}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 2. اختيار اليوم */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase">2. اختر اليوم</p>
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+                          {DATES.map(date => (
+                            <button key={date.value} onClick={() => setSelectedDate(date.value)} className={`flex-none w-16 py-3 rounded-xl flex flex-col items-center gap-1 transition-all border ${selectedDate === date.value ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-[#0a0f3c] text-white border-white/10 hover:border-white/30'}`}>
+                              <span className="text-[10px] font-bold">{date.dayName}</span>
+                              <span className="text-sm font-black">{date.dateNum}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 3. اختيار الوقت */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase">3. اختر الوقت</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {TIMES.map(time => (
+                            <button key={time} onClick={() => setSelectedTime(time)} className={`py-2.5 rounded-xl text-xs font-black transition-all border ${selectedTime === time ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-[#0a0f3c] text-white border-white/10 hover:border-white/30'}`}>
+                              {time}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
