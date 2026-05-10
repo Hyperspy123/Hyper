@@ -44,6 +44,14 @@ interface Translations {
   hosted_by: string;
   match_details: string;
   
+  // إنشاء مباراة جديدة (الكلمات المضافة حديثاً)
+  host_match: string;
+  select_court: string;
+  select_date: string;
+  select_time: string;
+  create_match: string;
+  cancel: string;
+  
   // الحجوزات، المكافآت، الفعاليات
   my_bookings: string;
   rewards: string;
@@ -62,6 +70,7 @@ const dictionary: Record<Language, Translations> = {
     welcome: 'أهلاً بك في هايب', book_now: 'احجز ملعبك الآن', featured_courts: 'الملاعب المميزة', view_all: 'عرض الكل',
     rank: 'التصنيف', matches: 'مباراة', level: 'المستوى', save_changes: 'حفظ التغييرات', phone: 'الجوال', email: 'الإيميل', gender: 'الجنس', birth_date: 'الميلاد', remaining_to_rank: 'للترقية', current_progress: 'تقدمك الحالي', max_level: 'أعلى رتبة',
     community: 'المجتمع', players: 'اللاعبين', lobbies: 'لوحة التنسيق', challenge: 'تحدي', open_matches: 'مباريات مفتوحة', join_match: 'انضمام', spots_left: 'شاغر', hosted_by: 'بواسطة', match_details: 'التفاصيل',
+    host_match: 'استضافة مباراة', select_court: 'اختر الملعب', select_date: 'اختر التاريخ', select_time: 'اختر الوقت', create_match: 'إنشاء التحدي الآن', cancel: 'إلغاء',
     my_bookings: 'حجوزاتي', rewards: 'مكافآتي', tournaments: 'فعاليات', upcoming: 'القادمة', previous: 'السابقة', cancelled: 'الملغاة', points_balance: 'رصيد النقاط', redeem: 'استبدال', active_events: 'الفعاليات الحالية'
   },
   en: {
@@ -69,6 +78,7 @@ const dictionary: Record<Language, Translations> = {
     welcome: 'Welcome to Hype', book_now: 'Book Now', featured_courts: 'Featured Courts', view_all: 'View All',
     rank: 'Rank', matches: 'Matches', level: 'Level', save_changes: 'Save', phone: 'Phone', email: 'Email', gender: 'Gender', birth_date: 'Birth Date', remaining_to_rank: 'To Rank', current_progress: 'Progress', max_level: 'Max Level',
     community: 'Community', players: 'Players', lobbies: 'Lobbies', challenge: 'Challenge', open_matches: 'Open Matches', join_match: 'Join', spots_left: 'Left', hosted_by: 'By', match_details: 'Details',
+    host_match: 'Host a Match', select_court: 'Select Court', select_date: 'Select Date', select_time: 'Select Time', create_match: 'Create Challenge Now', cancel: 'Cancel',
     my_bookings: 'My Bookings', rewards: 'My Rewards', tournaments: 'Tournaments', upcoming: 'Upcoming', previous: 'Previous', cancelled: 'Cancelled', points_balance: 'Points Balance', redeem: 'Redeem', active_events: 'Active Events'
   }
 };
