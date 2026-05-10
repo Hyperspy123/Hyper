@@ -1,164 +1,184 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { Users, MapPin, Clock, Calendar, Plus, X, Zap, Loader2, UserPlus, Trophy } from 'lucide-react';
+import { MapPin, Clock, Calendar, Plus, X, Zap, Loader2, Star, ShieldCheck, ChevronRight, Trash2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
 
 export default function Community() {
   const { t, dir, lang } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'open' | 'players'>('open');
+  const [activeTab, setActiveTab] = useState<'open' | 'my'>('open');
   const [loading, setLoading] = useState(true);
-  const [openMatches, setOpenMatches] = useState<any[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
   const [showHostForm, setShowHostForm] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
-  // حالات النموذج الجديد
-  const [newMatch, setNewMatch] = useState({
-    court: 'Court 1',
-    date: 'Today',
-    time: '08:00 PM',
-    level: 'PRO'
-  });
+  const [newMatch, setNewMatch] = useState({ court: 'Court 1', date: '', time: '20:00', price: '100' });
 
-  const COURTS = ['Court 1', 'Court 2', 'Court 3', 'VIP Court'];
-  const LEVELS = ['ROOKIE', 'PRO', 'ELITE', 'HYPE'];
+  const COURTS = [
+    { name: 'Court 1', img: 'https://images.unsplash.com/photo-1592910710242-ca660173a09b?q=80&w=1000' },
+    { name: 'Court 2', img: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?q=80&w=1000' },
+    { name: 'VIP Court', img: 'https://images.unsplash.com/photo-1626225453016-8344555034a7?q=80&w=1000' }
+  ];
 
   useEffect(() => {
-    fetchOpenMatches();
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    fetchMatches();
   }, []);
 
-  const fetchOpenMatches = async () => {
+  const fetchMatches = async () => {
     setLoading(true);
-    // هنا مستقبلاً تسحب من جدول open_matches في Supabase
-    const { data, error } = await supabase.from('open_matches').select('*').order('created_at', { ascending: false });
-    if (!error && data) setOpenMatches(data);
+    const { data } = await supabase.from('open_matches').select('*').order('created_at', { ascending: false });
+    if (data) setMatches(data);
     setLoading(false);
   };
 
-  const handleCreateMatch = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return toast.error(lang === 'ar' ? "سجل دخولك أولاً" : "Please login first");
+  const handleCreate = async () => {
+    if (!user) return toast.error("Login first");
+    const selectedCourt = COURTS.find(c => c.name === newMatch.court);
+    
+    const { error } = await supabase.from('open_matches').insert([{
+      host_id: user.id,
+      host_name: user.user_metadata?.first_name || 'Hype Player',
+      court_name: newMatch.court,
+      match_date: newMatch.date || 'Today',
+      match_time: newMatch.time,
+      image_url: selectedCourt?.img,
+      price: newMatch.price
+    }]);
 
-    try {
-      const { error } = await supabase.from('open_matches').insert([{
-        host_id: user.id,
-        host_name: user.user_metadata?.first_name || 'Player',
-        court_name: newMatch.court,
-        match_date: newMatch.date,
-        match_time: newMatch.time,
-        level_required: newMatch.level,
-        players_joined: 1,
-        total_slots: 4
-      }]);
-
-      if (error) throw error;
-
-      toast.success(lang === 'ar' ? "تم فتح التحدي بنجاح! 🔥" : "Challenge created successfully! 🔥");
+    if (!error) {
+      toast.success(lang === 'ar' ? "تم إضافة ملعبك للمجتمع! 🎾" : "Match added to community! 🎾");
       setShowHostForm(false);
-      fetchOpenMatches();
-    } catch (e) {
-      toast.error("Error creating match");
+      fetchMatches();
     }
   };
+
+  const deleteMatch = async (id: string) => {
+    await supabase.from('open_matches').delete().eq('id', id);
+    fetchMatches();
+    toast.info("Deleted");
+  };
+
+  const filteredMatches = activeTab === 'open' 
+    ? matches.filter(m => m.host_id !== user?.id) 
+    : matches.filter(m => m.host_id === user?.id);
 
   return (
     <div className="min-h-screen bg-[#05081d] text-white pb-32" dir={dir}>
       <Header />
       
-      <main className="p-6 max-w-md mx-auto pt-24 space-y-6">
+      <main className="p-6 max-w-md mx-auto pt-24 space-y-10">
         
-        {/* هيدر الصفحة مع زر الإضافة */}
-        <div className="flex justify-between items-center px-2">
-          <div className={dir === 'rtl' ? 'text-right' : 'text-left'}>
-            <h1 className="text-3xl font-[1000] italic uppercase tracking-tighter">{t('community')}</h1>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('open_matches')}</p>
-          </div>
-          <button 
-            onClick={() => setShowHostForm(true)}
-            className="w-12 h-12 bg-cyan-500 text-[#0a0f3c] rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/20 active:scale-90 transition-all"
-          >
-            <Plus size={24} strokeWidth={3} />
-          </button>
-        </div>
-
-        {/* التابات */}
-        <div className="flex bg-[#0a0f3c]/60 p-1.5 rounded-3xl border border-white/10 shadow-2xl">
-          <button onClick={() => setActiveTab('open')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${activeTab === 'open' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400'}`}>
+        {/* التبويبات الفخمة */}
+        <div className="flex bg-[#0a0f3c]/60 p-1.5 rounded-[28px] border border-white/10 shadow-2xl">
+          <button onClick={() => setActiveTab('open')} className={`flex-1 py-4 rounded-[22px] font-black text-xs uppercase transition-all ${activeTab === 'open' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400'}`}>
             {t('open_matches')}
           </button>
-          <button onClick={() => setActiveTab('players')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${activeTab === 'players' ? 'bg-purple-500 text-white' : 'text-gray-400'}`}>
-            {t('players')}
+          <button onClick={() => setActiveTab('my')} className={`flex-1 py-4 rounded-[22px] font-black text-xs uppercase transition-all ${activeTab === 'my' ? 'bg-purple-500 text-white' : 'text-gray-400'}`}>
+            {t('my_matches')}
           </button>
         </div>
 
-        {/* قائمة المباريات المفتوحة */}
-        <div className="space-y-6">
+        {/* زر الإضافة الكبير */}
+        <button 
+          onClick={() => setShowHostForm(true)}
+          className="w-full py-5 bg-white/5 border border-dashed border-white/20 rounded-[35px] flex items-center justify-center gap-3 text-gray-400 font-black italic uppercase hover:border-cyan-500 transition-all"
+        >
+          <Plus size={20} /> {t('host_match')}
+        </button>
+
+        {/* قائمة المباريات - تصميم مطابق للرئيسية */}
+        <div className="grid gap-12">
           {loading ? (
-            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" /></div>
-          ) : openMatches.map(match => (
-            <div key={match.id} className="bg-[#0a0f3c] border border-white/10 rounded-[40px] p-6 relative overflow-hidden group shadow-xl">
-              <div className="relative z-10 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center text-cyan-400 border border-cyan-500/20"><MapPin size={20} /></div>
-                    <div className={dir === 'rtl' ? 'text-right' : 'text-left'}>
-                      <h3 className="font-black text-lg italic uppercase leading-none mb-1">{match.court_name}</h3>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase">{t('hosted_by')} {match.host_name}</p>
+            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
+          ) : filteredMatches.length > 0 ? filteredMatches.map(match => (
+            <div key={match.id} className="group relative bg-[#0a0f3c]/40 backdrop-blur-xl rounded-[50px] overflow-hidden border border-white/10 shadow-2xl transition-all hover:border-cyan-500/30">
+              
+              <div className="h-64 overflow-hidden relative">
+                <img src={match.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#05081d] via-transparent" />
+                
+                {/* شارة المستضيف */}
+                <div className={`absolute top-6 ${dir === 'rtl' ? 'left-6' : 'right-6'} flex flex-col gap-2`}>
+                   <span className="bg-cyan-500 text-[#0a0f3c] px-4 py-2 rounded-2xl text-[9px] font-[1000] uppercase shadow-lg border border-cyan-400">
+                     {t('hosted_by')}: {match.host_name}
+                   </span>
+                </div>
+
+                <div className={`absolute bottom-6 ${dir === 'rtl' ? 'right-8' : 'left-8'} flex gap-4`}>
+                    <div className="flex items-center gap-2 text-white/80 text-[10px] font-black bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl">
+                      <Calendar size={14} className="text-cyan-400" /> {match.match_date}
                     </div>
+                    <div className="flex items-center gap-2 text-white/80 text-[10px] font-black bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl">
+                      <Clock size={14} className="text-cyan-400" /> {match.match_time}
+                    </div>
+                </div>
+              </div>
+
+              <div className={`p-10 pt-6 relative ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-3xl font-[1000] italic uppercase tracking-tighter text-white">{match.court_name}</h3>
+                  <div className="bg-white/5 p-4 rounded-[24px] border border-white/10 text-center shadow-inner">
+                    <span className="block text-[8px] text-gray-500 font-black mb-1">SAR</span>
+                    <span className="text-xl font-black text-cyan-400 italic">{match.price}</span>
                   </div>
-                  <div className="bg-white/5 px-3 py-1 rounded-lg border border-white/10 text-[9px] font-black text-purple-400">{match.level_required}</div>
                 </div>
 
-                <div className={`flex gap-4 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
-                  <div className="flex items-center gap-2 text-gray-400 text-[10px] font-bold"><Calendar size={14} className="text-cyan-500" /> {match.match_date}</div>
-                  <div className="flex items-center gap-2 text-gray-400 text-[10px] font-bold"><Clock size={14} className="text-cyan-500" /> {match.match_time}</div>
-                </div>
-
-                <button className="w-full py-4 bg-white/5 hover:bg-cyan-500 hover:text-[#0a0f3c] border border-white/10 rounded-2xl font-black uppercase italic transition-all active:scale-95">
-                  {t('join_match')}
-                </button>
+                {activeTab === 'my' ? (
+                  <button onClick={() => deleteMatch(match.id)} className="w-full mt-8 py-5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-[28px] font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all">
+                    <Trash2 size={18} /> {lang === 'ar' ? 'حذف الإعلان' : 'Delete Match'}
+                  </button>
+                ) : (
+                  <button className="w-full mt-8 py-5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-[#0a0f3c] rounded-[28px] font-black text-xs uppercase shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-3 active:scale-95 transition-all">
+                    {t('join_match')} <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
+                  </button>
+                )}
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="text-center py-20 bg-white/5 rounded-[50px] border border-dashed border-white/10">
+               <Zap size={40} className="mx-auto mb-4 text-gray-600" />
+               <p className="font-black text-gray-500 uppercase italic">{t('no_matches')}</p>
+            </div>
+          )}
         </div>
       </main>
 
-      {/* نموذج استضافة مباراة (Overlay Form) */}
+      {/* نموذج الإضافة (مطابق لأسلوب الحجز) */}
       {showHostForm && (
         <div className="fixed inset-0 z-[200] flex flex-col justify-end">
           <div className="absolute inset-0 bg-[#05081d]/90 backdrop-blur-md" onClick={() => setShowHostForm(false)} />
-          <div className="relative bg-[#0a0f3c] border-t border-white/10 rounded-t-[45px] p-8 space-y-8 animate-in slide-in-from-bottom duration-500">
+          <div className="relative bg-[#0a0f3c] border-t border-white/10 rounded-t-[50px] p-10 space-y-8 animate-in slide-in-from-bottom duration-500">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-[1000] italic uppercase">{t('host_match')}</h2>
-              <button onClick={() => setShowHostForm(false)} className="p-2 bg-white/5 rounded-full text-gray-400"><X size={20} /></button>
+              <h2 className="text-3xl font-[1000] italic uppercase text-cyan-400">{t('host_match')}</h2>
+              <button onClick={() => setShowHostForm(false)} className="p-3 bg-white/5 rounded-full text-gray-400"><X size={24} /></button>
             </div>
 
-            <div className="space-y-6">
-              {/* اختيار الملعب */}
-              <div className="space-y-3">
+            <div className="space-y-8">
+              <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_court')}</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {COURTS.map(c => (
-                    <button key={c} onClick={() => setNewMatch({...newMatch, court: c})} className={`py-3 rounded-xl text-[10px] font-black border transition-all ${newMatch.court === c ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-400'}`}>
-                      {c}
+                    <button key={c.name} onClick={() => setNewMatch({...newMatch, court: c.name})} className={`py-4 rounded-[20px] text-xs font-black border transition-all ${newMatch.court === c.name ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                      {c.name}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* الوقت والتاريخ */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-3">
-                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_date')}</p>
-                   <input type="date" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-xs font-bold outline-none focus:border-cyan-500/50" onChange={(e) => setNewMatch({...newMatch, date: e.target.value})} />
-                </div>
-                <div className="space-y-3">
-                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_time')}</p>
-                   <input type="time" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-xs font-bold outline-none focus:border-cyan-500/50" onChange={(e) => setNewMatch({...newMatch, time: e.target.value})} />
-                </div>
+              <div className="grid grid-cols-2 gap-6">
+                 <div className="space-y-3">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_date')}</p>
+                    <input type="date" className="w-full bg-white/5 border border-white/10 p-4 rounded-[20px] text-xs font-black outline-none focus:border-cyan-500/50" onChange={(e) => setNewMatch({...newMatch, date: e.target.value})} />
+                 </div>
+                 <div className="space-y-3">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_time')}</p>
+                    <input type="time" className="w-full bg-white/5 border border-white/10 p-4 rounded-[20px] text-xs font-black outline-none focus:border-cyan-500/50" onChange={(e) => setNewMatch({...newMatch, time: e.target.value})} />
+                 </div>
               </div>
 
-              <button onClick={handleCreateMatch} className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[25px] font-[1000] italic uppercase shadow-xl shadow-cyan-500/20 active:scale-95 transition-all">
+              <button onClick={handleCreate} className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] italic uppercase shadow-xl shadow-cyan-500/30 active:scale-95 transition-all">
                 {t('create_match')}
               </button>
             </div>

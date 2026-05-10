@@ -43,8 +43,10 @@ interface Translations {
   spots_left: string;
   hosted_by: string;
   match_details: string;
+  my_matches: string; 
+  no_matches: string; 
   
-  // إنشاء مباراة جديدة (الكلمات المضافة حديثاً)
+  // إنشاء مباراة جديدة
   host_match: string;
   select_court: string;
   select_date: string;
@@ -69,7 +71,8 @@ const dictionary: Record<Language, Translations> = {
     app_name: 'هايب', profile: 'الملف الشخصي', payment: 'الدفع', notifications: 'الإشعارات', language: 'اللغة', logout: 'خروج', change_lang: 'English',
     welcome: 'أهلاً بك في هايب', book_now: 'احجز ملعبك الآن', featured_courts: 'الملاعب المميزة', view_all: 'عرض الكل',
     rank: 'التصنيف', matches: 'مباراة', level: 'المستوى', save_changes: 'حفظ التغييرات', phone: 'الجوال', email: 'الإيميل', gender: 'الجنس', birth_date: 'الميلاد', remaining_to_rank: 'للترقية', current_progress: 'تقدمك الحالي', max_level: 'أعلى رتبة',
-    community: 'المجتمع', players: 'اللاعبين', lobbies: 'لوحة التنسيق', challenge: 'تحدي', open_matches: 'مباريات مفتوحة', join_match: 'انضمام', spots_left: 'شاغر', hosted_by: 'بواسطة', match_details: 'التفاصيل',
+    community: 'المجتمع', players: 'اللاعبين', lobbies: 'لوحة التنسيق', challenge: 'تحدي', open_matches: 'مباريات مفتوحة', join_match: 'انضمام', spots_left: 'شاغر', hosted_by: 'بواسطة', match_details: 'التفاصيل', 
+    my_matches: 'مبارياتي', no_matches: 'لا توجد مباريات متاحة حالياً',
     host_match: 'استضافة مباراة', select_court: 'اختر الملعب', select_date: 'اختر التاريخ', select_time: 'اختر الوقت', create_match: 'إنشاء التحدي الآن', cancel: 'إلغاء',
     my_bookings: 'حجوزاتي', rewards: 'مكافآتي', tournaments: 'فعاليات', upcoming: 'القادمة', previous: 'السابقة', cancelled: 'الملغاة', points_balance: 'رصيد النقاط', redeem: 'استبدال', active_events: 'الفعاليات الحالية'
   },
@@ -77,7 +80,8 @@ const dictionary: Record<Language, Translations> = {
     app_name: 'HYPE', profile: 'Profile', payment: 'Payment', notifications: 'Alerts', language: 'Language', logout: 'Logout', change_lang: 'العربية',
     welcome: 'Welcome to Hype', book_now: 'Book Now', featured_courts: 'Featured Courts', view_all: 'View All',
     rank: 'Rank', matches: 'Matches', level: 'Level', save_changes: 'Save', phone: 'Phone', email: 'Email', gender: 'Gender', birth_date: 'Birth Date', remaining_to_rank: 'To Rank', current_progress: 'Progress', max_level: 'Max Level',
-    community: 'Community', players: 'Players', lobbies: 'Lobbies', challenge: 'Challenge', open_matches: 'Open Matches', join_match: 'Join', spots_left: 'Left', hosted_by: 'By', match_details: 'Details',
+    community: 'Community', players: 'Players', lobbies: 'Lobbies', challenge: 'Challenge', open_matches: 'Open Matches', join_match: 'Join', spots_left: 'Left', hosted_by: 'By', match_details: 'Details', 
+    my_matches: 'My Matches', no_matches: 'No matches available right now',
     host_match: 'Host a Match', select_court: 'Select Court', select_date: 'Select Date', select_time: 'Select Time', create_match: 'Create Challenge Now', cancel: 'Cancel',
     my_bookings: 'My Bookings', rewards: 'My Rewards', tournaments: 'Tournaments', upcoming: 'Upcoming', previous: 'Previous', cancelled: 'Cancelled', points_balance: 'Points Balance', redeem: 'Redeem', active_events: 'Active Events'
   }
