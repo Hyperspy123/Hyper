@@ -1,9 +1,27 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { MapPin, Clock, Calendar, Plus, X, Zap, Loader2, Star, ShieldCheck, ChevronRight, Trash2 } from 'lucide-react';
+import { MapPin, Clock, Calendar, Plus, X, Zap, Loader2, ChevronRight, Trash2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
+
+// توليد 7 أيام قادمة
+const getUpcomingDates = (lang: string) => {
+  const daysAr = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const daysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const days = lang === 'ar' ? daysAr : daysEn;
+  
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    let dayName = days[d.getDay()];
+    if (i === 0) dayName = lang === 'ar' ? 'اليوم' : 'Today';
+    if (i === 1) dayName = lang === 'ar' ? 'غداً' : 'Tomorrow';
+    return { value: d.toISOString().split('T')[0], dayName, dateNum: d.getDate() };
+  });
+};
+
+const TIMES = ['04:00 PM', '06:00 PM', '08:00 PM', '10:00 PM', '12:00 AM'];
 
 export default function Community() {
   const { t, dir, lang } = useLanguage();
@@ -13,12 +31,16 @@ export default function Community() {
   const [showHostForm, setShowHostForm] = useState(false);
   const [user, setUser] = useState<any>(null);
 
-  const [newMatch, setNewMatch] = useState({ court: 'Court 1', date: '', time: '20:00', price: '100' });
+  const DATES = getUpcomingDates(lang);
+  
+  const [selectedCourt, setSelectedCourt] = useState('Court 1');
+  const [selectedDate, setSelectedDate] = useState(DATES[0].value);
+  const [selectedTime, setSelectedTime] = useState(TIMES[2]);
 
   const COURTS = [
-    { name: 'Court 1', img: 'https://images.unsplash.com/photo-1592910710242-ca660173a09b?q=80&w=1000' },
-    { name: 'Court 2', img: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?q=80&w=1000' },
-    { name: 'VIP Court', img: 'https://images.unsplash.com/photo-1626225453016-8344555034a7?q=80&w=1000' }
+    { name: 'Court 1', img: 'https://images.unsplash.com/photo-1592910710242-ca660173a09b?q=80&w=1000', price: '100' },
+    { name: 'Court 2', img: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?q=80&w=1000', price: '120' },
+    { name: 'VIP Court', img: 'https://images.unsplash.com/photo-1626225453016-8344555034a7?q=80&w=1000', price: '200' }
   ];
 
   useEffect(() => {
@@ -34,21 +56,21 @@ export default function Community() {
   };
 
   const handleCreate = async () => {
-    if (!user) return toast.error("Login first");
-    const selectedCourt = COURTS.find(c => c.name === newMatch.court);
+    if (!user) return toast.error(lang === 'ar' ? "سجل دخولك أولاً" : "Login first");
+    const courtData = COURTS.find(c => c.name === selectedCourt);
     
     const { error } = await supabase.from('open_matches').insert([{
       host_id: user.id,
       host_name: user.user_metadata?.first_name || 'Hype Player',
-      court_name: newMatch.court,
-      match_date: newMatch.date || 'Today',
-      match_time: newMatch.time,
-      image_url: selectedCourt?.img,
-      price: newMatch.price
+      court_name: selectedCourt,
+      match_date: selectedDate,
+      match_time: selectedTime,
+      image_url: courtData?.img,
+      price: courtData?.price
     }]);
 
     if (!error) {
-      toast.success(lang === 'ar' ? "تم إضافة ملعبك للمجتمع! 🎾" : "Match added to community! 🎾");
+      toast.success(lang === 'ar' ? "تم إنشاء الحجز بنجاح! 🎾" : "Booking created! 🎾");
       setShowHostForm(false);
       fetchMatches();
     }
@@ -57,7 +79,7 @@ export default function Community() {
   const deleteMatch = async (id: string) => {
     await supabase.from('open_matches').delete().eq('id', id);
     fetchMatches();
-    toast.info("Deleted");
+    toast.info(lang === 'ar' ? "تم الحذف" : "Deleted");
   };
 
   const filteredMatches = activeTab === 'open' 
@@ -83,29 +105,25 @@ export default function Community() {
         {/* زر الإضافة الكبير */}
         <button 
           onClick={() => setShowHostForm(true)}
-          className="w-full py-5 bg-white/5 border border-dashed border-white/20 rounded-[35px] flex items-center justify-center gap-3 text-gray-400 font-black italic uppercase hover:border-cyan-500 transition-all"
+          className="w-full py-5 bg-white/5 border border-dashed border-white/20 rounded-[35px] flex items-center justify-center gap-3 text-cyan-400 font-black italic uppercase hover:border-cyan-500 transition-all shadow-lg"
         >
           <Plus size={20} /> {t('host_match')}
         </button>
 
-        {/* قائمة المباريات - تصميم مطابق للرئيسية */}
+        {/* قائمة الحجوزات المتاحة */}
         <div className="grid gap-12">
           {loading ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
           ) : filteredMatches.length > 0 ? filteredMatches.map(match => (
             <div key={match.id} className="group relative bg-[#0a0f3c]/40 backdrop-blur-xl rounded-[50px] overflow-hidden border border-white/10 shadow-2xl transition-all hover:border-cyan-500/30">
-              
               <div className="h-64 overflow-hidden relative">
                 <img src={match.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#05081d] via-transparent" />
-                
-                {/* شارة المستضيف */}
                 <div className={`absolute top-6 ${dir === 'rtl' ? 'left-6' : 'right-6'} flex flex-col gap-2`}>
                    <span className="bg-cyan-500 text-[#0a0f3c] px-4 py-2 rounded-2xl text-[9px] font-[1000] uppercase shadow-lg border border-cyan-400">
                      {t('hosted_by')}: {match.host_name}
                    </span>
                 </div>
-
                 <div className={`absolute bottom-6 ${dir === 'rtl' ? 'right-8' : 'left-8'} flex gap-4`}>
                     <div className="flex items-center gap-2 text-white/80 text-[10px] font-black bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl">
                       <Calendar size={14} className="text-cyan-400" /> {match.match_date}
@@ -115,7 +133,6 @@ export default function Community() {
                     </div>
                 </div>
               </div>
-
               <div className={`p-10 pt-6 relative ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
                 <div className="flex justify-between items-center">
                   <h3 className="text-3xl font-[1000] italic uppercase tracking-tighter text-white">{match.court_name}</h3>
@@ -124,10 +141,9 @@ export default function Community() {
                     <span className="text-xl font-black text-cyan-400 italic">{match.price}</span>
                   </div>
                 </div>
-
                 {activeTab === 'my' ? (
                   <button onClick={() => deleteMatch(match.id)} className="w-full mt-8 py-5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-[28px] font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all">
-                    <Trash2 size={18} /> {lang === 'ar' ? 'حذف الإعلان' : 'Delete Match'}
+                    <Trash2 size={18} /> {lang === 'ar' ? 'حذف الحجز' : 'Delete Booking'}
                   </button>
                 ) : (
                   <button className="w-full mt-8 py-5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-[#0a0f3c] rounded-[28px] font-black text-xs uppercase shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-3 active:scale-95 transition-all">
@@ -145,37 +161,52 @@ export default function Community() {
         </div>
       </main>
 
-      {/* نموذج الإضافة (مطابق لأسلوب الحجز) */}
+      {/* لوحة إنشاء حجز (بدون كتابة يدوية) */}
       {showHostForm && (
         <div className="fixed inset-0 z-[200] flex flex-col justify-end">
           <div className="absolute inset-0 bg-[#05081d]/90 backdrop-blur-md" onClick={() => setShowHostForm(false)} />
-          <div className="relative bg-[#0a0f3c] border-t border-white/10 rounded-t-[50px] p-10 space-y-8 animate-in slide-in-from-bottom duration-500">
+          <div className="relative bg-[#0a0f3c] border-t border-white/10 rounded-t-[50px] p-8 space-y-8 animate-in slide-in-from-bottom duration-500">
             <div className="flex justify-between items-center">
               <h2 className="text-3xl font-[1000] italic uppercase text-cyan-400">{t('host_match')}</h2>
               <button onClick={() => setShowHostForm(false)} className="p-3 bg-white/5 rounded-full text-gray-400"><X size={24} /></button>
             </div>
 
             <div className="space-y-8">
+              {/* 1. اختيار الملعب */}
               <div className="space-y-4">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_court')}</p>
+                <p className={`text-[10px] font-black text-gray-500 uppercase tracking-widest ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>{t('select_court')}</p>
                 <div className="grid grid-cols-2 gap-3">
                   {COURTS.map(c => (
-                    <button key={c.name} onClick={() => setNewMatch({...newMatch, court: c.name})} className={`py-4 rounded-[20px] text-xs font-black border transition-all ${newMatch.court === c.name ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                    <button key={c.name} onClick={() => setSelectedCourt(c.name)} className={`py-4 rounded-[20px] text-xs font-black border transition-all ${selectedCourt === c.name ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-400'}`}>
                       {c.name}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                 <div className="space-y-3">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_date')}</p>
-                    <input type="date" className="w-full bg-white/5 border border-white/10 p-4 rounded-[20px] text-xs font-black outline-none focus:border-cyan-500/50" onChange={(e) => setNewMatch({...newMatch, date: e.target.value})} />
-                 </div>
-                 <div className="space-y-3">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_time')}</p>
-                    <input type="time" className="w-full bg-white/5 border border-white/10 p-4 rounded-[20px] text-xs font-black outline-none focus:border-cyan-500/50" onChange={(e) => setNewMatch({...newMatch, time: e.target.value})} />
-                 </div>
+              {/* 2. اختيار اليوم (أزرار بدال الكتابة) */}
+              <div className="space-y-4">
+                <p className={`text-[10px] font-black text-gray-500 uppercase tracking-widest ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>{t('select_date')}</p>
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {DATES.map(date => (
+                    <button key={date.value} onClick={() => setSelectedDate(date.value)} className={`flex-none w-[72px] py-4 rounded-2xl flex flex-col items-center gap-1 transition-all border ${selectedDate === date.value ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400' : 'bg-[#0a0f3c] text-gray-300 border-white/10'}`}>
+                      <span className="text-[10px] font-bold">{date.dayName}</span>
+                      <span className="text-lg font-black">{date.dateNum}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. اختيار الوقت (أزرار بدال الكتابة) */}
+              <div className="space-y-4">
+                <p className={`text-[10px] font-black text-gray-500 uppercase tracking-widest ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>{t('select_time')}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {TIMES.map(time => (
+                    <button key={time} onClick={() => setSelectedTime(time)} className={`py-3 rounded-xl text-[10px] font-black transition-all border ${selectedTime === time ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400' : 'bg-[#0a0f3c] text-gray-300 border-white/10'}`}>
+                      {time}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <button onClick={handleCreate} className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] italic uppercase shadow-xl shadow-cyan-500/30 active:scale-95 transition-all">
