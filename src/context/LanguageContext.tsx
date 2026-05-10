@@ -3,8 +3,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // 1. اللغات المدعومة
 export type Language = 'ar' | 'en';
 
-// 2. القالب الصارم للكلمات (شامل كل تحديثات المجتمع والرانكات)
+// 2. القالب الصارم للكلمات (شامل كل شيء من البداية لليوم)
 interface Translations {
+  // الأساسيات
   app_name: string;
   profile: string;
   payment: string;
@@ -12,100 +13,63 @@ interface Translations {
   language: string;
   logout: string;
   change_lang: string;
-  // كلمات الصفحة الرئيسية والمجتمع
+  
+  // الصفحة الرئيسية
   welcome: string;
   book_now: string;
   featured_courts: string;
-  community: string;
-  players: string;
-  lobbies: string;
-  challenge: string;
+  view_all: string;
+  
+  // الملف الشخصي
   rank: string;
   matches: string;
   level: string;
-  view_all: string;
   save_changes: string;
   phone: string;
   email: string;
   gender: string;
   birth_date: string;
-  // الكلمات الجديدة للمباريات المفتوحة وشريط التقدم
+  remaining_to_rank: string;
+  current_progress: string;
+  max_level: string;
+  
+  // المجتمع والتحديات
+  community: string;
+  players: string;
+  lobbies: string;
+  challenge: string;
   open_matches: string;
   join_match: string;
   spots_left: string;
   hosted_by: string;
-  remaining_to_rank: string;
-  current_progress: string;
-  max_level: string;
   match_details: string;
+  
+  // الحجوزات، المكافآت، الفعاليات
+  my_bookings: string;
+  rewards: string;
+  tournaments: string;
+  upcoming: string;
+  previous: string;
+  cancelled: string;
+  points_balance: string;
+  redeem: string;
+  active_events: string;
 }
 
 const dictionary: Record<Language, Translations> = {
   ar: {
-    app_name: 'هايب',
-    profile: 'الملف الشخصي',
-    payment: 'معلومات الدفع',
-    notifications: 'الإشعارات',
-    language: 'اللغة',
-    logout: 'تسجيل الخروج',
-    change_lang: 'English',
-    welcome: 'أهلاً بك في هايب',
-    book_now: 'احجز ملعبك الآن',
-    featured_courts: 'الملاعب المميزة',
-    community: 'المجتمع',
-    players: 'اللاعبين',
-    lobbies: 'لوحة التنسيق',
-    challenge: 'تحدى',
-    rank: 'التصنيف',
-    matches: 'المباريات',
-    level: 'مستوى اللعب',
-    view_all: 'عرض الكل',
-    save_changes: 'حفظ التغييرات',
-    phone: 'رقم الجوال',
-    email: 'البريد الإلكتروني',
-    gender: 'الجنس',
-    birth_date: 'تاريخ الميلاد',
-    open_matches: 'مباريات مفتوحة',
-    join_match: 'انضمام للمباراة',
-    spots_left: 'أماكن شاغرة',
-    hosted_by: 'بواسطة',
-    remaining_to_rank: 'متبقي للرتبة التالية',
-    current_progress: 'تقدمك الحالي',
-    max_level: 'أعلى رتبة',
-    match_details: 'تفاصيل المباراة'
+    app_name: 'هايب', profile: 'الملف الشخصي', payment: 'الدفع', notifications: 'الإشعارات', language: 'اللغة', logout: 'خروج', change_lang: 'English',
+    welcome: 'أهلاً بك في هايب', book_now: 'احجز ملعبك الآن', featured_courts: 'الملاعب المميزة', view_all: 'عرض الكل',
+    rank: 'التصنيف', matches: 'مباراة', level: 'المستوى', save_changes: 'حفظ التغييرات', phone: 'الجوال', email: 'الإيميل', gender: 'الجنس', birth_date: 'الميلاد', remaining_to_rank: 'للترقية', current_progress: 'تقدمك الحالي', max_level: 'أعلى رتبة',
+    community: 'المجتمع', players: 'اللاعبين', lobbies: 'لوحة التنسيق', challenge: 'تحدي', open_matches: 'مباريات مفتوحة', join_match: 'انضمام', spots_left: 'شاغر', hosted_by: 'بواسطة', match_details: 'التفاصيل',
+    my_bookings: 'حجوزاتي', rewards: 'مكافآتي', tournaments: 'فعاليات', upcoming: 'القادمة', previous: 'السابقة', cancelled: 'الملغاة', points_balance: 'رصيد النقاط', redeem: 'استبدال', active_events: 'الفعاليات الحالية'
   },
   en: {
-    app_name: 'HYPE',
-    profile: 'My Profile',
-    payment: 'Payment Info',
-    notifications: 'Notifications',
-    language: 'Language',
-    logout: 'Log Out',
-    change_lang: 'العربية',
-    welcome: 'Welcome to Hype',
-    book_now: 'Book Your Court Now',
-    featured_courts: 'Featured Courts',
-    community: 'Community',
-    players: 'Players',
-    lobbies: 'Lobbies',
-    challenge: 'Challenge',
-    rank: 'Rank',
-    matches: 'Matches',
-    level: 'Play Level',
-    view_all: 'View All',
-    save_changes: 'Save Changes',
-    phone: 'Phone Number',
-    email: 'Email Address',
-    gender: 'Gender',
-    birth_date: 'Birth Date',
-    open_matches: 'Open Matches',
-    join_match: 'Join Match',
-    spots_left: 'Spots left',
-    hosted_by: 'Hosted by',
-    remaining_to_rank: 'To next rank',
-    current_progress: 'Current Progress',
-    max_level: 'Max Level',
-    match_details: 'Match Details'
+    app_name: 'HYPE', profile: 'Profile', payment: 'Payment', notifications: 'Alerts', language: 'Language', logout: 'Logout', change_lang: 'العربية',
+    welcome: 'Welcome to Hype', book_now: 'Book Now', featured_courts: 'Featured Courts', view_all: 'View All',
+    rank: 'Rank', matches: 'Matches', level: 'Level', save_changes: 'Save', phone: 'Phone', email: 'Email', gender: 'Gender', birth_date: 'Birth Date', remaining_to_rank: 'To Rank', current_progress: 'Progress', max_level: 'Max Level',
+    community: 'Community', players: 'Players', lobbies: 'Lobbies', challenge: 'Challenge', open_matches: 'Open Matches', join_match: 'Join', spots_left: 'Left', hosted_by: 'By', match_details: 'Details',
+    my_bookings: 'My Bookings', rewards: 'My Rewards', tournaments: 'Tournaments', upcoming: 'Upcoming', previous: 'Previous', cancelled: 'Cancelled', points_balance: 'Points Balance', redeem: 'Redeem', active_events: 'Active Events'
   }
 };
 
@@ -134,7 +98,6 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
 
   const toggleLang = () => setLang(prev => (prev === 'ar' ? 'en' : 'ar'));
   
-  // دالة الترجمة الآمنة
   const t = (key: keyof Translations): string => {
     return dictionary[lang][key] || key;
   };
