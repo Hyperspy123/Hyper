@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // 1. اللغات المدعومة
 export type Language = 'ar' | 'en';
 
-// 2. القالب الصارم للكلمات (أضفت لك كل كلمات التطبيق المتوقعة)
+// 2. القالب الصارم للكلمات (شامل كل تحديثات المجتمع والرانكات)
 interface Translations {
   app_name: string;
   profile: string;
@@ -29,6 +29,15 @@ interface Translations {
   email: string;
   gender: string;
   birth_date: string;
+  // الكلمات الجديدة للمباريات المفتوحة وشريط التقدم
+  open_matches: string;
+  join_match: string;
+  spots_left: string;
+  hosted_by: string;
+  remaining_to_rank: string;
+  current_progress: string;
+  max_level: string;
+  match_details: string;
 }
 
 const dictionary: Record<Language, Translations> = {
@@ -56,6 +65,14 @@ const dictionary: Record<Language, Translations> = {
     email: 'البريد الإلكتروني',
     gender: 'الجنس',
     birth_date: 'تاريخ الميلاد',
+    open_matches: 'مباريات مفتوحة',
+    join_match: 'انضمام للمباراة',
+    spots_left: 'أماكن شاغرة',
+    hosted_by: 'بواسطة',
+    remaining_to_rank: 'متبقي للرتبة التالية',
+    current_progress: 'تقدمك الحالي',
+    max_level: 'أعلى رتبة',
+    match_details: 'تفاصيل المباراة'
   },
   en: {
     app_name: 'HYPE',
@@ -81,6 +98,14 @@ const dictionary: Record<Language, Translations> = {
     email: 'Email Address',
     gender: 'Gender',
     birth_date: 'Birth Date',
+    open_matches: 'Open Matches',
+    join_match: 'Join Match',
+    spots_left: 'Spots left',
+    hosted_by: 'Hosted by',
+    remaining_to_rank: 'To next rank',
+    current_progress: 'Current Progress',
+    max_level: 'Max Level',
+    match_details: 'Match Details'
   }
 };
 
