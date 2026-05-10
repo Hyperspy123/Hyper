@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { supabase } from '../LLL'; 
 import { toast } from 'sonner';
-import { Trophy, Calendar, Users, Medal, ChevronLeft, Clock, Zap, CheckCircle2, Loader2 } from 'lucide-react';
+import { Trophy, Calendar, ChevronLeft, Clock, Zap, CheckCircle2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext'; // 🔥 استيراد المترجم
 
 export default function Tournaments() {
+  const { t, dir, lang } = useLanguage(); // 🔥 جلب أدوات اللغة
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // قراءة الفعاليات المسجلة من ذاكرة الجهاز (localStorage) لضمان بقاء حالة الزر حتى بعد التحديث
   const [joinedEvents, setJoinedEvents] = useState<string[]>(() => {
     const saved = localStorage.getItem('hype_joined_events');
     return saved ? JSON.parse(saved) : [];
@@ -20,7 +21,6 @@ export default function Tournaments() {
   useEffect(() => {
     fetchEvents();
 
-    // نظام التحديث اللحظي (Real-time) للعداد
     const channel = supabase
       .channel('tournaments-realtime')
       .on(
@@ -39,7 +39,6 @@ export default function Tournaments() {
     };
   }, []);
 
-  // حفظ التغييرات في ذاكرة الجهاز
   useEffect(() => {
     localStorage.setItem('hype_joined_events', JSON.stringify(joinedEvents));
   }, [joinedEvents]);
@@ -52,7 +51,7 @@ export default function Tournaments() {
       .order('created_at', { ascending: true });
     
     if (error) {
-      toast.error("فشل في جلب الفعاليات");
+      toast.error(lang === 'ar' ? "فشل في جلب الفعاليات" : "Failed to fetch tournaments");
     } else {
       setEvents(data || []);
     }
@@ -63,15 +62,13 @@ export default function Tournaments() {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      toast.error("سجل دخولك أولاً يا وحش! 🎾");
+      toast.error(lang === 'ar' ? "سجل دخولك أولاً يا وحش! 🎾" : "Login first! 🎾");
       return;
     }
 
-    // التأكد إنه مو مسجل أصلاً والعدد مو كامل
     if (joinedEvents.includes(tournamentId) || current >= max) return;
 
     try {
-      // 1. تسجيل بيانات المستخدم في جدول المشاركين (عشان تظهر لك في Supabase)
       const { error: participantError } = await supabase
         .from('tournament_participants')
         .insert([
@@ -79,15 +76,13 @@ export default function Tournaments() {
         ]);
 
       if (participantError) {
-        // إذا كان الشخص مسجل مسبقاً في قاعدة البيانات
         if (participantError.code === '23505') {
           setJoinedEvents(prev => [...prev, tournamentId]);
-          return toast.error("أنت مسجل بالفعل في هذه البطولة!");
+          return toast.error(lang === 'ar' ? "أنت مسجل بالفعل في هذه البطولة!" : "You are already registered!");
         }
         throw participantError;
       }
 
-      // 2. تحديث عداد الفعالية في جدول البطولات
       const { error: updateError } = await supabase
         .from('tournaments')
         .update({ current_participants: current + 1 })
@@ -95,13 +90,12 @@ export default function Tournaments() {
 
       if (updateError) throw updateError;
 
-      // 3. تحديث الحالة المحلية
       setJoinedEvents(prev => [...prev, tournamentId]);
-      toast.success("كفو! تم تسجيلك وحفظ بياناتك في السيرفر 🔥");
+      toast.success(lang === 'ar' ? "كفو! تم تسجيلك وحفظ بياناتك في السيرفر 🔥" : "Awesome! You are successfully registered 🔥");
 
     } catch (error) {
       console.error(error);
-      toast.error("حدث خطأ أثناء التسجيل");
+      toast.error(lang === 'ar' ? "حدث خطأ أثناء التسجيل" : "Registration failed");
     }
   };
 
@@ -114,19 +108,21 @@ export default function Tournaments() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent pb-32 text-white font-sans relative" dir="rtl">
+    <div className="min-h-screen bg-transparent pb-32 text-white font-sans relative" dir={dir}>
       <Header />
       
-      <main className="p-6 max-w-md mx-auto space-y-8 relative z-10 pt-24 text-right">
+      <main className="p-6 max-w-md mx-auto space-y-8 relative z-10 pt-24">
         
         <div className="flex items-center justify-between mb-6">
-          <div className="text-right">
-            <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none text-white">الفعاليات</h1>
+          <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
+            <ChevronLeft size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
+          </button>
+          <div className={dir === 'ltr' ? 'text-right' : 'text-left'}>
+            <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none text-white">
+              {t('tournaments')}
+            </h1>
             <p className="text-[10px] font-black text-cyan-400 mt-1 uppercase tracking-widest opacity-60 italic">HYPE EVENTS HUB</p>
           </div>
-          <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all">
-            <ChevronLeft size={20} className="rotate-180" />
-          </button>
         </div>
 
         <div className="grid gap-10">
@@ -140,26 +136,30 @@ export default function Tournaments() {
                 <div className="relative h-64 overflow-hidden">
                   <img src={event.image_url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f3c] via-transparent" />
-                  <div className="absolute top-6 left-6 bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg">
+                  <div className={`absolute top-6 ${dir === 'ltr' ? 'right-6' : 'left-6'} bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg`}>
                     {event.court_name}
                   </div>
                 </div>
 
                 <div className="p-8 space-y-6">
-                  <div className="flex justify-between items-start text-right">
+                  <div className={`flex justify-between items-start ${dir === 'ltr' ? 'flex-row-reverse text-left' : 'text-right'}`}>
                     <div className="p-2.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-yellow-500 shadow-lg">
                       <Trophy size={20} />
                     </div>
                     <h3 className="text-2xl font-[1000] italic uppercase text-white tracking-tighter leading-none">{event.name}</h3>
                   </div>
 
-                  <p className="text-sm text-gray-400 font-bold leading-relaxed opacity-80 text-right">{event.description}</p>
+                  <p className={`text-sm text-gray-400 font-bold leading-relaxed opacity-80 ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>
+                    {event.description}
+                  </p>
 
                   <div className="space-y-3">
                     <div className="flex justify-between items-end">
-                      <span className="text-[10px] font-black text-gray-500 uppercase italic">اكتمال العدد</span>
+                      <span className="text-[10px] font-black text-gray-500 uppercase italic">
+                        {lang === 'ar' ? 'اكتمال العدد' : 'COMPLETION'}
+                      </span>
                       <span className={`text-sm font-black italic ${isFull ? 'text-red-500' : 'text-cyan-400'}`}>
-                        {event.current_participants} / {event.max_participants} بطل
+                        {event.current_participants} / {event.max_participants} {lang === 'ar' ? 'بطل' : 'Player'}
                       </span>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -170,9 +170,13 @@ export default function Tournaments() {
                     </div>
                   </div>
 
-                  <div className="flex gap-4 justify-end text-[10px] font-black text-gray-400 border-t border-white/5 pt-5">
-                    <div className="flex items-center gap-1.5">{event.start_time} <Clock size={14} className="text-cyan-500" /></div>
-                    <div className="flex items-center gap-1.5">{event.start_date} <Calendar size={14} className="text-cyan-500" /></div>
+                  <div className={`flex gap-4 justify-end text-[10px] font-black text-gray-400 border-t border-white/5 pt-5 ${dir === 'ltr' ? 'flex-row-reverse' : ''}`}>
+                    <div className="flex items-center gap-1.5">
+                      {event.start_time} <Clock size={14} className="text-cyan-500" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {event.start_date} <Calendar size={14} className="text-cyan-500" />
+                    </div>
                   </div>
 
                   <button
@@ -187,11 +191,15 @@ export default function Tournaments() {
                     }`}
                   >
                     {isUserRegistered ? (
-                      <>أنت مسجل في هذه الفعالية <CheckCircle2 size={18} /></>
+                      <>
+                        {lang === 'ar' ? 'أنت مسجل في هذه الفعالية' : 'Registered successfully'} <CheckCircle2 size={18} />
+                      </>
                     ) : isFull ? (
-                      'نعتذر، اكتملت المقاعد 🛑'
+                      lang === 'ar' ? 'نعتذر، اكتملت المقاعد 🛑' : 'Sorry, Seats Full 🛑'
                     ) : (
-                      <>انضم الآن <Zap size={18} fill="currentColor" /></>
+                      <>
+                        {lang === 'ar' ? 'انضم الآن' : 'JOIN NOW'} <Zap size={18} fill="currentColor" />
+                      </>
                     )}
                   </button>
                 </div>
