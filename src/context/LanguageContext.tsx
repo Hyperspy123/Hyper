@@ -15,6 +15,10 @@ interface Translations {
   host_match: string; select_court: string; select_date: string; select_time: string; create_match: string; cancel: string;
   my_bookings: string; rewards: string; tournaments: string; upcoming: string; previous: string; cancelled: string;
   points_balance: string; redeem: string; active_events: string;
+  // 🔥 الكلمات الجديدة اللي تمت إضافتها للمجتمع
+  how_many_missing: string;
+  players_count_label: string;
+  login_first: string;
 }
 
 const dictionary: Record<Language, Translations> = {
@@ -25,7 +29,8 @@ const dictionary: Record<Language, Translations> = {
     community: 'المجتمع', players: 'اللاعبين', lobbies: 'لوحة التنسيق', challenge: 'تحدي', open_matches: 'مباريات مفتوحة', join_match: 'انضمام', spots_left: 'شاغر', hosted_by: 'بواسطة', match_details: 'التفاصيل', 
     my_matches: 'مبارياتي', no_matches: 'لا توجد مباريات متاحة حالياً',
     host_match: 'إنشاء حجز', select_court: 'اختر الملعب', select_date: 'اختر التاريخ', select_time: 'اختر الوقت', create_match: 'تأكيد الحجز', cancel: 'إلغاء',
-    my_bookings: 'حجوزاتي', rewards: 'مكافآتي', tournaments: 'فعاليات', upcoming: 'القادمة', previous: 'السابقة', cancelled: 'الملغاة', points_balance: 'رصيد النقاط', redeem: 'استبدال', active_events: 'الفعاليات الحالية'
+    my_bookings: 'حجوزاتي', rewards: 'مكافآتي', tournaments: 'فعاليات', upcoming: 'القادمة', previous: 'السابقة', cancelled: 'الملغاة', points_balance: 'رصيد النقاط', redeem: 'استبدال', active_events: 'الفعاليات الحالية',
+    how_many_missing: 'كم ناقصك لاعب؟', players_count_label: 'لاعبين', login_first: 'سجل دخولك أولاً'
   },
   en: {
     app_name: 'HYPE', profile: 'Profile', payment: 'Payment', notifications: 'Alerts', language: 'Language', logout: 'Logout', change_lang: 'العربية',
@@ -34,22 +39,41 @@ const dictionary: Record<Language, Translations> = {
     community: 'Community', players: 'Players', lobbies: 'Lobbies', challenge: 'Challenge', open_matches: 'Open Matches', join_match: 'Join', spots_left: 'Left', hosted_by: 'By', match_details: 'Details', 
     my_matches: 'My Matches', no_matches: 'No matches available right now',
     host_match: 'Create Booking', select_court: 'Select Court', select_date: 'Select Date', select_time: 'Select Time', create_match: 'Confirm Booking', cancel: 'Cancel',
-    my_bookings: 'My Bookings', rewards: 'My Rewards', tournaments: 'Tournaments', upcoming: 'Upcoming', previous: 'Previous', cancelled: 'Cancelled', points_balance: 'Points Balance', redeem: 'Redeem', active_events: 'Active Events'
+    my_bookings: 'My Bookings', rewards: 'My Rewards', tournaments: 'Tournaments', upcoming: 'Upcoming', previous: 'Previous', cancelled: 'Cancelled', points_balance: 'Points Balance', redeem: 'Redeem', active_events: 'Active Events',
+    how_many_missing: 'How many players missing?', players_count_label: 'Players', login_first: 'Please login first'
   }
 };
 
-const LanguageContext = createContext<any>(undefined);
+interface LanguageContextType {
+  lang: Language;
+  toggleLang: () => void;
+  t: (key: keyof Translations) => string;
+  dir: 'rtl' | 'ltr';
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('hype_lang') as Language) || 'ar');
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  
   useEffect(() => {
     localStorage.setItem('hype_lang', lang);
     document.documentElement.dir = dir;
   }, [lang, dir]);
+  
   const toggleLang = () => setLang(prev => (prev === 'ar' ? 'en' : 'ar'));
   const t = (key: keyof Translations): string => dictionary[lang][key] || key;
-  return <LanguageContext.Provider value={{ lang, toggleLang, t, dir }}>{children}</LanguageContext.Provider>;
+  
+  return (
+    <LanguageContext.Provider value={{ lang, toggleLang, t, dir }}>
+      {children}
+    </LanguageContext.Provider>
+  );
 };
 
-export const useLanguage = () => useContext(LanguageContext);
+export const useLanguage = () => {
+  const context = useContext(LanguageContext);
+  if (!context) throw new Error('useLanguage error');
+  return context;
+};
