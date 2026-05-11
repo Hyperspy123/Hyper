@@ -50,7 +50,7 @@ export default function Community() {
 
   const fetchCourts = async () => {
     const { data } = await supabase.from('courts').select('*');
-    if (data) {
+    if (data && data.length > 0) {
       setCourts(data);
       setSelectedCourt(data[0]);
     }
@@ -58,27 +58,45 @@ export default function Community() {
 
   const fetchMatches = async () => {
     setLoading(true);
-    const { data } = await supabase.from('open_matches').select('*').order('created_at', { ascending: false });
-    if (data) setMatches(data);
+    const { data, error } = await supabase.from('open_matches').select('*').order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error("Error fetching matches:", error);
+    } else if (data) {
+      setMatches(data);
+    }
     setLoading(false);
   };
 
+  // 🔥 هنا تم تعديل الدالة لإظهار الأخطاء بصورة واضحة
   const handleCreate = async () => {
     if (!user) return toast.error(t('login_first'));
-    const { error } = await supabase.from('open_matches').insert([{
-      host_id: user.id,
-      host_name: user.user_metadata?.first_name || 'Hype Player',
-      court_name: selectedCourt.name,
-      match_date: selectedDate,
-      match_time: selectedTime,
-      image_url: selectedCourt.image_url,
-      price: selectedCourt.price || '150',
-      needed_players: neededPlayers,
-      joined_count: 0
-    }]);
-    if (!error) {
-      toast.success(lang === 'ar' ? "تم نشر حجزك! 🔥" : "Booking published! 🔥");
-      setShowHostForm(false);
+    if (!selectedCourt) return toast.error(lang === 'ar' ? "الرجاء اختيار ملعب" : "Please select a court");
+
+    try {
+      const { error } = await supabase.from('open_matches').insert([{
+        host_id: user.id,
+        host_name: user.user_metadata?.first_name || 'Hype Player',
+        court_name: selectedCourt.name,
+        match_date: selectedDate,
+        match_time: selectedTime,
+        image_url: selectedCourt.image_url,
+        price: selectedCourt.price || '150',
+        needed_players: neededPlayers,
+        joined_count: 0
+      }]);
+
+      if (error) {
+        console.error("Supabase Insert Error:", error);
+        toast.error(`Error: ${error.message}`);
+      } else {
+        toast.success(lang === 'ar' ? "تم نشر حجزك! 🔥" : "Booking published! 🔥");
+        setShowHostForm(false);
+        fetchMatches(); // لتحديث القائمة فوراً
+      }
+    } catch (err: any) {
+      console.error("Unexpected Error:", err);
+      toast.error(`Unexpected Error: ${err.message}`);
     }
   };
 
@@ -90,13 +108,20 @@ export default function Community() {
       .update({ joined_count: match.joined_count + 1 })
       .eq('id', match.id);
 
-    if (!error) toast.success(t('already_joined'));
+    if (error) {
+      console.error("Join Error:", error);
+      toast.error("Failed to join");
+    } else {
+      toast.success(t('already_joined'));
+      fetchMatches();
+    }
   };
 
-  // 🔥 هذي هي الدالة اللي كانت ناقصة وسببت الخطأ الأحمر
   const deleteMatch = async (id: string) => {
     const { error } = await supabase.from('open_matches').delete().eq('id', id);
-    if (!error) {
+    if (error) {
+      console.error("Delete Error:", error);
+    } else {
       fetchMatches();
       toast.info(lang === 'ar' ? "تم الإلغاء" : "Cancelled");
     }
