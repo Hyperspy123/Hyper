@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { MapPin, Clock, Calendar, Plus, X, Zap, Loader2, ChevronRight, Trash2, UserPlus } from 'lucide-react';
+import { MapPin, Clock, Calendar, Plus, X, Zap, Loader2, ChevronRight, Trash2, Users, UserPlus, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
 
@@ -26,27 +26,35 @@ export default function Community() {
   const [activeTab, setActiveTab] = useState<'open' | 'my'>('open');
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<any[]>([]);
+  const [courts, setCourts] = useState<any[]>([]);
   const [showHostForm, setShowHostForm] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   const DATES = getUpcomingDates(lang);
   
-  // بيانات الملاعب مترجمة
-  const COURTS = [
-    { id: 'c1', name: lang === 'ar' ? 'ملعب ١' : 'Court 1', img: 'https://images.unsplash.com/photo-1592910710242-ca660173a09b?q=80&w=1000', price: '100' },
-    { id: 'c2', name: lang === 'ar' ? 'ملعب ٢' : 'Court 2', img: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?q=80&w=1000', price: '120' },
-    { id: 'c3', name: lang === 'ar' ? 'ملعب VIP' : 'VIP Court', img: 'https://images.unsplash.com/photo-1626225453016-8344555034a7?q=80&w=1000', price: '200' }
-  ];
-
-  const [selectedCourt, setSelectedCourt] = useState(COURTS[0].name);
+  const [selectedCourt, setSelectedCourt] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(DATES[0].value);
   const [selectedTime, setSelectedTime] = useState(TIMES[2]);
   const [neededPlayers, setNeededPlayers] = useState(1);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    fetchCourts();
     fetchMatches();
+
+    const channel = supabase.channel('community_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'open_matches' }, () => fetchMatches())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
+
+  const fetchCourts = async () => {
+    const { data } = await supabase.from('courts').select('*');
+    if (data) {
+      setCourts(data);
+      setSelectedCourt(data[0]);
+    }
+  };
 
   const fetchMatches = async () => {
     setLoading(true);
@@ -57,28 +65,41 @@ export default function Community() {
 
   const handleCreate = async () => {
     if (!user) return toast.error(t('login_first'));
-    const courtData = COURTS.find(c => c.name === selectedCourt);
     const { error } = await supabase.from('open_matches').insert([{
       host_id: user.id,
       host_name: user.user_metadata?.first_name || 'Hype Player',
-      court_name: selectedCourt,
+      court_name: selectedCourt.name,
       match_date: selectedDate,
       match_time: selectedTime,
-      image_url: courtData?.img,
-      price: courtData?.price,
-      needed_players: neededPlayers
+      image_url: selectedCourt.image_url,
+      price: selectedCourt.price || '150',
+      needed_players: neededPlayers,
+      joined_count: 0
     }]);
     if (!error) {
-      toast.success(lang === 'ar' ? "تم نشر الحجز! 🔥" : "Booking published! 🔥");
+      toast.success(lang === 'ar' ? "تم نشر حجزك! 🔥" : "Booking published! 🔥");
       setShowHostForm(false);
-      fetchMatches();
     }
   };
 
+  const handleJoin = async (match: any) => {
+    if (!user) return toast.error(t('login_first'));
+    if (match.joined_count >= match.needed_players) return toast.error(t('match_full'));
+    
+    const { error } = await supabase.from('open_matches')
+      .update({ joined_count: match.joined_count + 1 })
+      .eq('id', match.id);
+
+    if (!error) toast.success(t('already_joined'));
+  };
+
+  // 🔥 هذي هي الدالة اللي كانت ناقصة وسببت الخطأ الأحمر
   const deleteMatch = async (id: string) => {
-    await supabase.from('open_matches').delete().eq('id', id);
-    fetchMatches();
-    toast.info(lang === 'ar' ? "تم الحذف" : "Deleted");
+    const { error } = await supabase.from('open_matches').delete().eq('id', id);
+    if (!error) {
+      fetchMatches();
+      toast.info(lang === 'ar' ? "تم الإلغاء" : "Cancelled");
+    }
   };
 
   const filteredMatches = activeTab === 'open' 
@@ -99,55 +120,67 @@ export default function Community() {
         {/* زر الإضافة */}
         <button onClick={() => setShowHostForm(true)} className="w-full py-5 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-dashed border-cyan-500/30 rounded-[35px] flex items-center justify-center gap-3 text-cyan-400 font-black italic uppercase transition-all shadow-lg active:scale-95"><Plus size={20} /> {t('host_match')}</button>
 
-        {/* قائمة الكروت الفخمة */}
+        {/* عرض الملاعب المفتوحة */}
         <div className="grid gap-12">
           {loading ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
-          ) : filteredMatches.length > 0 ? filteredMatches.map(match => (
-            <div key={match.id} className="relative group bg-[#0a0f3c]/40 backdrop-blur-xl rounded-[50px] overflow-hidden border border-white/10 shadow-2xl transition-all hover:border-cyan-500/40">
-              <div className="h-64 overflow-hidden relative">
-                <img src={match.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#05081d] via-transparent" />
-                <div className={`absolute top-6 ${dir === 'rtl' ? 'left-6' : 'right-6'}`}>
-                   <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2">
-                     <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
-                     <span className="text-[10px] font-black text-white uppercase">{match.host_name}</span>
-                   </div>
-                </div>
-                <div className={`absolute top-6 ${dir === 'rtl' ? 'right-6' : 'left-6'}`}>
-                    <div className="bg-cyan-500 text-[#0a0f3c] px-4 py-2 rounded-2xl text-[9px] font-[1000] uppercase shadow-xl flex items-center gap-2">
-                        <UserPlus size={14} /> {lang === 'ar' ? `ناقص ${match.needed_players}` : `${match.needed_players} Missing`}
+          ) : filteredMatches.length > 0 ? filteredMatches.map(match => {
+            const isFull = match.joined_count >= match.needed_players;
+            return (
+              <div key={match.id} className="relative group bg-[#0a0f3c]/40 backdrop-blur-xl rounded-[50px] overflow-hidden border border-white/10 shadow-2xl transition-all hover:border-cyan-500/40">
+                <div className="h-64 overflow-hidden relative">
+                  <img src={match.image_url} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#05081d] via-transparent" />
+                  
+                  <div className={`absolute top-6 ${dir === 'rtl' ? 'left-6' : 'right-6'}`}>
+                    <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2">
+                      <span className="text-[10px] font-black text-white uppercase">{match.host_name}</span>
                     </div>
-                </div>
-                <div className={`absolute bottom-6 ${dir === 'rtl' ? 'right-8' : 'left-8'} flex gap-3`}>
-                    <div className="flex items-center gap-2 text-white text-[10px] font-black bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/10"><Calendar size={14} className="text-cyan-400" /> {match.match_date}</div>
-                    <div className="flex items-center gap-2 text-white text-[10px] font-black bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/10"><Clock size={14} className="text-cyan-400" /> {match.match_time}</div>
-                </div>
-              </div>
-              <div className={`p-10 pt-6 relative z-10 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-3xl font-[1000] italic uppercase tracking-tighter text-white leading-none">{match.court_name}</h3>
-                  <div className="bg-white/5 p-4 rounded-[24px] border border-white/10 text-center shadow-inner">
-                    <span className="block text-[8px] text-gray-500 font-black mb-1">SAR</span>
-                    <span className="text-xl font-black text-cyan-400 italic">{match.price}</span>
+                  </div>
+
+                  <div className={`absolute top-6 ${dir === 'rtl' ? 'right-6' : 'left-6'}`}>
+                      <div className={`${isFull ? 'bg-red-500' : 'bg-cyan-500'} text-[#0a0f3c] px-4 py-2 rounded-2xl text-[9px] font-[1000] uppercase shadow-xl flex items-center gap-2`}>
+                          <UserPlus size={14} /> 
+                          {isFull ? t('slots_full') : lang === 'ar' ? `متبقي ${match.needed_players - match.joined_count}` : `${match.needed_players - match.joined_count} Slots Left`}
+                      </div>
                   </div>
                 </div>
-                {activeTab === 'my' ? (
-                  <button onClick={() => deleteMatch(match.id)} className="w-full py-5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-[28px] font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"><Trash2 size={18} /> {lang === 'ar' ? 'حذف الإعلان' : 'Delete Match'}</button>
-                ) : (
-                  <button className="w-full py-5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-[#0a0f3c] rounded-[28px] font-black text-xs uppercase shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                    {t('join_match')} <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
-                  </button>
-                )}
+
+                <div className={`p-10 pt-6 relative z-10 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="text-3xl font-[1000] italic uppercase tracking-tighter text-white leading-none">{match.court_name}</h3>
+                      <div className="flex items-center gap-2 mt-2 text-gray-400 font-bold text-xs">
+                        <Calendar size={12} className="text-cyan-400" /> {match.match_date} 
+                        <Clock size={12} className="text-cyan-400 ml-2" /> {match.match_time}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-[24px] border border-white/10 text-center">
+                      <span className="block text-[8px] text-gray-500 font-black mb-1">SAR</span>
+                      <span className="text-xl font-black text-cyan-400 italic">{match.price}</span>
+                    </div>
+                  </div>
+
+                  {activeTab === 'my' ? (
+                    <button onClick={() => deleteMatch(match.id)} className="w-full py-5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-[28px] font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"><Trash2 size={18} /> {lang === 'ar' ? 'إلغاء الإعلان' : 'Cancel Match'}</button>
+                  ) : (
+                    <button 
+                      onClick={() => handleJoin(match)}
+                      disabled={isFull}
+                      className={`w-full py-5 rounded-[28px] font-black text-xs uppercase shadow-xl flex items-center justify-center gap-3 transition-all active:scale-95 ${isFull ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-[#0a0f3c] hover:shadow-cyan-500/40'}`}
+                    >
+                      {isFull ? t('slots_full') : <>{t('join_match')} <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} /></>}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          )) : (
+            );
+          }) : (
             <div className="text-center py-20 bg-white/5 rounded-[50px] border border-dashed border-white/10"><Zap size={40} className="mx-auto mb-4 text-gray-700" /><p className="font-black text-gray-500 uppercase italic">{t('no_matches')}</p></div>
           )}
         </div>
       </main>
 
-      {/* لوحة إنشاء حجز المحدثة */}
       {showHostForm && (
         <div className="fixed inset-0 z-[200] flex flex-col justify-end">
           <div className="absolute inset-0 bg-[#05081d]/95 backdrop-blur-xl" onClick={() => setShowHostForm(false)} />
@@ -158,32 +191,29 @@ export default function Community() {
             </div>
 
             <div className="space-y-8">
-              {/* اختيار الملعب مع ترجمة الأسماء */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_court')}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {COURTS.map(c => (
-                    <button key={c.id} onClick={() => setSelectedCourt(c.name)} className={`py-4 rounded-[20px] text-[10px] font-black border transition-all ${selectedCourt === c.name ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-400'}`}>{c.name}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* قسم "كم ناقصك؟" الجديد */}
-              <div className="space-y-4">
-                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest flex items-center gap-2">
-                  <Zap size={14} className="fill-cyan-400" /> {t('how_many_missing')}
-                </p>
-                <div className="flex gap-3">
-                  {[1, 2, 3].map(num => (
-                    <button key={num} onClick={() => setNeededPlayers(num)} className={`flex-1 py-5 rounded-[22px] font-[1000] text-lg border transition-all flex flex-col items-center justify-center gap-1 ${neededPlayers === num ? 'bg-purple-600 border-purple-400 text-white shadow-lg shadow-purple-500/40' : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'}`}>
-                      {num}
-                      <span className="text-[8px] font-black uppercase opacity-60">{t('players_count_label')}</span>
+                <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                  {courts.map(c => (
+                    <button key={c.id} onClick={() => setSelectedCourt(c)} className={`flex-none w-32 h-32 rounded-3xl overflow-hidden border-2 transition-all relative ${selectedCourt?.id === c.id ? 'border-cyan-500 scale-105' : 'border-white/10 opacity-50'}`}>
+                      <img src={c.image_url} className="w-full h-full object-cover" alt="" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-2">
+                        <span className="text-[10px] font-black text-center">{c.name}</span>
+                      </div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* اختيار اليوم */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{t('how_many_missing')}</p>
+                <div className="flex gap-3">
+                  {[1, 2, 3].map(num => (
+                    <button key={num} onClick={() => setNeededPlayers(num)} className={`flex-1 py-4 rounded-[22px] font-black border transition-all ${neededPlayers === num ? 'bg-purple-600 border-purple-400' : 'bg-white/5 border-white/10 text-gray-500'}`}>{num} {t('players_count_label')}</button>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_date')}</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -193,12 +223,11 @@ export default function Community() {
                 </div>
               </div>
 
-              {/* اختيار الوقت */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_time')}</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {TIMES.map(time => (
-                    <button key={time} onClick={() => setSelectedTime(time)} className={`py-4 rounded-[18px] text-[10px] font-black transition-all border ${selectedTime === time ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg' : 'bg-white/5 text-gray-400 border-white/10'}`}>{time}</button>
+                    <button key={time} onClick={() => setSelectedTime(time)} className={`flex-none min-w-[80px] py-4 rounded-[18px] text-[10px] font-black transition-all border ${selectedTime === time ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg' : 'bg-white/5 text-gray-400 border-white/10'}`}>{time}</button>
                   ))}
                 </div>
               </div>
