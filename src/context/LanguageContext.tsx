@@ -19,11 +19,16 @@ interface Translations {
   how_many_missing: string;
   players_count_label: string;
   login_first: string;
-  // 🔥 كلمات نظام الانضمام الجديد
+  // 🔥 كلمات نظام الانضمام 
   joining: string;
   already_joined: string;
   slots_full: string;
   match_full: string;
+  // 🔥 كلمات النظام المثالي (منع التعارض وعرض اللاعبين)
+  slot_taken: string;
+  joined_players_list: string;
+  host_info: string;
+  you_are_in: string;
 }
 
 const dictionary: Record<Language, Translations> = {
@@ -36,7 +41,8 @@ const dictionary: Record<Language, Translations> = {
     host_match: 'إنشاء حجز', select_court: 'اختر الملعب', select_date: 'اختر التاريخ', select_time: 'اختر الوقت', create_match: 'تأكيد الحجز', cancel: 'إلغاء',
     my_bookings: 'حجوزاتي', rewards: 'مكافآتي', tournaments: 'فعاليات', upcoming: 'القادمة', previous: 'السابقة', cancelled: 'الملغاة', points_balance: 'رصيد النقاط', redeem: 'استبدال', active_events: 'الفعاليات الحالية',
     how_many_missing: 'كم ناقصك لاعب؟', players_count_label: 'لاعبين', login_first: 'سجل دخولك أولاً',
-    joining: 'جاري الانضمام...', already_joined: 'تم الانضمام بنجاح ✅', slots_full: 'اكتمل العدد 🛑', match_full: 'هذه المباراة مكتملة'
+    joining: 'جاري الانضمام...', already_joined: 'تم الانضمام بنجاح ✅', slots_full: 'اكتمل العدد 🛑', match_full: 'هذه المباراة مكتملة',
+    slot_taken: 'هذا الوقت محجوز مسبقاً 🛑', joined_players_list: 'اللاعبين المنضمين', host_info: 'صاحب الحجز', you_are_in: 'أنت منضم بالفعل'
   },
   en: {
     app_name: 'HYPE', profile: 'Profile', payment: 'Payment', notifications: 'Alerts', language: 'Language', logout: 'Logout', change_lang: 'العربية',
@@ -47,7 +53,8 @@ const dictionary: Record<Language, Translations> = {
     host_match: 'Create Booking', select_court: 'Select Court', select_date: 'Select Date', select_time: 'Select Time', create_match: 'Confirm Booking', cancel: 'Cancel',
     my_bookings: 'My Bookings', rewards: 'My Rewards', tournaments: 'Tournaments', upcoming: 'Upcoming', previous: 'Previous', cancelled: 'Cancelled', points_balance: 'Points Balance', redeem: 'Redeem', active_events: 'Active Events',
     how_many_missing: 'How many players missing?', players_count_label: 'Players', login_first: 'Please login first',
-    joining: 'Joining...', already_joined: 'Joined Successfully ✅', slots_full: 'Full Capacity 🛑', match_full: 'This match is full'
+    joining: 'Joining...', already_joined: 'Joined Successfully ✅', slots_full: 'Full Capacity 🛑', match_full: 'This match is full',
+    slot_taken: 'This slot is already booked 🛑', joined_players_list: 'Joined Players', host_info: 'Host', you_are_in: 'You are already in'
   }
 };
 
