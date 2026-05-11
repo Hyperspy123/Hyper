@@ -62,12 +62,11 @@ export default function Community() {
     setLoading(false);
   };
 
-  // 🔥 دالة الإنشاء المحدثة (تمنع الحجز المزدوج)
+  // 🔥 تم ربط الإشعارات بالقاموس
   const handleCreate = async () => {
-    if (!user) return toast.error(t('login_first'));
+    if (!user) return toast.error(t('notif_login_required' as any));
     if (!selectedCourt) return toast.error(lang === 'ar' ? "الرجاء اختيار ملعب" : "Please select a court");
 
-    // 1. فحص ما إذا كان الملعب محجوزاً في نفس الوقت والتاريخ
     const { data: existingMatch } = await supabase
       .from('open_matches')
       .select('id')
@@ -77,7 +76,7 @@ export default function Community() {
       .single();
 
     if (existingMatch) {
-      return toast.error(t('slot_taken')); // رسالة "الخانة محجوزة"
+      return toast.error(t('notif_slot_taken' as any)); 
     }
 
     try {
@@ -91,12 +90,12 @@ export default function Community() {
         price: selectedCourt.price || '150',
         needed_players: neededPlayers,
         joined_count: 0,
-        joined_users: [] // مصفوفة فارغة في البداية
+        joined_users: [] 
       }]);
 
       if (error) throw error;
       
-      toast.success(lang === 'ar' ? "تم نشر حجزك بنجاح! 🔥" : "Booking published successfully! 🔥");
+      toast.success(t('notif_booking_confirmed' as any));
       setShowHostForm(false);
       fetchMatches();
     } catch (err: any) {
@@ -104,12 +103,11 @@ export default function Community() {
     }
   };
 
-  // 🔥 دالة الانضمام المحدثة (تحفظ اسم الشخص اللي انضم)
+  // 🔥 تم ربط الإشعارات بالقاموس
   const handleJoin = async (match: any) => {
-    if (!user) return toast.error(t('login_first'));
+    if (!user) return toast.error(t('notif_login_required' as any));
     if (match.joined_count >= match.needed_players) return toast.error(t('match_full'));
     
-    // التأكد إن اللاعب مو منضم أصلاً
     const joinedList = match.joined_users || [];
     const isAlreadyIn = joinedList.some((u: any) => u.id === user.id);
     if (isAlreadyIn) return toast.error(t('you_are_in'));
@@ -125,15 +123,16 @@ export default function Community() {
       .eq('id', match.id);
 
     if (!error) {
-      toast.success(t('already_joined'));
+      toast.success(t('notif_join_success' as any));
       fetchMatches();
     }
   };
 
+  // 🔥 تم ربط الإشعارات بالقاموس
   const deleteMatch = async (id: string) => {
     await supabase.from('open_matches').delete().eq('id', id);
     fetchMatches();
-    toast.info(lang === 'ar' ? "تم الإلغاء" : "Cancelled");
+    toast.info(t('notif_match_cancelled' as any));
   };
 
   const filteredMatches = activeTab === 'open' 
@@ -166,7 +165,6 @@ export default function Community() {
                   <img src={match.image_url} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#05081d] via-transparent" />
                   
-                  {/* شارة توضح من هو صاحب الحجز بشكل بارز */}
                   <div className={`absolute top-6 ${dir === 'rtl' ? 'left-6' : 'right-6'}`}>
                     <div className="bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2 shadow-lg">
                       <ShieldCheck size={14} className="text-purple-400" />
@@ -199,7 +197,6 @@ export default function Community() {
                     </div>
                   </div>
 
-                  {/* 🔥 قائمة بأسماء اللاعبين المنضمين (تظهر لصاحب الحجز وللجميع) */}
                   {joinedList.length > 0 && (
                     <div className="mb-6 p-4 bg-white/5 rounded-[20px] border border-white/5">
                       <p className="text-[10px] font-black text-gray-400 uppercase mb-3 flex items-center gap-2">

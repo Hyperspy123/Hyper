@@ -15,20 +15,28 @@ interface Translations {
   host_match: string; select_court: string; select_date: string; select_time: string; create_match: string; cancel: string;
   my_bookings: string; rewards: string; tournaments: string; upcoming: string; previous: string; cancelled: string;
   points_balance: string; redeem: string; active_events: string;
-  // 🔥 الكلمات الجديدة اللي تمت إضافتها للمجتمع
+  
+  // 🔥 الكلمات الخاصة بالمجتمع
   how_many_missing: string;
   players_count_label: string;
   login_first: string;
-  // 🔥 كلمات نظام الانضمام 
   joining: string;
   already_joined: string;
   slots_full: string;
   match_full: string;
-  // 🔥 كلمات النظام المثالي (منع التعارض وعرض اللاعبين)
   slot_taken: string;
   joined_players_list: string;
   host_info: string;
   you_are_in: string;
+
+  // 🔥 كلمات الإشعارات الجديدة
+  notification_title: string;
+  notif_booking_confirmed: string;
+  notif_join_success: string;
+  notif_match_cancelled: string;
+  notif_slot_taken: string;
+  notif_new_player_joined: string;
+  notif_login_required: string;
 }
 
 const dictionary: Record<Language, Translations> = {
@@ -42,7 +50,16 @@ const dictionary: Record<Language, Translations> = {
     my_bookings: 'حجوزاتي', rewards: 'مكافآتي', tournaments: 'فعاليات', upcoming: 'القادمة', previous: 'السابقة', cancelled: 'الملغاة', points_balance: 'رصيد النقاط', redeem: 'استبدال', active_events: 'الفعاليات الحالية',
     how_many_missing: 'كم ناقصك لاعب؟', players_count_label: 'لاعبين', login_first: 'سجل دخولك أولاً',
     joining: 'جاري الانضمام...', already_joined: 'تم الانضمام بنجاح ✅', slots_full: 'اكتمل العدد 🛑', match_full: 'هذه المباراة مكتملة',
-    slot_taken: 'هذا الوقت محجوز مسبقاً 🛑', joined_players_list: 'اللاعبين المنضمين', host_info: 'صاحب الحجز', you_are_in: 'أنت منضم بالفعل'
+    slot_taken: 'هذا الوقت محجوز مسبقاً 🛑', joined_players_list: 'اللاعبين المنضمين', host_info: 'صاحب الحجز', you_are_in: 'أنت منضم بالفعل',
+    
+    // إشعارات العربي
+    notification_title: 'الإشعارات',
+    notif_booking_confirmed: 'تم تأكيد حجزك بنجاح! 🔥🎾',
+    notif_join_success: 'تم انضمامك للمباراة بنجاح! 🚀',
+    notif_match_cancelled: 'تم إلغاء الحجز بنجاح 🗑️',
+    notif_slot_taken: 'عذراً، هذا الوقت تم حجزه للتو 🛑',
+    notif_new_player_joined: 'انضم لاعب جديد لتحديك! 👤',
+    notif_login_required: 'يجب تسجيل الدخول أولاً 🔐'
   },
   en: {
     app_name: 'HYPE', profile: 'Profile', payment: 'Payment', notifications: 'Alerts', language: 'Language', logout: 'Logout', change_lang: 'العربية',
@@ -54,7 +71,16 @@ const dictionary: Record<Language, Translations> = {
     my_bookings: 'My Bookings', rewards: 'My Rewards', tournaments: 'Tournaments', upcoming: 'Upcoming', previous: 'Previous', cancelled: 'Cancelled', points_balance: 'Points Balance', redeem: 'Redeem', active_events: 'Active Events',
     how_many_missing: 'How many players missing?', players_count_label: 'Players', login_first: 'Please login first',
     joining: 'Joining...', already_joined: 'Joined Successfully ✅', slots_full: 'Full Capacity 🛑', match_full: 'This match is full',
-    slot_taken: 'This slot is already booked 🛑', joined_players_list: 'Joined Players', host_info: 'Host', you_are_in: 'You are already in'
+    slot_taken: 'This slot is already booked 🛑', joined_players_list: 'Joined Players', host_info: 'Host', you_are_in: 'You are already in',
+    
+    // إشعارات الإنجليزي
+    notification_title: 'Notifications',
+    notif_booking_confirmed: 'Booking confirmed successfully! 🔥🎾',
+    notif_join_success: 'You have joined the match! 🚀',
+    notif_match_cancelled: 'Match cancelled successfully 🗑️',
+    notif_slot_taken: 'Sorry, this slot was just taken 🛑',
+    notif_new_player_joined: 'A new player joined your challenge! 👤',
+    notif_login_required: 'Please login first 🔐'
   }
 };
 
