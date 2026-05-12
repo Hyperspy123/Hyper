@@ -110,7 +110,9 @@ export default function MyBookings() {
       
       setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
     } catch (error: any) {
-      toast.error(lang === 'ar' ? "فشل في الإلغاء" : "Cancellation failed");
+      // 🔥 هنا التعديل اللي بيصيد لنا الخطأ الحقيقي
+      console.error("تفاصيل الخطأ الدقيقة من قاعدة البيانات:", error);
+      toast.error(lang === 'ar' ? `الخطأ: ${error.message}` : `Error: ${error.message}`);
     }
   };
 
