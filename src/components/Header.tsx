@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe, Headphones } from 'lucide-react'; // 🔥 تمت إضافة أيقونة الدعم الفني
+import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe, Headphones } from 'lucide-react';
 import { supabase } from '../LLL';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -12,15 +12,6 @@ export default function Header() {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  // 🎧 دالة فتح الإيميل للدعم الفني
-  const handleSupportClick = () => {
-    const email = "support@hype.com"; // 💡 استبدله بإيميل التطبيق الفعلي
-    const subject = lang === 'ar' ? "طلب دعم فني - تطبيق هايب" : "Tech Support - Hype App";
-    window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
-    setIsOpen(false); // إغلاق القائمة بعد الضغط
-  };
-
-  // 🗑️ شلنا الإشعارات من هنا
   const menuItems = [
     { icon: User, label: t('profile'), path: '/profile' },
     { icon: Wallet, label: t('payment'), path: '/payment' },
@@ -40,7 +31,6 @@ export default function Header() {
           <span className="font-[1000] text-xl tracking-tighter italic uppercase text-white">HYPE</span>
         </div>
 
-        {/* زر الإشعارات الثابت في الهيدر */}
         <button onClick={() => navigate('/notifications')} className="p-2 hover:bg-white/5 rounded-xl relative transition-all">
           <Bell size={22} className="text-white" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#05081d]"></span>
@@ -61,7 +51,6 @@ export default function Header() {
           </div>
 
           <nav className="flex-1 p-6 space-y-2">
-            {/* العناصر الأساسية (الملف الشخصي، الدفع) */}
             {menuItems.map((item) => (
               <button
                 key={item.path}
@@ -74,10 +63,10 @@ export default function Header() {
               </button>
             ))}
 
-            {/* 🎧 زر الدعم الفني الجديد */}
+            {/* 🔥 التعديل هنا: يحوله لصفحة الدعم الفني */}
             <button
-              onClick={handleSupportClick}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-gray-400 hover:bg-white/5 hover:text-purple-400 transition-all"
+              onClick={() => { navigate('/support'); setIsOpen(false); }}
+              className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition-all ${location.pathname === '/support' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400 hover:bg-white/5 hover:text-purple-400'}`}
             >
               <Headphones size={20} />
               <span className={`flex-1 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
@@ -86,7 +75,6 @@ export default function Header() {
               {dir === 'rtl' ? <ChevronLeft size={16} opacity={0.5} /> : <ChevronRight size={16} opacity={0.5} />}
             </button>
 
-            {/* خيار تغيير اللغة */}
             <div className="pt-4 mt-4 border-t border-white/5">
               <button
                 onClick={toggleLang}
