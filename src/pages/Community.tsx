@@ -99,9 +99,9 @@ export default function Community() {
         court_name: selectedCourt.name,
         match_date: selectedDate,
         match_time: selectedTime,
-        duration_minutes: selectedDuration, // 🔥 إرسال المدة
+        duration_minutes: selectedDuration, 
         image_url: selectedCourt.image_url,
-        price: totalPrice, // 🔥 إرسال السعر المحسوب
+        price: totalPrice, 
         needed_players: neededPlayers,
         joined_count: 0,
         joined_users: [] 
@@ -109,6 +109,12 @@ export default function Community() {
 
       if (error) throw error;
       
+      // إرسال إشعار للمستخدم بتأكيد الحجز
+      await supabase.from('notifications').insert([{
+        user_id: user.id,
+        translation_key: 'notif_booking_confirmed'
+      }]);
+
       toast.success(t('notif_booking_confirmed' as any));
       setShowHostForm(false);
       fetchMatches();
@@ -136,13 +142,32 @@ export default function Community() {
       .eq('id', match.id);
 
     if (!error) {
+      // إرسال إشعار لصاحب المباراة إن فيه شخص انضم
+      if (match.host_id !== user.id) {
+        await supabase.from('notifications').insert([{
+          user_id: match.host_id,
+          translation_key: 'notif_new_player_joined'
+        }]);
+      }
+
       toast.success(t('notif_join_success' as any));
       fetchMatches();
     }
   };
 
-  const deleteMatch = async (id: string) => {
-    await supabase.from('open_matches').delete().eq('id', id);
+  const deleteMatch = async (match: any) => {
+    await supabase.from('open_matches').delete().eq('id', match.id);
+    
+    // إرسال إشعار لكل اللاعبين المنضمين إن المباراة انلغت
+    const joinedUsers = match.joined_users || [];
+    if (joinedUsers.length > 0) {
+      const notifications = joinedUsers.map((u: any) => ({
+        user_id: u.id,
+        translation_key: 'notif_match_cancelled'
+      }));
+      await supabase.from('notifications').insert(notifications);
+    }
+
     fetchMatches();
     toast.info(t('notif_match_cancelled' as any));
   };
@@ -201,7 +226,6 @@ export default function Community() {
                         <span className="flex items-center gap-1"><Calendar size={12} className="text-cyan-400" /> {match.match_date}</span>
                         <span className="w-px h-3 bg-white/20"></span>
                         <span className="flex items-center gap-1"><Clock size={12} className="text-cyan-400" /> {match.match_time}</span>
-                        {/* 🔥 عرض المدة في كرت المباراة */}
                         {match.duration_minutes && (
                           <>
                             <span className="w-px h-3 bg-white/20"></span>
@@ -233,7 +257,7 @@ export default function Community() {
                   )}
 
                   {activeTab === 'my' ? (
-                    <button onClick={() => deleteMatch(match.id)} className="w-full mt-2 py-5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-[28px] font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"><Trash2 size={18} /> {lang === 'ar' ? 'إلغاء الإعلان' : 'Cancel Match'}</button>
+                    <button onClick={() => deleteMatch(match)} className="w-full mt-2 py-5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-[28px] font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"><Trash2 size={18} /> {lang === 'ar' ? 'إلغاء الإعلان' : 'Cancel Match'}</button>
                   ) : (
                     <button 
                       onClick={() => handleJoin(match)}
@@ -273,14 +297,12 @@ export default function Community() {
                       <img src={c.image_url} className="w-full h-full object-cover" alt="" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 flex flex-col justify-end p-3">
                         <span className="text-xs font-black text-left text-white leading-tight">{c.name}</span>
-                        {/* عرض السعر الأساسي للملعب */}
                         <span className="text-[9px] font-bold text-cyan-400 mt-1">{c.price_per_hour || 150} {t('sar' as any)}/h</span>
                       </div>
                     </button>
                   ))}
                 </div>
                 
-                {/* 🔥 تفاصيل الملعب المختار */}
                 {selectedCourt && (selectedCourt.description || (selectedCourt.features && selectedCourt.features.length > 0)) && (
                   <div className="bg-white/5 border border-white/10 rounded-[20px] p-4 mt-2 animate-in fade-in">
                     {selectedCourt.description && (
@@ -302,7 +324,7 @@ export default function Community() {
                 )}
               </div>
 
-              {/* 2. اختيار المدة 🔥 */}
+              {/* 2. اختيار المدة */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">{t('duration' as any)}</p>
                 <div className="flex gap-3">
@@ -349,7 +371,7 @@ export default function Community() {
                 </div>
               </div>
 
-              {/* 🔥 التسعيرة النهائية وزر التأكيد */}
+              {/* التسعيرة النهائية وزر التأكيد */}
               <div className="pt-6 border-t border-white/10 mt-6">
                 <div className="flex justify-between items-end mb-6">
                   <div>
