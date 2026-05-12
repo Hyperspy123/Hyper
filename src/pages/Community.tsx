@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import Header from '@/components/Header';
-import { MapPin, Clock, Calendar, Plus, X, Zap, Loader2, ChevronRight, Trash2, Users, UserPlus, ShieldCheck } from 'lucide-react';
+import { MapPin, Clock, Calendar, Plus, X, Zap, Loader2, ChevronRight, Trash2, Users, UserPlus, ShieldCheck, Timer, Info, Sparkles } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
 
@@ -31,10 +31,24 @@ export default function Community() {
   const [user, setUser] = useState<any>(null);
 
   const DATES = getUpcomingDates(lang);
+  
+  // حالات الفورم
   const [selectedCourt, setSelectedCourt] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(DATES[0].value);
   const [selectedTime, setSelectedTime] = useState(TIMES[2]);
   const [neededPlayers, setNeededPlayers] = useState(1);
+  const [selectedDuration, setSelectedDuration] = useState<number>(60); // 🔥 المدة الافتراضية 60 دقيقة
+
+  // خيارات المدة
+  const DURATIONS = [
+    { value: 60, label: t('mins_60' as any) },
+    { value: 90, label: t('mins_90' as any) },
+    { value: 120, label: t('mins_120' as any) }
+  ];
+
+  // 🔥 الحسبة الديناميكية للسعر
+  const basePrice = selectedCourt?.price_per_hour || 150;
+  const totalPrice = (basePrice * (selectedDuration / 60)).toFixed(2);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -62,7 +76,6 @@ export default function Community() {
     setLoading(false);
   };
 
-  // 🔥 تم ربط الإشعارات بالقاموس
   const handleCreate = async () => {
     if (!user) return toast.error(t('notif_login_required' as any));
     if (!selectedCourt) return toast.error(lang === 'ar' ? "الرجاء اختيار ملعب" : "Please select a court");
@@ -86,8 +99,9 @@ export default function Community() {
         court_name: selectedCourt.name,
         match_date: selectedDate,
         match_time: selectedTime,
+        duration_minutes: selectedDuration, // 🔥 إرسال المدة
         image_url: selectedCourt.image_url,
-        price: selectedCourt.price || '150',
+        price: totalPrice, // 🔥 إرسال السعر المحسوب
         needed_players: neededPlayers,
         joined_count: 0,
         joined_users: [] 
@@ -103,7 +117,6 @@ export default function Community() {
     }
   };
 
-  // 🔥 تم ربط الإشعارات بالقاموس
   const handleJoin = async (match: any) => {
     if (!user) return toast.error(t('notif_login_required' as any));
     if (match.joined_count >= match.needed_players) return toast.error(t('match_full'));
@@ -128,7 +141,6 @@ export default function Community() {
     }
   };
 
-  // 🔥 تم ربط الإشعارات بالقاموس
   const deleteMatch = async (id: string) => {
     await supabase.from('open_matches').delete().eq('id', id);
     fetchMatches();
@@ -182,17 +194,25 @@ export default function Community() {
                 </div>
 
                 <div className={`p-10 pt-6 relative z-10 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
-                  <div className="flex justify-between items-center mb-6">
+                  <div className="flex justify-between items-start mb-6">
                     <div>
                       <h3 className="text-3xl font-[1000] italic uppercase tracking-tighter text-white leading-none">{match.court_name}</h3>
-                      <div className="flex items-center gap-2 mt-3 text-gray-400 font-bold text-xs bg-white/5 p-2 rounded-xl inline-flex border border-white/5">
-                        <Calendar size={14} className="text-cyan-400" /> {match.match_date} 
-                        <span className="w-px h-3 bg-white/20 mx-1"></span>
-                        <Clock size={14} className="text-cyan-400" /> {match.match_time}
+                      <div className="flex flex-wrap items-center gap-2 mt-3 text-gray-400 font-bold text-xs bg-white/5 p-2 rounded-xl border border-white/5">
+                        <span className="flex items-center gap-1"><Calendar size={12} className="text-cyan-400" /> {match.match_date}</span>
+                        <span className="w-px h-3 bg-white/20"></span>
+                        <span className="flex items-center gap-1"><Clock size={12} className="text-cyan-400" /> {match.match_time}</span>
+                        {/* 🔥 عرض المدة في كرت المباراة */}
+                        {match.duration_minutes && (
+                          <>
+                            <span className="w-px h-3 bg-white/20"></span>
+                            <span className="flex items-center gap-1"><Timer size={12} className="text-purple-400" /> {match.duration_minutes} {lang === 'ar' ? 'د' : 'Mins'}</span>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <div className="bg-white/5 p-4 rounded-[24px] border border-white/10 text-center">
-                      <span className="block text-[8px] text-gray-500 font-black mb-1 uppercase">SAR</span>
+                    
+                    <div className="bg-white/5 p-4 rounded-[24px] border border-white/10 text-center flex-shrink-0">
+                      <span className="block text-[8px] text-gray-500 font-black mb-1 uppercase">{t('sar' as any)}</span>
                       <span className="text-xl font-black text-cyan-400 italic">{match.price}</span>
                     </div>
                   </div>
@@ -232,58 +252,120 @@ export default function Community() {
         </div>
       </main>
 
+      {/* مودال إنشاء الحجز */}
       {showHostForm && (
         <div className="fixed inset-0 z-[200] flex flex-col justify-end">
           <div className="absolute inset-0 bg-[#05081d]/95 backdrop-blur-xl" onClick={() => setShowHostForm(false)} />
-          <div className="relative bg-[#0a0f3c] border-t border-cyan-500/20 rounded-t-[50px] p-8 space-y-8 animate-in slide-in-from-bottom duration-500">
-            <div className="flex justify-between items-center">
+          <div className="relative bg-[#0a0f3c] border-t border-cyan-500/20 rounded-t-[50px] p-8 max-h-[90vh] overflow-y-auto scrollbar-hide animate-in slide-in-from-bottom duration-500">
+            <div className="flex justify-between items-center mb-8">
               <h2 className="text-3xl font-[1000] italic uppercase text-white tracking-tighter">{t('host_match')}</h2>
-              <button onClick={() => setShowHostForm(false)} className="p-3 bg-white/5 rounded-full text-gray-400"><X size={24} /></button>
+              <button onClick={() => setShowHostForm(false)} className="p-3 bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors"><X size={24} /></button>
             </div>
 
             <div className="space-y-8">
+              
+              {/* 1. اختيار الملعب */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_court')}</p>
                 <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
                   {courts.map(c => (
-                    <button key={c.id} onClick={() => setSelectedCourt(c)} className={`flex-none w-32 h-32 rounded-3xl overflow-hidden border-2 transition-all relative ${selectedCourt?.id === c.id ? 'border-cyan-500 scale-105 shadow-lg shadow-cyan-500/20' : 'border-white/10 opacity-50'}`}>
+                    <button key={c.id} onClick={() => setSelectedCourt(c)} className={`flex-none w-32 h-32 rounded-3xl overflow-hidden border-2 transition-all relative ${selectedCourt?.id === c.id ? 'border-cyan-500 scale-105 shadow-lg shadow-cyan-500/20' : 'border-white/10 opacity-50 hover:opacity-100'}`}>
                       <img src={c.image_url} className="w-full h-full object-cover" alt="" />
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center p-2">
-                        <span className="text-xs font-black text-center text-white">{c.name}</span>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 flex flex-col justify-end p-3">
+                        <span className="text-xs font-black text-left text-white leading-tight">{c.name}</span>
+                        {/* عرض السعر الأساسي للملعب */}
+                        <span className="text-[9px] font-bold text-cyan-400 mt-1">{c.price_per_hour || 150} {t('sar' as any)}/h</span>
                       </div>
+                    </button>
+                  ))}
+                </div>
+                
+                {/* 🔥 تفاصيل الملعب المختار */}
+                {selectedCourt && (selectedCourt.description || (selectedCourt.features && selectedCourt.features.length > 0)) && (
+                  <div className="bg-white/5 border border-white/10 rounded-[20px] p-4 mt-2 animate-in fade-in">
+                    {selectedCourt.description && (
+                      <p className="text-xs text-gray-300 mb-3 flex items-start gap-2">
+                        <Info size={14} className="text-cyan-400 mt-0.5 flex-shrink-0" />
+                        {selectedCourt.description}
+                      </p>
+                    )}
+                    {selectedCourt.features && selectedCourt.features.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCourt.features.map((feature: string, idx: number) => (
+                          <span key={idx} className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-1 rounded-md text-[9px] font-bold uppercase flex items-center gap-1">
+                            <Sparkles size={10} /> {feature}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. اختيار المدة 🔥 */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">{t('duration' as any)}</p>
+                <div className="flex gap-3">
+                  {DURATIONS.map(dur => (
+                    <button 
+                      key={dur.value} 
+                      onClick={() => setSelectedDuration(dur.value)} 
+                      className={`flex-1 py-4 rounded-[22px] font-black text-xs transition-all border flex flex-col items-center gap-1 ${selectedDuration === dur.value ? 'bg-purple-600 border-purple-400 text-white shadow-lg shadow-purple-500/30' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                    >
+                      <Timer size={16} className={selectedDuration === dur.value ? 'text-white' : 'text-gray-600'} />
+                      {dur.label}
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* 3. اختيار عدد اللاعبين الناقصين */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{t('how_many_missing')}</p>
                 <div className="flex gap-3">
                   {[1, 2, 3].map(num => (
-                    <button key={num} onClick={() => setNeededPlayers(num)} className={`flex-1 py-4 rounded-[22px] font-black border transition-all ${neededPlayers === num ? 'bg-purple-600 border-purple-400 text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-500'}`}>{num} {t('players_count_label')}</button>
+                    <button key={num} onClick={() => setNeededPlayers(num)} className={`flex-1 py-4 rounded-[22px] font-black border transition-all ${neededPlayers === num ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg shadow-cyan-500/30' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>{num} {t('players_count_label')}</button>
                   ))}
                 </div>
               </div>
 
+              {/* 4. اختيار التاريخ */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_date')}</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {DATES.map(date => (
-                    <button key={date.value} onClick={() => setSelectedDate(date.value)} className={`flex-none w-[70px] py-4 rounded-[20px] flex flex-col items-center gap-1 transition-all border ${selectedDate === date.value ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg' : 'bg-white/5 text-gray-400 border-white/10'}`}><span className="text-[10px] font-bold">{date.dayName}</span><span className="text-lg font-black">{date.dateNum}</span></button>
+                    <button key={date.value} onClick={() => setSelectedDate(date.value)} className={`flex-none w-[70px] py-4 rounded-[20px] flex flex-col items-center gap-1 transition-all border ${selectedDate === date.value ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}><span className="text-[10px] font-bold">{date.dayName}</span><span className="text-lg font-black">{date.dateNum}</span></button>
                   ))}
                 </div>
               </div>
 
+              {/* 5. اختيار الوقت */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_time')}</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {TIMES.map(time => (
-                    <button key={time} onClick={() => setSelectedTime(time)} className={`flex-none min-w-[80px] py-4 rounded-[18px] text-[10px] font-black transition-all border ${selectedTime === time ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg' : 'bg-white/5 text-gray-400 border-white/10'}`}>{time}</button>
+                    <button key={time} onClick={() => setSelectedTime(time)} className={`flex-none min-w-[80px] py-4 rounded-[18px] text-[10px] font-black transition-all border ${selectedTime === time ? 'bg-cyan-500 text-[#0a0f3c] border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}>{time}</button>
                   ))}
                 </div>
               </div>
 
-              <button onClick={handleCreate} className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] italic uppercase shadow-xl shadow-cyan-500/30 active:scale-95 transition-all">{t('create_match')}</button>
+              {/* 🔥 التسعيرة النهائية وزر التأكيد */}
+              <div className="pt-6 border-t border-white/10 mt-6">
+                <div className="flex justify-between items-end mb-6">
+                  <div>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{t('price' as any)}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-[1000] italic text-cyan-400">{totalPrice}</span>
+                      <span className="text-xs font-bold text-gray-400 uppercase">{t('sar' as any)}</span>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={handleCreate} className="w-full py-6 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-[30px] font-[1000] italic uppercase shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] active:scale-95 transition-all flex justify-center items-center gap-2">
+                  <Sparkles size={18} />
+                  {t('create_match')}
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
