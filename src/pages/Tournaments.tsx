@@ -91,6 +91,13 @@ export default function Tournaments() {
       if (updateError) throw updateError;
 
       setJoinedEvents(prev => [...prev, tournamentId]);
+
+      // 🔥 إرسال إشعار انضمام للبطولة للمستخدم
+      await supabase.from('notifications').insert([{
+        user_id: user.id,
+        translation_key: 'notif_tournament_joined'
+      }]);
+
       toast.success(lang === 'ar' ? "كفو! تم تسجيلك وحفظ بياناتك في السيرفر 🔥" : "Awesome! You are successfully registered 🔥");
 
     } catch (error) {
@@ -137,7 +144,7 @@ export default function Tournaments() {
             // 🔥 اختيار الاسم والوصف واسم الملعب ديناميكياً بناءً على لغة التطبيق
             const displayTitle = lang === 'ar' ? (event.title_ar || event.name) : (event.title_en || event.title_ar || event.name);
             const displayDesc = lang === 'ar' ? (event.description_ar || event.description) : (event.description_en || event.description_ar || event.description);
-            const displayCourtName = lang === 'ar' ? event.court_name : (event.court_name_en || event.court_name); // 👈 إضافة اسم الملعب المترجم
+            const displayCourtName = lang === 'ar' ? event.court_name : (event.court_name_en || event.court_name);
             const displayDate = event.start_date || event.date;
             const displayTime = event.start_time || event.time;
 
@@ -147,7 +154,6 @@ export default function Tournaments() {
                   <img src={event.image_url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f3c] via-transparent" />
                   
-                  {/* 🔥 تم ربط اسم الملعب المترجم بالبطاقة */}
                   {displayCourtName && (
                     <div className={`absolute top-6 ${dir === 'ltr' ? 'right-6' : 'left-6'} bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg`}>
                       {displayCourtName}
@@ -160,11 +166,9 @@ export default function Tournaments() {
                     <div className="p-2.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-yellow-500 shadow-lg">
                       <Trophy size={20} />
                     </div>
-                    {/* عرض العنوان المترجم */}
                     <h3 className="text-2xl font-[1000] italic uppercase text-white tracking-tighter leading-none">{displayTitle}</h3>
                   </div>
 
-                  {/* عرض الوصف المترجم */}
                   <p className={`text-sm text-gray-400 font-bold leading-relaxed opacity-80 ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>
                     {displayDesc}
                   </p>
