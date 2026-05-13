@@ -4,13 +4,14 @@ import Header from '@/components/Header';
 import { Calendar, Clock, ChevronLeft, Loader2, Trash2, Swords, QrCode, Ticket, CheckCircle2, XCircle, MapPin, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useLanguage } from '../context/LanguageContext'; // 🔥 استيراد المترجم
+import { useLanguage } from '../context/LanguageContext'; 
 
 export default function MyBookings() {
-  const { t, dir, lang } = useLanguage(); // 🔥 جلب أدوات اللغة
+  const { t, dir, lang } = useLanguage(); 
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'current' | 'previous' | 'cancelled'>('current');
+  const [currentUser, setCurrentUser] = useState<any>(null); // 🔥 حفظ بيانات المستخدم للإشعارات
   
   const navigate = useNavigate();
 
@@ -26,6 +27,7 @@ export default function MyBookings() {
         navigate('/auth');
         return;
       }
+      setCurrentUser(user); // 🔥 حفظ المستخدم
 
       // 1. جلب الحجوزات العادية
       const { data: normalBookings, error: normalError } = await supabase
@@ -65,6 +67,7 @@ export default function MyBookings() {
         const court = courtsData?.find(crt => crt.name === c.court_name);
         const isChallenger = c.challenger_id === user.id;
         const opponentName = isChallenger ? c.challenged?.first_name : c.challenger?.first_name;
+        const opponentId = isChallenger ? c.challenged?.id : c.challenger?.id; // 🔥 جلب ID الخصم عشان نرسل له إشعار لو انلغى التحدي
 
         const mappedStatus = c.status === 'accepted' ? 'confirmed' : (c.status === 'rejected' || c.status === 'cancelled') ? 'cancelled' : c.status;
 
@@ -76,7 +79,8 @@ export default function MyBookings() {
           image_url: court?.image_url,
           start_time: c.match_time,
           status: mappedStatus,
-          opponent_name: opponentName
+          opponent_name: opponentName,
+          opponent_id: opponentId // 🔥 حفظ ID الخصم
         });
       });
 
@@ -95,22 +99,38 @@ export default function MyBookings() {
   const handleCancelBooking = async (booking: any) => {
     const confirmMsg = lang === 'ar' ? "هل أنت متأكد من إلغاء هذا الموعد؟" : "Are you sure you want to cancel this booking?";
     const confirmCancel = window.confirm(confirmMsg);
-    if (!confirmCancel) return;
+    if (!confirmCancel || !currentUser) return;
 
     try {
       if (booking.type === 'challenge') {
         const { error } = await supabase.from('challenges').update({ status: 'cancelled' }).eq('id', booking.id);
         if (error) throw error;
+        
+        // 🔥 إرسال إشعار لك وإشعار لخصمك
+        const notificationsToInsert = [
+          { user_id: currentUser.id, translation_key: 'notif_booking_cancelled' }
+        ];
+        if (booking.opponent_id) {
+          notificationsToInsert.push({ user_id: booking.opponent_id, translation_key: 'notif_booking_cancelled' });
+        }
+        await supabase.from('notifications').insert(notificationsToInsert);
+
         toast.success(lang === 'ar' ? "تم إلغاء التحدي وإشعار الخصم 🛑" : "Challenge cancelled and opponent notified 🛑");
       } else {
         const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', booking.id);
         if (error) throw error;
+
+        // 🔥 إرسال إشعار لك بعد إلغاء حجزك
+        await supabase.from('notifications').insert([{
+          user_id: currentUser.id,
+          translation_key: 'notif_booking_cancelled'
+        }]);
+
         toast.success(lang === 'ar' ? "تم إلغاء الحجز بنجاح 🛑" : "Booking successfully cancelled 🛑");
       }
       
       setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
     } catch (error: any) {
-      // 🔥 هنا التعديل اللي بيصيد لنا الخطأ الحقيقي
       console.error("تفاصيل الخطأ الدقيقة من قاعدة البيانات:", error);
       toast.error(lang === 'ar' ? `الخطأ: ${error.message}` : `Error: ${error.message}`);
     }
@@ -145,7 +165,7 @@ export default function MyBookings() {
           </button>
           <div className={dir === 'ltr' ? 'text-left' : 'text-right'}>
             <h1 className="text-3xl font-[1000] italic uppercase leading-none tracking-tighter">
-              {t('my_bookings')}
+              {t('my_bookings' as any)}
             </h1>
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
               {lang === 'ar' ? 'تذاكر الملاعب والتحديات' : 'Court Tickets & Challenges'}
@@ -203,7 +223,7 @@ export default function MyBookings() {
                     <div className={`flex flex-col gap-1 ${dir === 'rtl' ? 'items-end' : 'items-start'}`}>
                       {booking.type === 'challenge' && (
                         <span className="text-[8px] font-black text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-md uppercase flex items-center gap-1">
-                          <Swords size={10} /> {t('challenge')}
+                          <Swords size={10} /> {t('challenge' as any)}
                         </span>
                       )}
                       
