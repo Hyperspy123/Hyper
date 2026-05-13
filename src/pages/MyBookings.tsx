@@ -11,7 +11,7 @@ export default function MyBookings() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'current' | 'previous' | 'cancelled'>('current');
-  const [currentUser, setCurrentUser] = useState<any>(null); // 🔥 حفظ بيانات المستخدم للإشعارات
+  const [currentUser, setCurrentUser] = useState<any>(null); 
   
   const navigate = useNavigate();
 
@@ -27,7 +27,7 @@ export default function MyBookings() {
         navigate('/auth');
         return;
       }
-      setCurrentUser(user); // 🔥 حفظ المستخدم
+      setCurrentUser(user);
 
       // 1. جلب الحجوزات العادية
       const { data: normalBookings, error: normalError } = await supabase
@@ -48,7 +48,7 @@ export default function MyBookings() {
       // 3. جلب بيانات الملاعب عشان نعرضها للتحديات
       const { data: courtsData } = await supabase.from('courts').select('name, image_url, location');
 
-      // 4. توحيد ودمج البيانات في مصفوفة واحدة
+      // 4. توحيد ودمج البيانات
       const mergedBookings: any[] = [];
 
       normalBookings?.forEach(b => {
@@ -67,7 +67,7 @@ export default function MyBookings() {
         const court = courtsData?.find(crt => crt.name === c.court_name);
         const isChallenger = c.challenger_id === user.id;
         const opponentName = isChallenger ? c.challenged?.first_name : c.challenger?.first_name;
-        const opponentId = isChallenger ? c.challenged?.id : c.challenger?.id; // 🔥 جلب ID الخصم عشان نرسل له إشعار لو انلغى التحدي
+        const opponentId = isChallenger ? c.challenged?.id : c.challenger?.id;
 
         const mappedStatus = c.status === 'accepted' ? 'confirmed' : (c.status === 'rejected' || c.status === 'cancelled') ? 'cancelled' : c.status;
 
@@ -80,7 +80,7 @@ export default function MyBookings() {
           start_time: c.match_time,
           status: mappedStatus,
           opponent_name: opponentName,
-          opponent_id: opponentId // 🔥 حفظ ID الخصم
+          opponent_id: opponentId 
         });
       });
 
@@ -106,18 +106,18 @@ export default function MyBookings() {
         const { error } = await supabase.from('challenges').update({ status: 'cancelled' }).eq('id', booking.id);
         if (error) throw error;
         
-        // 🔥 إرسال إشعار لك وإشعار لخصمك
+        // 🔥 إرسال إشعار لك وإشعار لخصمك (نصوص صريحة بدلاً من translation_key)
         const notificationsToInsert = [
           { 
             user_id: currentUser.id, 
             title: lang === 'ar' ? 'إلغاء التحدي 🛑' : 'Challenge Cancelled 🛑',
-            message: t('notif_booking_cancelled' as any),
+            message: t('notif_booking_cancelled' as any) || (lang === 'ar' ? 'تم إلغاء التحدي بنجاح.' : 'The challenge has been cancelled.'),
             type: 'cancellation',
             is_read: false
           }
         ];
         
-        // إشعار الخصم
+        // إشعار الخصم بنص صريح
         if (booking.opponent_id) {
           notificationsToInsert.push({ 
             user_id: booking.opponent_id, 
@@ -134,11 +134,11 @@ export default function MyBookings() {
         const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', booking.id);
         if (error) throw error;
 
-        // 🔥 إرسال إشعار لك بعد إلغاء الحجز العادي
+        // 🔥 إرسال إشعار لك بعد إلغاء الحجز العادي (نصوص صريحة)
         await supabase.from('notifications').insert([{
           user_id: currentUser.id,
           title: lang === 'ar' ? 'إلغاء الحجز 🗑️' : 'Booking Cancelled 🗑️',
-          message: t('notif_booking_cancelled' as any),
+          message: t('notif_booking_cancelled' as any) || (lang === 'ar' ? 'تم إلغاء الحجز بنجاح.' : 'Booking successfully cancelled.'),
           type: 'cancellation',
           is_read: false
         }]);
@@ -153,7 +153,6 @@ export default function MyBookings() {
     }
   };
 
-  // 🔥 دالة توليد رمز الحجز
   const generateBookingCode = (id: string, type: string) => {
     if (!id) return 'HYP-00000';
     const prefix = type === 'challenge' ? 'CHL' : 'HYP';
@@ -175,7 +174,6 @@ export default function MyBookings() {
       <Header />
       <main className="p-6 max-w-md mx-auto pt-24 space-y-8">
         
-        {/* العنوان وزر العودة */}
         <div className="flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-cyan-400 active:scale-90 transition-all shadow-xl">
             <ChevronLeft size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
@@ -190,7 +188,6 @@ export default function MyBookings() {
           </div>
         </div>
 
-        {/* التبويبات */}
         <div className="flex bg-[#0a0f3c]/60 backdrop-blur-3xl p-1.5 rounded-[24px] border border-white/10 shadow-2xl">
           {(['current', 'previous', 'cancelled'] as const).map((tab) => (
             <button
@@ -207,7 +204,6 @@ export default function MyBookings() {
           ))}
         </div>
 
-        {/* قائمة الحجوزات */}
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="animate-spin text-cyan-400" size={32} /></div>
         ) : (
@@ -215,12 +211,10 @@ export default function MyBookings() {
             {filteredBookings.length > 0 ? filteredBookings.map((booking) => (
               <div key={booking.id} className={`bg-[#0a0f3c] border ${booking.type === 'challenge' ? 'border-purple-500/40' : 'border-white/10'} rounded-[30px] p-1 relative overflow-hidden group shadow-2xl transition-all`}>
                 
-                {/* تأثير الإضاءة الفخمة في الخلفية */}
                 <div className={`absolute inset-0 bg-gradient-to-br opacity-40 ${booking.type === 'challenge' ? 'from-purple-500/20 to-pink-500/10' : 'from-cyan-500/10 to-purple-500/10'}`} />
 
                 <div className="bg-[#05081d] rounded-[28px] p-5 relative z-10">
                   
-                  {/* 🎟️ الهيدر: رمز الحجز والحالة */}
                   <div className="flex justify-between items-center mb-5 border-b border-white/5 pb-4 border-dashed">
                     <div className="flex items-center gap-2">
                       <div className={`p-1.5 rounded-lg ${booking.type === 'challenge' ? 'bg-purple-500/10' : 'bg-white/5'}`}>
@@ -236,7 +230,6 @@ export default function MyBookings() {
                       </div>
                     </div>
                     
-                    {/* شارة الحالة والنوع */}
                     <div className={`flex flex-col gap-1 ${dir === 'rtl' ? 'items-end' : 'items-start'}`}>
                       {booking.type === 'challenge' && (
                         <span className="text-[8px] font-black text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-md uppercase flex items-center gap-1">
@@ -271,7 +264,6 @@ export default function MyBookings() {
                     </div>
                   </div>
 
-                  {/* 📍 معلومات الملعب */}
                   <div className={`space-y-2 mb-6 ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>
                     <h3 className="text-xl font-[1000] italic uppercase text-white flex items-center gap-2">
                       {booking.court_name}
@@ -292,7 +284,6 @@ export default function MyBookings() {
                     )}
                   </div>
 
-                  {/* ⏰ الوقت والتاريخ */}
                   <div className="flex gap-3 mb-4">
                     <div className="flex-1 bg-white/5 border border-white/5 rounded-2xl p-3 flex items-center gap-3">
                       <Calendar size={18} className={booking.type === 'challenge' ? 'text-purple-400' : 'text-cyan-400'} />
@@ -314,7 +305,6 @@ export default function MyBookings() {
                     </div>
                   </div>
 
-                  {/* زر الإلغاء (يظهر فقط في التبويب الحالي) */}
                   {activeTab === 'current' && (
                     <div className="pt-2 border-t border-white/5 border-dashed">
                       <button 
