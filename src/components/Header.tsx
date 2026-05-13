@@ -19,7 +19,8 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-[100] px-6 py-4 flex justify-between items-center bg-[#05081d]/80 backdrop-blur-lg border-b border-white/5">
+      {/* الهيدر - z-[40] لضمان بقائه تحت الشريط السفلي (z-50) */}
+      <header className="fixed top-0 left-0 right-0 z-[40] px-6 py-4 flex justify-between items-center bg-[#05081d]/80 backdrop-blur-lg border-b border-white/5">
         <button onClick={toggleMenu} className="p-2 hover:bg-white/5 rounded-xl transition-all">
           <Menu size={24} className="text-white" />
         </button>
@@ -37,10 +38,15 @@ export default function Header() {
         </button>
       </header>
 
-      {/* Side Menu - تم رفع z-index إلى 9999 لضمان تغطية جميع العناصر بما فيها الشريط السفلي */}
-      <div className={`fixed inset-0 z-[9999] transition-all duration-500 ${isOpen ? 'visible' : 'invisible pointer-events-none'}`}>
-        <div className={`absolute inset-0 bg-[#05081d]/90 backdrop-blur-md transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0'}`} onClick={toggleMenu} />
+      {/* 🔥 القائمة الجانبية - z-[9999] وتعمل فقط عند الفتح لتغطي كل شيء بما في ذلك البار السفلي */}
+      <div className={`fixed inset-0 z-[9999] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+        {/* الخلفية المظلمة */}
+        <div 
+          className={`absolute inset-0 bg-[#05081d]/90 backdrop-blur-md transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
+          onClick={toggleMenu} 
+        />
         
+        {/* جسم القائمة */}
         <aside 
           className={`absolute top-0 bottom-0 w-80 bg-[#0a0f3c] border-white/10 shadow-2xl transition-transform duration-500 flex flex-col
             ${dir === 'rtl' ? (isOpen ? 'right-0' : 'translate-x-full right-0 border-l') : (isOpen ? 'left-0' : '-translate-x-full left-0 border-r')}`}

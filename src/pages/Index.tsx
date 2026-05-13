@@ -31,9 +31,11 @@ export default function Index() {
     const matchesSearch = (court.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                          (court.location || '').toLowerCase().includes(searchTerm.toLowerCase());
     
+    // 💡 ذكاء الفرز: توحيد حالة الأحرف عشان يتطابق صح 100٪
     const safeGender = (court.gender || '').toLowerCase();
     const matchesGender = genderFilter === 'all' || safeGender === genderFilter;
     
+    // 💡 ذكاء الفرز لنمط اللعب: إزالة المسافات وتوحيد الكلمة عشان يقبل 1v1 أو 1 VS 1
     const safeType = (court.type || '').toLowerCase().replace(/\s/g, '').replace('vs', 'v'); 
     const matchesType = typeFilter === 'all' || safeType === typeFilter;
     
@@ -58,8 +60,7 @@ export default function Index() {
         <div className="absolute inset-0 bg-gradient-to-b from-[#05081d]/50 via-transparent to-[#05081d]" />
       </div>
 
-      {/* 🔥 هنا التعديل السحري: رفعنا طبقة المحتوى كاملة عشان ما تتغطى */}
-      <div className="relative z-[999]">
+      <div className="relative z-10">
         <Header />
         
         <main className="p-6 max-w-md mx-auto space-y-10 pt-28">
