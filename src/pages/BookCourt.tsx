@@ -4,11 +4,13 @@ import { supabase } from '../LLL';
 import Header from '@/components/Header';
 import { ChevronRight, Clock, Zap, CalendarDays, Timer, Loader2, Lock, Swords } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '../context/LanguageContext'; // 🔥 أضفنا استدعاء اللغة هنا
 
 export default function BookCourt() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, lang } = useLanguage(); // 🔥 سحبنا اللغة والترجمة
   
   const challengeInfo = location.state as { isChallengeMode?: boolean, opponentId?: string, opponentName?: string };
 
@@ -114,7 +116,6 @@ export default function BookCourt() {
   }, [cleanId]);
 
   useEffect(() => {
-    // ✅ التأكد من وجود اسم الملعب قبل البحث عن المواعيد
     if (selectedDate && court?.name) {
       fetchBookedSlots(selectedDate, court.name);
       setSelectedTime('');
@@ -163,6 +164,16 @@ export default function BookCourt() {
         }]);
 
         if (bookingError) throw bookingError;
+
+        // 🔥 كود الإشعارات الجديد: ينرسل الإشعار بعد تأكيد الحجز مباشرة
+        await supabase.from('notifications').insert([{
+          user_id: user.id,
+          title: lang === 'ar' ? 'تأكيد الحجز 🎾' : 'Booking Confirmed 🎾',
+          message: t('notif_booking_confirmed' as any),
+          type: 'booking',
+          is_read: false
+        }]);
+
         toast.success("تم الحجز بنجاح! ننتظرك في الملعب 🎾");
         setTimeout(() => navigate('/my-bookings'), 1000);
       }
@@ -207,7 +218,6 @@ export default function BookCourt() {
       )}
 
       <main className="px-6 max-w-md mx-auto space-y-8 text-right pt-6">
-        {/* بطاقة الملعب */}
         <div className="relative h-56 rounded-[40px] overflow-hidden border border-white/10 shadow-2xl group">
           <img src={court?.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="Court" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f3c] via-transparent to-transparent" />
@@ -220,7 +230,6 @@ export default function BookCourt() {
           </div>
         </div>
 
-        {/* اختيار المدة */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest">
             <span>مدة اللعب</span>
@@ -239,7 +248,6 @@ export default function BookCourt() {
           </div>
         </section>
 
-        {/* اختيار التاريخ */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest">
             <span>اختر اليوم</span>
@@ -260,7 +268,6 @@ export default function BookCourt() {
           </div>
         </section>
 
-        {/* اختيار الوقت */}
         <section className="space-y-4 relative">
           <div className="flex items-center gap-2 justify-end opacity-40 text-[10px] font-black uppercase tracking-widest">
             <span>اختر وقت البداية</span>
@@ -293,7 +300,6 @@ export default function BookCourt() {
           </div>
         </section>
 
-        {/* زر التأكيد */}
         <div className="fixed bottom-24 left-0 right-0 px-6 max-w-md mx-auto z-40">
           <button 
             onClick={handleConfirm} 

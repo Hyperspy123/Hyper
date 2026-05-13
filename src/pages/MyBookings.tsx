@@ -108,10 +108,24 @@ export default function MyBookings() {
         
         // 🔥 إرسال إشعار لك وإشعار لخصمك
         const notificationsToInsert = [
-          { user_id: currentUser.id, translation_key: 'notif_booking_cancelled' }
+          { 
+            user_id: currentUser.id, 
+            title: lang === 'ar' ? 'إلغاء التحدي 🛑' : 'Challenge Cancelled 🛑',
+            message: t('notif_booking_cancelled' as any),
+            type: 'cancellation',
+            is_read: false
+          }
         ];
+        
+        // إشعار الخصم
         if (booking.opponent_id) {
-          notificationsToInsert.push({ user_id: booking.opponent_id, translation_key: 'notif_booking_cancelled' });
+          notificationsToInsert.push({ 
+            user_id: booking.opponent_id, 
+            title: lang === 'ar' ? 'انسحاب الخصم ⚔️' : 'Opponent Withdrew ⚔️',
+            message: lang === 'ar' ? `لقد قام الخصم بإلغاء التحدي في ${booking.court_name}` : `The opponent cancelled the challenge at ${booking.court_name}`,
+            type: 'cancellation',
+            is_read: false
+          });
         }
         await supabase.from('notifications').insert(notificationsToInsert);
 
@@ -120,10 +134,13 @@ export default function MyBookings() {
         const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', booking.id);
         if (error) throw error;
 
-        // 🔥 إرسال إشعار لك بعد إلغاء حجزك
+        // 🔥 إرسال إشعار لك بعد إلغاء الحجز العادي
         await supabase.from('notifications').insert([{
           user_id: currentUser.id,
-          translation_key: 'notif_booking_cancelled'
+          title: lang === 'ar' ? 'إلغاء الحجز 🗑️' : 'Booking Cancelled 🗑️',
+          message: t('notif_booking_cancelled' as any),
+          type: 'cancellation',
+          is_read: false
         }]);
 
         toast.success(lang === 'ar' ? "تم إلغاء الحجز بنجاح 🛑" : "Booking successfully cancelled 🛑");

@@ -37,8 +37,8 @@ export default function Header() {
         </button>
       </header>
 
-      {/* Side Menu */}
-      <div className={`fixed inset-0 z-[150] transition-all duration-500 ${isOpen ? 'visible' : 'invisible pointer-events-none'}`}>
+      {/* Side Menu - تم رفع z-index إلى 9999 لضمان تغطية جميع العناصر بما فيها الشريط السفلي */}
+      <div className={`fixed inset-0 z-[9999] transition-all duration-500 ${isOpen ? 'visible' : 'invisible pointer-events-none'}`}>
         <div className={`absolute inset-0 bg-[#05081d]/90 backdrop-blur-md transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0'}`} onClick={toggleMenu} />
         
         <aside 
@@ -63,7 +63,6 @@ export default function Header() {
               </button>
             ))}
 
-            {/* 🔥 التعديل هنا: يحوله لصفحة الدعم الفني */}
             <button
               onClick={() => { navigate('/support'); setIsOpen(false); }}
               className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition-all ${location.pathname === '/support' ? 'bg-cyan-500 text-[#0a0f3c]' : 'text-gray-400 hover:bg-white/5 hover:text-purple-400'}`}
