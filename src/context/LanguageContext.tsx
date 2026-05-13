@@ -42,8 +42,9 @@ interface Translations {
   notif_slot_taken: string;
   notif_new_player_joined: string;
   notif_login_required: string;
+  notif_match_now_full: string; // 👈 الإشعار الجديد
 
-  // 🔥 كلمات تفاصيل الحجز والمدة (الجديدة)
+  // 🔥 كلمات تفاصيل الحجز والمدة
   duration: string;
   price: string;
   sar: string;
@@ -79,8 +80,9 @@ const dictionary: Record<Language, Translations> = {
     notif_slot_taken: 'عذراً، هذا الوقت تم حجزه للتو 🛑',
     notif_new_player_joined: 'انضم لاعب جديد لتحديك! 👤',
     notif_login_required: 'يجب تسجيل الدخول أولاً 🔐',
+    notif_match_now_full: 'اكتمل عدد اللاعبين والمباراة جاهزة! 🎾🔥', // 👈 إضافة الترجمة
 
-    // 🔥 كلمات تفاصيل الحجز (الجديدة)
+    // كلمات تفاصيل الحجز
     duration: 'المدة',
     price: 'السعر الإجمالي',
     sar: 'ريال',
@@ -114,8 +116,9 @@ const dictionary: Record<Language, Translations> = {
     notif_slot_taken: 'Sorry, this slot was just taken 🛑',
     notif_new_player_joined: 'A new player joined your challenge! 👤',
     notif_login_required: 'Please login first 🔐',
+    notif_match_now_full: 'Match is full and ready to go! 🎾🔥', // 👈 إضافة الترجمة
 
-    // 🔥 كلمات تفاصيل الحجز (الجديدة)
+    // كلمات تفاصيل الحجز
     duration: 'Duration',
     price: 'Total Price',
     sar: 'SAR',

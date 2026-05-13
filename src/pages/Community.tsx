@@ -32,21 +32,18 @@ export default function Community() {
 
   const DATES = getUpcomingDates(lang);
   
-  // حالات الفورم
   const [selectedCourt, setSelectedCourt] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(DATES[0].value);
   const [selectedTime, setSelectedTime] = useState(TIMES[2]);
   const [neededPlayers, setNeededPlayers] = useState(1);
-  const [selectedDuration, setSelectedDuration] = useState<number>(60); // 🔥 المدة الافتراضية 60 دقيقة
+  const [selectedDuration, setSelectedDuration] = useState<number>(60);
 
-  // خيارات المدة
   const DURATIONS = [
     { value: 60, label: t('mins_60' as any) },
     { value: 90, label: t('mins_90' as any) },
     { value: 120, label: t('mins_120' as any) }
   ];
 
-  // 🔥 الحسبة الديناميكية للسعر
   const basePrice = selectedCourt?.price_per_hour || 150;
   const totalPrice = (basePrice * (selectedDuration / 60)).toFixed(2);
 
@@ -97,6 +94,7 @@ export default function Community() {
         host_id: user.id,
         host_name: user.user_metadata?.first_name || 'Hype Player',
         court_name: selectedCourt.name,
+        court_name_en: selectedCourt.name_en || selectedCourt.name, // 🔥 حفظ الاسم الإنجليزي
         match_date: selectedDate,
         match_time: selectedTime,
         duration_minutes: selectedDuration, 
@@ -109,7 +107,6 @@ export default function Community() {
 
       if (error) throw error;
       
-      // إرسال إشعار للمستخدم بتأكيد الحجز
       await supabase.from('notifications').insert([{
         user_id: user.id,
         translation_key: 'notif_booking_confirmed'
@@ -133,21 +130,36 @@ export default function Community() {
 
     const currentUserData = { id: user.id, name: user.user_metadata?.first_name || 'Hype Player' };
     const updatedUsersList = [...joinedList, currentUserData];
+    const newJoinedCount = match.joined_count + 1;
+    const isNowFull = newJoinedCount === match.needed_players; // 🔥 هل اكتملت المباراة بهذا اللاعب؟
 
     const { error } = await supabase.from('open_matches')
       .update({ 
-        joined_count: match.joined_count + 1,
+        joined_count: newJoinedCount,
         joined_users: updatedUsersList
       })
       .eq('id', match.id);
 
     if (!error) {
-      // إرسال إشعار لصاحب المباراة إن فيه شخص انضم
+      // إشعار انضمام عادي لصاحب الحجز
       if (match.host_id !== user.id) {
         await supabase.from('notifications').insert([{
           user_id: match.host_id,
           translation_key: 'notif_new_player_joined'
         }]);
+      }
+
+      // 🔥 إشعار "اكتملت المباراة" يروح للكل (الهوست + اللاعبين) إذا تفللت
+      if (isNowFull) {
+        const fullNotifications = [
+          { user_id: match.host_id, translation_key: 'notif_match_now_full' },
+          ...updatedUsersList.map(u => ({ user_id: u.id, translation_key: 'notif_match_now_full' }))
+        ];
+        // إزالة التكرار لو الهوست موجود بالقائمة
+        const uniqueNotifications = Array.from(new Set(fullNotifications.map(n => n.user_id)))
+          .map(id => ({ user_id: id, translation_key: 'notif_match_now_full' }));
+          
+        await supabase.from('notifications').insert(uniqueNotifications);
       }
 
       toast.success(t('notif_join_success' as any));
@@ -158,7 +170,6 @@ export default function Community() {
   const deleteMatch = async (match: any) => {
     await supabase.from('open_matches').delete().eq('id', match.id);
     
-    // إرسال إشعار لكل اللاعبين المنضمين إن المباراة انلغت
     const joinedUsers = match.joined_users || [];
     if (joinedUsers.length > 0) {
       const notifications = joinedUsers.map((u: any) => ({
@@ -195,6 +206,9 @@ export default function Community() {
             const isFull = match.joined_count >= match.needed_players;
             const joinedList = match.joined_users || [];
             const amIJoined = joinedList.some((u: any) => u.id === user?.id);
+            
+            // 🔥 اختيار اسم الملعب بناءً على اللغة
+            const displayCourtName = lang === 'ar' ? match.court_name : (match.court_name_en || match.court_name);
 
             return (
               <div key={match.id} className="relative group bg-[#0a0f3c]/40 backdrop-blur-xl rounded-[50px] overflow-hidden border border-white/10 shadow-2xl transition-all hover:border-cyan-500/40">
@@ -221,7 +235,8 @@ export default function Community() {
                 <div className={`p-10 pt-6 relative z-10 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <h3 className="text-3xl font-[1000] italic uppercase tracking-tighter text-white leading-none">{match.court_name}</h3>
+                      {/* 🔥 عرض الاسم المترجم */}
+                      <h3 className="text-3xl font-[1000] italic uppercase tracking-tighter text-white leading-none">{displayCourtName}</h3>
                       <div className="flex flex-wrap items-center gap-2 mt-3 text-gray-400 font-bold text-xs bg-white/5 p-2 rounded-xl border border-white/5">
                         <span className="flex items-center gap-1"><Calendar size={12} className="text-cyan-400" /> {match.match_date}</span>
                         <span className="w-px h-3 bg-white/20"></span>
@@ -288,32 +303,38 @@ export default function Community() {
 
             <div className="space-y-8">
               
-              {/* 1. اختيار الملعب */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_court')}</p>
                 <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-                  {courts.map(c => (
-                    <button key={c.id} onClick={() => setSelectedCourt(c)} className={`flex-none w-32 h-32 rounded-3xl overflow-hidden border-2 transition-all relative ${selectedCourt?.id === c.id ? 'border-cyan-500 scale-105 shadow-lg shadow-cyan-500/20' : 'border-white/10 opacity-50 hover:opacity-100'}`}>
-                      <img src={c.image_url} className="w-full h-full object-cover" alt="" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 flex flex-col justify-end p-3">
-                        <span className="text-xs font-black text-left text-white leading-tight">{c.name}</span>
-                        <span className="text-[9px] font-bold text-cyan-400 mt-1">{c.price_per_hour || 150} {t('sar' as any)}/h</span>
-                      </div>
-                    </button>
-                  ))}
+                  {courts.map(c => {
+                    // 🔥 عرض اسم الملعب المترجم في المودال
+                    const courtNameDisplay = lang === 'ar' ? c.name : (c.name_en || c.name);
+                    return (
+                      <button key={c.id} onClick={() => setSelectedCourt(c)} className={`flex-none w-32 h-32 rounded-3xl overflow-hidden border-2 transition-all relative ${selectedCourt?.id === c.id ? 'border-cyan-500 scale-105 shadow-lg shadow-cyan-500/20' : 'border-white/10 opacity-50 hover:opacity-100'}`}>
+                        <img src={c.image_url} className="w-full h-full object-cover" alt="" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 flex flex-col justify-end p-3">
+                          <span className="text-xs font-black text-left text-white leading-tight">{courtNameDisplay}</span>
+                          <span className="text-[9px] font-bold text-cyan-400 mt-1">{c.price_per_hour || 150} {t('sar' as any)}/h</span>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
                 
-                {selectedCourt && (selectedCourt.description || (selectedCourt.features && selectedCourt.features.length > 0)) && (
+                {selectedCourt && (selectedCourt.description || selectedCourt.description_en || (selectedCourt.features && selectedCourt.features.length > 0)) && (
                   <div className="bg-white/5 border border-white/10 rounded-[20px] p-4 mt-2 animate-in fade-in">
-                    {selectedCourt.description && (
+                    {/* 🔥 عرض وصف الملعب المترجم */}
+                    {(selectedCourt.description || selectedCourt.description_en) && (
                       <p className="text-xs text-gray-300 mb-3 flex items-start gap-2">
                         <Info size={14} className="text-cyan-400 mt-0.5 flex-shrink-0" />
-                        {selectedCourt.description}
+                        {lang === 'ar' ? selectedCourt.description : (selectedCourt.description_en || selectedCourt.description)}
                       </p>
                     )}
-                    {selectedCourt.features && selectedCourt.features.length > 0 && (
+                    
+                    {/* 🔥 عرض مميزات الملعب المترجمة */}
+                    {(selectedCourt.features || selectedCourt.features_en) && (
                       <div className="flex flex-wrap gap-2">
-                        {selectedCourt.features.map((feature: string, idx: number) => (
+                        {(lang === 'ar' ? selectedCourt.features : (selectedCourt.features_en || selectedCourt.features))?.map((feature: string, idx: number) => (
                           <span key={idx} className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-1 rounded-md text-[9px] font-bold uppercase flex items-center gap-1">
                             <Sparkles size={10} /> {feature}
                           </span>
@@ -324,7 +345,6 @@ export default function Community() {
                 )}
               </div>
 
-              {/* 2. اختيار المدة */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">{t('duration' as any)}</p>
                 <div className="flex gap-3">
@@ -341,7 +361,6 @@ export default function Community() {
                 </div>
               </div>
 
-              {/* 3. اختيار عدد اللاعبين الناقصين */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{t('how_many_missing')}</p>
                 <div className="flex gap-3">
@@ -351,7 +370,6 @@ export default function Community() {
                 </div>
               </div>
 
-              {/* 4. اختيار التاريخ */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_date')}</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -361,7 +379,6 @@ export default function Community() {
                 </div>
               </div>
 
-              {/* 5. اختيار الوقت */}
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('select_time')}</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -371,7 +388,6 @@ export default function Community() {
                 </div>
               </div>
 
-              {/* التسعيرة النهائية وزر التأكيد */}
               <div className="pt-6 border-t border-white/10 mt-6">
                 <div className="flex justify-between items-end mb-6">
                   <div>
