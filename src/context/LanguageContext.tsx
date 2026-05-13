@@ -62,6 +62,13 @@ interface Translations {
   mins_90: string;
   mins_120: string;
   court_features: string;
+
+  // 🔥 كلمات الفرز (Filters)
+  filter_all: string;
+  filter_mens: string;
+  filter_womens: string;
+  filter_1v1: string;
+  filter_2v2: string;
 }
 
 const dictionary: Record<Language, Translations> = {
@@ -107,6 +114,13 @@ const dictionary: Record<Language, Translations> = {
     mins_90: '90 دقيقة',
     mins_120: '120 دقيقة',
     court_features: 'مميزات الملعب',
+
+    // كلمات الفرز
+    filter_all: 'الكل',
+    filter_mens: 'رجالي 👨',
+    filter_womens: 'نسائي 👩',
+    filter_1v1: '١ ضد ١ 🎾',
+    filter_2v2: '٢ ضد ٢ 👥',
   },
   en: {
     app_name: 'HYPE', profile: 'Profile', payment: 'Payment', notifications: 'Alerts', language: 'Language', logout: 'Logout', change_lang: 'العربية',
@@ -150,6 +164,13 @@ const dictionary: Record<Language, Translations> = {
     mins_90: '90 Mins',
     mins_120: '120 Mins',
     court_features: 'Court Features',
+
+    // كلمات الفرز
+    filter_all: 'All',
+    filter_mens: "Men's 👨",
+    filter_womens: "Women's 👩",
+    filter_1v1: '1 v 1 🎾',
+    filter_2v2: '2 v 2 👥',
   }
 };
 

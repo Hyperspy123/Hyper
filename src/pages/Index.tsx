@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL'; 
 import Header from '@/components/Header';
 import { MapPin, ChevronRight, Zap, Search, SlidersHorizontal, Users, User, SearchX, Star, ShieldCheck, Loader2 } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext'; // 🔥 استيراد المترجم
+import { useLanguage } from '../context/LanguageContext'; 
 
 export default function Index() {
-  const { t, dir, lang } = useLanguage(); // 🔥 جلب أدوات اللغة
+  const { t, dir, lang } = useLanguage(); 
   const navigate = useNavigate();
   const [courts, setCourts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,8 +30,13 @@ export default function Index() {
   const filteredCourts = courts.filter(court => {
     const matchesSearch = (court.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                          (court.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // الفرز بناءً على الجنس (رجالي/نسائي)
     const matchesGender = genderFilter === 'all' || court.gender === genderFilter;
+    
+    // الفرز بناءً على النوع (1v1/2v2) - يعتمد على عمود type في قاعدة البيانات
     const matchesType = typeFilter === 'all' || court.type === typeFilter;
+    
     return matchesSearch && matchesGender && matchesType;
   });
 
@@ -97,30 +102,43 @@ export default function Index() {
               </button>
             </div>
 
+            {/* 🔥 قائمة الفرز المحدثة باللغات */}
             {showFilters && (
-              <div className="absolute top-full right-0 left-0 mt-4 p-8 bg-[#0a0f3c]/95 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] space-y-8 animate-in fade-in zoom-in-95 duration-300 z-[100]">
+              <div className="absolute top-full right-0 left-0 mt-4 p-6 bg-[#0a0f3c]/95 backdrop-blur-3xl rounded-[30px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] space-y-6 animate-in fade-in zoom-in-95 duration-300 z-[100]">
+                
+                {/* 1. فرز الجنس */}
                 <div>
-                  <div className={`flex items-center gap-2 mb-4 text-gray-400 text-[10px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
-                    <User size={14} className="text-cyan-400" /> {lang === 'ar' ? 'نوع الحجز' : 'BOOKING TYPE'}
+                  <div className={`flex items-center gap-2 mb-3 text-gray-400 text-[10px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
+                    <User size={14} className="text-cyan-400" /> {lang === 'ar' ? 'الفئة' : 'CATEGORY'}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {(['all', 'male', 'female'] as const).map((g) => (
-                      <button key={g} onClick={() => setGenderFilter(g)} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === g ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
-                        {g === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : g === 'male' ? (lang === 'ar' ? 'رجالي' : 'Men') : (lang === 'ar' ? 'نسائي' : 'Women')}
-                      </button>
-                    ))}
+                    <button onClick={() => setGenderFilter('all')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'all' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                      {t('filter_all' as any) || (lang === 'ar' ? 'الكل' : 'All')}
+                    </button>
+                    <button onClick={() => setGenderFilter('male')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'male' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                      {t('filter_mens' as any) || (lang === 'ar' ? 'رجالي 👨' : "Men's 👨")}
+                    </button>
+                    <button onClick={() => setGenderFilter('female')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'female' ? 'bg-purple-500 border-purple-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                      {t('filter_womens' as any) || (lang === 'ar' ? 'نسائي 👩' : "Women's 👩")}
+                    </button>
                   </div>
                 </div>
+
+                {/* 2. فرز نمط اللعب (1v1 / 2v2) */}
                 <div>
-                  <div className={`flex items-center gap-2 mb-4 text-gray-400 text-[10px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
+                  <div className={`flex items-center gap-2 mb-3 text-gray-400 text-[10px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
                     <Users size={14} className="text-cyan-400" /> {lang === 'ar' ? 'نمط اللعب' : 'PLAY STYLE'}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {(['all', '1v1', '2v2'] as const).map((t) => (
-                      <button key={t} onClick={() => setTypeFilter(t)} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === t ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
-                        {t === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : t}
-                      </button>
-                    ))}
+                    <button onClick={() => setTypeFilter('all')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === 'all' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                      {t('filter_all' as any) || (lang === 'ar' ? 'الكل' : 'All')}
+                    </button>
+                    <button onClick={() => setTypeFilter('1v1')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === '1v1' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                      {t('filter_1v1' as any) || (lang === 'ar' ? '١ ضد ١ 🎾' : '1 v 1 🎾')}
+                    </button>
+                    <button onClick={() => setTypeFilter('2v2')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === '2v2' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
+                      {t('filter_2v2' as any) || (lang === 'ar' ? '٢ ضد ٢ 👥' : '2 v 2 👥')}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -149,9 +167,16 @@ export default function Index() {
                         <ShieldCheck size={12} /> {lang === 'ar' ? 'موثق' : 'Verified'}
                       </span>
                     )}
+                    {/* شارة الفئة */}
                     <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase backdrop-blur-xl border ${court.gender === 'female' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
                       {court.gender === 'female' ? (lang === 'ar' ? 'نسائي 🚺' : 'Ladies 🚺') : (lang === 'ar' ? 'رجالي 🚹' : 'Men 🚹')}
                     </span>
+                    {/* شارة النوع */}
+                    {court.type && (
+                      <span className="px-4 py-2 bg-black/40 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
+                        {court.type === '1v1' ? '1 VS 1' : '2 VS 2'}
+                      </span>
+                    )}
                   </div>
 
                   <div className={`absolute top-6 ${dir === 'rtl' ? 'right-6' : 'left-6'} bg-yellow-500 text-black px-4 py-2 rounded-2xl text-[10px] font-black flex items-center gap-2 shadow-2xl border border-yellow-400 ${dir === 'rtl' ? 'rotate-3' : '-rotate-3'}`}>
@@ -174,7 +199,7 @@ export default function Index() {
                   </div>
 
                   <button className="w-full mt-8 py-5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-[#0a0f3c] rounded-[30px] font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/50 transition-all flex items-center justify-center gap-3">
-                    {t('book_now')} <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
+                    {t('book_now' as any)} <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
                   </button>
                 </div>
               </div>
@@ -182,7 +207,7 @@ export default function Index() {
               <div className="text-center py-24 bg-white/5 backdrop-blur-xl rounded-[50px] border border-dashed border-white/20">
                 <SearchX size={60} className="text-gray-700 mx-auto mb-6" />
                 <h3 className="text-xl font-black text-white mb-2 tracking-tight">
-                  {lang === 'ar' ? 'لا توجد ملاعب!' : 'No Courts Found!'}
+                  {lang === 'ar' ? 'لا توجد ملاعب تطابق بحثك!' : 'No Courts Found!'}
                 </h3>
               </div>
             )}
