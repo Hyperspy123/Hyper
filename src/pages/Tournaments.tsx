@@ -4,10 +4,10 @@ import { supabase } from '../LLL';
 import { toast } from 'sonner';
 import { Trophy, Calendar, ChevronLeft, Clock, Zap, CheckCircle2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext'; // 🔥 استيراد المترجم
+import { useLanguage } from '../context/LanguageContext'; 
 
 export default function Tournaments() {
-  const { t, dir, lang } = useLanguage(); // 🔥 جلب أدوات اللغة
+  const { t, dir, lang } = useLanguage(); 
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -119,7 +119,7 @@ export default function Tournaments() {
           </button>
           <div className={dir === 'ltr' ? 'text-right' : 'text-left'}>
             <h1 className="text-4xl font-[1000] italic tracking-tighter uppercase leading-none text-white">
-              {t('tournaments')}
+              {t('tournaments' as any) || 'Tournaments'}
             </h1>
             <p className="text-[10px] font-black text-cyan-400 mt-1 uppercase tracking-widest opacity-60 italic">HYPE EVENTS HUB</p>
           </div>
@@ -127,18 +127,30 @@ export default function Tournaments() {
 
         <div className="grid gap-10">
           {events.map((event) => {
-            const isFull = event.current_participants >= event.max_participants;
-            const progress = (event.current_participants / event.max_participants) * 100;
+            // 🔥 حماية البيانات من الأخطاء القديمة (عشان لو الخانة فارغة ما يضرب الكود)
+            const maxParticipants = event.max_participants || 32; 
+            const currentParticipants = event.current_participants || 0;
+            
+            const isFull = currentParticipants >= maxParticipants;
+            const progress = (currentParticipants / maxParticipants) * 100;
             const isUserRegistered = joinedEvents.includes(event.id);
+
+            // 🔥 اختيار الاسم والوصف ديناميكياً بناءً على لغة التطبيق
+            const displayTitle = lang === 'ar' ? (event.title_ar || event.name) : (event.title_en || event.title_ar || event.name);
+            const displayDesc = lang === 'ar' ? (event.description_ar || event.description) : (event.description_en || event.description_ar || event.description);
+            const displayDate = event.start_date || event.date;
+            const displayTime = event.start_time || event.time;
 
             return (
               <div key={event.id} className="group relative bg-[#0a0f3c]/80 backdrop-blur-2xl border border-white/10 rounded-[45px] overflow-hidden shadow-2xl transition-all hover:border-cyan-500/30">
                 <div className="relative h-64 overflow-hidden">
                   <img src={event.image_url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f3c] via-transparent" />
-                  <div className={`absolute top-6 ${dir === 'ltr' ? 'right-6' : 'left-6'} bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg`}>
-                    {event.court_name}
-                  </div>
+                  {event.court_name && (
+                    <div className={`absolute top-6 ${dir === 'ltr' ? 'right-6' : 'left-6'} bg-cyan-500 text-[#0a0f3c] px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-lg`}>
+                      {event.court_name}
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-8 space-y-6">
@@ -146,11 +158,13 @@ export default function Tournaments() {
                     <div className="p-2.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-yellow-500 shadow-lg">
                       <Trophy size={20} />
                     </div>
-                    <h3 className="text-2xl font-[1000] italic uppercase text-white tracking-tighter leading-none">{event.name}</h3>
+                    {/* 🔥 عرض العنوان المترجم */}
+                    <h3 className="text-2xl font-[1000] italic uppercase text-white tracking-tighter leading-none">{displayTitle}</h3>
                   </div>
 
+                  {/* 🔥 عرض الوصف المترجم */}
                   <p className={`text-sm text-gray-400 font-bold leading-relaxed opacity-80 ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>
-                    {event.description}
+                    {displayDesc}
                   </p>
 
                   <div className="space-y-3">
@@ -159,7 +173,7 @@ export default function Tournaments() {
                         {lang === 'ar' ? 'اكتمال العدد' : 'COMPLETION'}
                       </span>
                       <span className={`text-sm font-black italic ${isFull ? 'text-red-500' : 'text-cyan-400'}`}>
-                        {event.current_participants} / {event.max_participants} {lang === 'ar' ? 'بطل' : 'Player'}
+                        {currentParticipants} / {maxParticipants} {lang === 'ar' ? 'بطل' : 'Player'}
                       </span>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -171,16 +185,20 @@ export default function Tournaments() {
                   </div>
 
                   <div className={`flex gap-4 justify-end text-[10px] font-black text-gray-400 border-t border-white/5 pt-5 ${dir === 'ltr' ? 'flex-row-reverse' : ''}`}>
-                    <div className="flex items-center gap-1.5">
-                      {event.start_time} <Clock size={14} className="text-cyan-500" />
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {event.start_date} <Calendar size={14} className="text-cyan-500" />
-                    </div>
+                    {displayTime && (
+                      <div className="flex items-center gap-1.5">
+                        {displayTime} <Clock size={14} className="text-cyan-500" />
+                      </div>
+                    )}
+                    {displayDate && (
+                      <div className="flex items-center gap-1.5">
+                        {displayDate} <Calendar size={14} className="text-cyan-500" />
+                      </div>
+                    )}
                   </div>
 
                   <button
-                    onClick={() => handleJoin(event.id, event.current_participants, event.max_participants)}
+                    onClick={() => handleJoin(event.id, currentParticipants, maxParticipants)}
                     disabled={isUserRegistered || (isFull && !isUserRegistered)}
                     className={`w-full py-5 rounded-[28px] font-[1000] text-sm uppercase italic transition-all flex items-center justify-center gap-2 shadow-xl ${
                       isUserRegistered 
