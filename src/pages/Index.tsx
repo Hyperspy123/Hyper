@@ -31,11 +31,13 @@ export default function Index() {
     const matchesSearch = (court.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                          (court.location || '').toLowerCase().includes(searchTerm.toLowerCase());
     
-    // الفرز بناءً على الجنس (رجالي/نسائي)
-    const matchesGender = genderFilter === 'all' || court.gender === genderFilter;
+    // 💡 ذكاء الفرز: توحيد حالة الأحرف عشان يتطابق صح 100٪
+    const safeGender = (court.gender || '').toLowerCase();
+    const matchesGender = genderFilter === 'all' || safeGender === genderFilter;
     
-    // الفرز بناءً على النوع (1v1/2v2) - يعتمد على عمود type في قاعدة البيانات
-    const matchesType = typeFilter === 'all' || court.type === typeFilter;
+    // 💡 ذكاء الفرز لنمط اللعب: إزالة المسافات وتوحيد الكلمة عشان يقبل 1v1 أو 1 VS 1
+    const safeType = (court.type || '').toLowerCase().replace(/\s/g, '').replace('vs', 'v'); 
+    const matchesType = typeFilter === 'all' || safeType === typeFilter;
     
     return matchesSearch && matchesGender && matchesType;
   });
@@ -43,7 +45,6 @@ export default function Index() {
   return (
     <div className="min-h-screen relative text-white pb-32 overflow-x-hidden" dir={dir}>
       
-      {/* --- Background Engine --- */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[#05081d]" />
         <div 
@@ -63,7 +64,6 @@ export default function Index() {
         <Header />
         
         <main className="p-6 max-w-md mx-auto space-y-10 pt-28">
-          {/* Identity Section */}
           <section className="text-center space-y-4">
             <div className="flex justify-center mb-2">
               <div className="relative group">
@@ -83,7 +83,6 @@ export default function Index() {
             </div>
           </section>
 
-          {/* Search & Filters */}
           <div className="relative z-50 group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-[26px] opacity-20 group-focus-within:opacity-40 transition duration-500 blur" />
             <div className="relative flex gap-3">
@@ -102,42 +101,39 @@ export default function Index() {
               </button>
             </div>
 
-            {/* 🔥 قائمة الفرز المحدثة باللغات */}
             {showFilters && (
               <div className="absolute top-full right-0 left-0 mt-4 p-6 bg-[#0a0f3c]/95 backdrop-blur-3xl rounded-[30px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] space-y-6 animate-in fade-in zoom-in-95 duration-300 z-[100]">
                 
-                {/* 1. فرز الجنس */}
                 <div>
                   <div className={`flex items-center gap-2 mb-3 text-gray-400 text-[10px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
                     <User size={14} className="text-cyan-400" /> {lang === 'ar' ? 'الفئة' : 'CATEGORY'}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <button onClick={() => setGenderFilter('all')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'all' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
-                      {t('filter_all' as any) || (lang === 'ar' ? 'الكل' : 'All')}
+                      {t('filter_all' as any) || 'الكل'}
                     </button>
                     <button onClick={() => setGenderFilter('male')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'male' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
-                      {t('filter_mens' as any) || (lang === 'ar' ? 'رجالي 👨' : "Men's 👨")}
+                      {t('filter_mens' as any) || 'رجالي'}
                     </button>
                     <button onClick={() => setGenderFilter('female')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'female' ? 'bg-purple-500 border-purple-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
-                      {t('filter_womens' as any) || (lang === 'ar' ? 'نسائي 👩' : "Women's 👩")}
+                      {t('filter_womens' as any) || 'نسائي'}
                     </button>
                   </div>
                 </div>
 
-                {/* 2. فرز نمط اللعب (1v1 / 2v2) */}
                 <div>
                   <div className={`flex items-center gap-2 mb-3 text-gray-400 text-[10px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
                     <Users size={14} className="text-cyan-400" /> {lang === 'ar' ? 'نمط اللعب' : 'PLAY STYLE'}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <button onClick={() => setTypeFilter('all')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === 'all' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
-                      {t('filter_all' as any) || (lang === 'ar' ? 'الكل' : 'All')}
+                      {t('filter_all' as any) || 'الكل'}
                     </button>
                     <button onClick={() => setTypeFilter('1v1')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === '1v1' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
-                      {t('filter_1v1' as any) || (lang === 'ar' ? '١ ضد ١ 🎾' : '1 v 1 🎾')}
+                      {t('filter_1v1' as any) || '1 VS 1'}
                     </button>
                     <button onClick={() => setTypeFilter('2v2')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === '2v2' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
-                      {t('filter_2v2' as any) || (lang === 'ar' ? '٢ ضد ٢ 👥' : '2 v 2 👥')}
+                      {t('filter_2v2' as any) || '2 VS 2'}
                     </button>
                   </div>
                 </div>
@@ -145,7 +141,6 @@ export default function Index() {
             )}
           </div>
 
-          {/* Courts Grid */}
           <div className="grid gap-12">
             {loading ? (
               <div className="flex flex-col items-center py-20 text-cyan-400 font-black italic">
@@ -163,18 +158,16 @@ export default function Index() {
                   
                   <div className={`absolute top-6 ${dir === 'rtl' ? 'left-6' : 'right-6'} flex flex-col gap-2`}>
                     {court.isVerified && (
-                      <span className="bg-cyan-500 text-[#0a0f3c] px-3 py-1.5 rounded-2xl text-[9px] font-[1000] uppercase flex items-center gap-1 shadow-lg border border-cyan-400">
+                      <span className="bg-cyan-500 text-[#0a0f3c] px-3 py-1.5 rounded-2xl text-[9px] font-[1000] uppercase flex items-center justify-center gap-1 shadow-lg border border-cyan-400">
                         <ShieldCheck size={12} /> {lang === 'ar' ? 'موثق' : 'Verified'}
                       </span>
                     )}
-                    {/* شارة الفئة */}
-                    <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase backdrop-blur-xl border ${court.gender === 'female' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
-                      {court.gender === 'female' ? (lang === 'ar' ? 'نسائي 🚺' : 'Ladies 🚺') : (lang === 'ar' ? 'رجالي 🚹' : 'Men 🚹')}
+                    <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase text-center backdrop-blur-xl border ${court.gender?.toLowerCase() === 'female' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
+                      {court.gender?.toLowerCase() === 'female' ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
                     </span>
-                    {/* شارة النوع */}
                     {court.type && (
-                      <span className="px-4 py-2 bg-black/40 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
-                        {court.type === '1v1' ? '1 VS 1' : '2 VS 2'}
+                      <span className="px-4 py-2 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
+                        {court.type.toLowerCase().includes('1') ? '1 VS 1' : '2 VS 2'}
                       </span>
                     )}
                   </div>
