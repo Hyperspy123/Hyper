@@ -1,29 +1,34 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Send, Headphones, Mail, Loader2, MessageSquareText, HelpCircle, MessageCircle } from 'lucide-react';
+import { ChevronLeft, Send, Headphones, Loader2, MessageCircle, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Support() {
   const navigate = useNavigate();
-  // 🔥 جلبنا دالة t لترجمة الكلمات الرئيسية
   const { t, lang, dir } = useLanguage();
   
+  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!subject.trim()) {
+      toast.error(lang === 'ar' ? 'الرجاء كتابة موضوع الرسالة' : 'Please write the message subject');
+      return;
+    }
     if (!message.trim()) {
-      toast.error(lang === 'ar' ? 'الرجاء كتابة رسالة أولاً' : 'Please write a message first');
+      toast.error(lang === 'ar' ? 'الرجاء كتابة تفاصيل رسالتك' : 'Please write your message details');
       return;
     }
 
     setIsSubmitting(true);
 
-    // ⏳ محاكاة عملية إرسال للإيميل
+    // ⏳ محاكاة عملية إرسال
     setTimeout(() => {
       setIsSubmitting(false);
+      setSubject('');
       setMessage('');
       toast.success(
         lang === 'ar' 
@@ -46,7 +51,6 @@ export default function Support() {
           <div className={dir === 'ltr' ? 'text-left' : 'text-right'}>
             <h1 className="text-3xl font-[1000] italic uppercase leading-none tracking-tighter flex items-center gap-2">
               <Headphones className="text-purple-400" size={28} />
-              {/* 🔥 ترجمة العنوان */}
               {t('support_title' as any) || (lang === 'ar' ? 'الدعم الفني' : 'SUPPORT')}
             </h1>
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
@@ -55,90 +59,71 @@ export default function Support() {
           </div>
         </div>
 
-        {/* 🔥 الخيارات السريعة المترجمة (الأسئلة الشائعة والمحادثة المباشرة) */}
-        <div className="grid grid-cols-2 gap-4">
-          <button 
-            onClick={() => toast.info(lang === 'ar' ? 'المحادثة المباشرة ستتوفر قريباً 💬' : 'Live Chat coming soon 💬')}
-            className="bg-[#0a0f3c] p-5 rounded-3xl border border-white/10 flex flex-col items-center gap-3 hover:border-cyan-500/50 transition-all shadow-lg group"
-          >
-            <div className="p-3 bg-cyan-500/10 rounded-2xl group-hover:bg-cyan-500/20 transition-all">
-              <MessageCircle className="text-cyan-400" size={28} />
-            </div>
-            <span className="text-sm font-[1000] uppercase tracking-wider text-center leading-tight">
-              {t('support_chat' as any) || (lang === 'ar' ? 'محادثة مباشرة' : 'Live Chat')}
+        {/* 🛡️ الشارات العلوية (مطابقة للتصميم بالصورة) */}
+        <div className="flex gap-4">
+          <div className="flex-1 bg-[#131b4d]/50 border border-white/5 rounded-full py-3.5 px-4 flex items-center justify-center gap-2 shadow-lg">
+            <span className="text-xs font-bold text-gray-300">
+              {lang === 'ar' ? 'رد خلال 24 ساعة' : 'Reply in 24 hrs'}
             </span>
-          </button>
-
-          <button 
-            onClick={() => toast.info(lang === 'ar' ? 'صفحة الأسئلة الشائعة ستتوفر قريباً ❓' : 'FAQs coming soon ❓')}
-            className="bg-[#0a0f3c] p-5 rounded-3xl border border-white/10 flex flex-col items-center gap-3 hover:border-purple-500/50 transition-all shadow-lg group"
-          >
-            <div className="p-3 bg-purple-500/10 rounded-2xl group-hover:bg-purple-500/20 transition-all">
-              <HelpCircle className="text-purple-400" size={28} />
-            </div>
-            <span className="text-sm font-[1000] uppercase tracking-wider text-center leading-tight">
-              {t('support_faq' as any) || (lang === 'ar' ? 'الأسئلة الشائعة' : 'FAQs')}
-            </span>
-          </button>
-        </div>
-
-        {/* فاصل مرئي لراسلنا عبر البريد */}
-        <div className="flex items-center gap-4 my-6 opacity-70">
-          <div className="h-px flex-1 bg-white/10"></div>
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-            {t('support_email' as any) || (lang === 'ar' ? 'راسلنا عبر البريد' : 'Email Us')}
-          </span>
-          <div className="h-px flex-1 bg-white/10"></div>
-        </div>
-
-        {/* بطاقة الإيميل الوهمي */}
-        <div className="bg-gradient-to-br from-purple-500/10 to-cyan-500/10 border border-white/10 rounded-[24px] p-5 flex items-center gap-4 shadow-lg">
-          <div className="w-12 h-12 bg-[#0a0f3c] rounded-2xl flex items-center justify-center border border-white/5 shadow-inner">
-            <Mail className="text-cyan-400" size={24} />
+            <MessageCircle size={16} className="text-cyan-400" />
           </div>
-          <div className="flex-1">
-            <p className="text-xs font-bold text-gray-400 mb-1">
-              {lang === 'ar' ? 'الإيميل المخصص للشكاوى:' : 'Dedicated Support Email:'}
-            </p>
-            <p className="text-lg font-black text-white tracking-wider">
-              support@hype.com
-            </p>
+          <div className="flex-1 bg-[#131b4d]/50 border border-white/5 rounded-full py-3.5 px-4 flex items-center justify-center gap-2 shadow-lg">
+            <span className="text-xs font-bold text-gray-300">
+              {lang === 'ar' ? 'دعم آمن 100%' : '100% Secure'}
+            </span>
+            <ShieldCheck size={16} className="text-purple-400" />
           </div>
         </div>
 
-        {/* نموذج الإرسال */}
-        <form onSubmit={handleSubmit} className="bg-[#0a0f3c] border border-white/10 rounded-[30px] p-6 shadow-2xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 opacity-50" />
+        {/* 📝 نموذج المراسلة (مطابق للتصميم بالصورة) */}
+        <form onSubmit={handleSubmit} className="bg-[#0a0f3c] border border-white/5 rounded-[40px] p-6 shadow-2xl relative">
           
-          <div className="relative z-10 space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-300 flex items-center gap-2">
-                <MessageSquareText size={16} className="text-purple-400" />
-                {lang === 'ar' ? 'كيف يمكننا مساعدتك؟' : 'How can we help you?'}
+          <div className="space-y-6 relative z-10">
+            
+            {/* حقل موضوع الرسالة */}
+            <div className={`space-y-3 ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>
+              <label className="text-sm font-bold text-gray-400 px-2">
+                {lang === 'ar' ? 'موضوع الرسالة' : 'Message Subject'}
+              </label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder={lang === 'ar' ? 'مثلاً: مشكلة في الحجز...' : 'e.g., Booking issue...'}
+                className="w-full bg-transparent border border-cyan-500 rounded-full py-4 px-6 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all font-medium"
+              />
+            </div>
+
+            {/* حقل رسالتك بالتفصيل */}
+            <div className={`space-y-3 ${dir === 'ltr' ? 'text-left' : 'text-right'}`}>
+              <label className="text-sm font-bold text-gray-400 px-2">
+                {lang === 'ar' ? 'رسالتك بالتفصيل' : 'Message Details'}
               </label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={lang === 'ar' ? 'اكتب شكواك أو استفسارك هنا بالتفصيل...' : 'Write your complaint or inquiry here in detail...'}
-                rows={6}
-                className="w-full bg-[#05081d] border border-white/10 rounded-2xl p-4 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all resize-none font-medium"
+                placeholder={lang === 'ar' ? 'اكتب هنا ما يواجهك...' : 'Write your issue here...'}
+                rows={5}
+                className="w-full bg-transparent border border-white/10 rounded-[28px] py-4 px-6 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all resize-none font-medium"
               />
             </div>
 
+            {/* زر إرسال البريد */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-2xl font-[1000] text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-all flex justify-center items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 mt-4 bg-cyan-500 hover:bg-cyan-400 text-[#05081d] rounded-full font-[1000] text-lg transition-all flex justify-center items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(6,182,212,0.2)]"
             >
               {isSubmitting ? (
-                <Loader2 className="animate-spin" size={20} />
+                <Loader2 className="animate-spin text-[#05081d]" size={24} />
               ) : (
                 <>
-                  <Send size={18} className={dir === 'rtl' ? 'rotate-180' : ''} />
-                  {lang === 'ar' ? 'إرسال الرسالة' : 'Send Message'}
+                  <Send size={22} className={dir === 'rtl' ? 'rotate-180' : ''} />
+                  {lang === 'ar' ? 'إرسال البريد' : 'Send Email'}
                 </>
               )}
             </button>
+            
           </div>
         </form>
 
