@@ -21,6 +21,12 @@ interface Translations {
   courts: string;
   support: string;
 
+  // 🔥 كلمات الدعم الفني
+  support_title: string;
+  support_faq: string;
+  support_chat: string;
+  support_email: string;
+
   // 🔥 الكلمات الخاصة بالمجتمع
   how_many_missing: string;
   players_count_label: string;
@@ -42,7 +48,11 @@ interface Translations {
   notif_slot_taken: string;
   notif_new_player_joined: string;
   notif_login_required: string;
-  notif_match_now_full: string; // 👈 الإشعار الجديد
+  notif_match_now_full: string;
+  notif_private_booking: string;
+  notif_booking_cancelled: string;
+  notif_rank_up: string;
+  notif_tournament_joined: string;
 
   // 🔥 كلمات تفاصيل الحجز والمدة
   duration: string;
@@ -67,6 +77,9 @@ const dictionary: Record<Language, Translations> = {
     // كلمات الشريط السفلي
     home: 'الرئيسية', courts: 'الملاعب', support: 'الدعم',
 
+    // كلمات الدعم الفني
+    support_title: 'الدعم الفني', support_faq: 'الأسئلة الشائعة', support_chat: 'محادثة مباشرة', support_email: 'راسلنا عبر البريد',
+
     // كلمات المجتمع
     how_many_missing: 'كم ناقصك لاعب؟', players_count_label: 'لاعبين', login_first: 'سجل دخولك أولاً',
     joining: 'جاري الانضمام...', already_joined: 'تم الانضمام بنجاح ✅', slots_full: 'اكتمل العدد 🛑', match_full: 'هذه المباراة مكتملة',
@@ -80,7 +93,11 @@ const dictionary: Record<Language, Translations> = {
     notif_slot_taken: 'عذراً، هذا الوقت تم حجزه للتو 🛑',
     notif_new_player_joined: 'انضم لاعب جديد لتحديك! 👤',
     notif_login_required: 'يجب تسجيل الدخول أولاً 🔐',
-    notif_match_now_full: 'اكتمل عدد اللاعبين والمباراة جاهزة! 🎾🔥', // 👈 إضافة الترجمة
+    notif_match_now_full: 'اكتمل عدد اللاعبين والمباراة جاهزة! 🎾🔥',
+    notif_private_booking: 'تم تأكيد حجزك الخاص للملعب بنجاح! 🎾',
+    notif_booking_cancelled: 'تم إلغاء الحجز بنجاح 🗑️',
+    notif_rank_up: 'ألف مبروك! ارتفع تصنيفك لمستوى أعلى! 🌟🏆',
+    notif_tournament_joined: 'تم تسجيلك في البطولة بنجاح! 🏆',
 
     // كلمات تفاصيل الحجز
     duration: 'المدة',
@@ -103,6 +120,9 @@ const dictionary: Record<Language, Translations> = {
     // كلمات الشريط السفلي
     home: 'Home', courts: 'Courts', support: 'Support',
 
+    // كلمات الدعم الفني
+    support_title: 'Support', support_faq: 'FAQs', support_chat: 'Live Chat', support_email: 'Email Us',
+
     // كلمات المجتمع
     how_many_missing: 'How many players missing?', players_count_label: 'Players', login_first: 'Please login first',
     joining: 'Joining...', already_joined: 'Joined Successfully ✅', slots_full: 'Full Capacity 🛑', match_full: 'This match is full',
@@ -116,7 +136,11 @@ const dictionary: Record<Language, Translations> = {
     notif_slot_taken: 'Sorry, this slot was just taken 🛑',
     notif_new_player_joined: 'A new player joined your challenge! 👤',
     notif_login_required: 'Please login first 🔐',
-    notif_match_now_full: 'Match is full and ready to go! 🎾🔥', // 👈 إضافة الترجمة
+    notif_match_now_full: 'Match is full and ready to go! 🎾🔥',
+    notif_private_booking: 'Private court booking confirmed! 🎾',
+    notif_booking_cancelled: 'Booking cancelled successfully 🗑️',
+    notif_rank_up: 'Congratulations! You ranked up to a new level! 🌟🏆',
+    notif_tournament_joined: 'You have successfully registered for the tournament! 🏆',
 
     // كلمات تفاصيل الحجز
     duration: 'Duration',

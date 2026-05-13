@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Send, Headphones, Mail, Loader2, MessageSquareText } from 'lucide-react';
+import { ChevronLeft, Send, Headphones, Mail, Loader2, MessageSquareText, HelpCircle, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Support() {
   const navigate = useNavigate();
-  const { lang, dir } = useLanguage();
+  // 🔥 جلبنا دالة t لترجمة الكلمات الرئيسية
+  const { t, lang, dir } = useLanguage();
   
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,7 +21,7 @@ export default function Support() {
 
     setIsSubmitting(true);
 
-    // ⏳ محاكاة عملية إرسال للإيميل الوهمي (تأخير ثانيتين)
+    // ⏳ محاكاة عملية إرسال للإيميل
     setTimeout(() => {
       setIsSubmitting(false);
       setMessage('');
@@ -29,7 +30,6 @@ export default function Support() {
           ? 'تم استلام رسالتك! سنتواصل معك قريباً 🎧' 
           : 'Message received! We will contact you soon 🎧'
       );
-      // اختياري: نرجعه للصفحة الرئيسية بعد الإرسال
       setTimeout(() => navigate('/'), 1500);
     }, 2000);
   };
@@ -46,12 +46,49 @@ export default function Support() {
           <div className={dir === 'ltr' ? 'text-left' : 'text-right'}>
             <h1 className="text-3xl font-[1000] italic uppercase leading-none tracking-tighter flex items-center gap-2">
               <Headphones className="text-purple-400" size={28} />
-              {lang === 'ar' ? 'الدعم الفني' : 'SUPPORT'}
+              {/* 🔥 ترجمة العنوان */}
+              {t('support_title' as any) || (lang === 'ar' ? 'الدعم الفني' : 'SUPPORT')}
             </h1>
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
               {lang === 'ar' ? 'نحن هنا لمساعدتك' : 'We are here to help'}
             </p>
           </div>
+        </div>
+
+        {/* 🔥 الخيارات السريعة المترجمة (الأسئلة الشائعة والمحادثة المباشرة) */}
+        <div className="grid grid-cols-2 gap-4">
+          <button 
+            onClick={() => toast.info(lang === 'ar' ? 'المحادثة المباشرة ستتوفر قريباً 💬' : 'Live Chat coming soon 💬')}
+            className="bg-[#0a0f3c] p-5 rounded-3xl border border-white/10 flex flex-col items-center gap-3 hover:border-cyan-500/50 transition-all shadow-lg group"
+          >
+            <div className="p-3 bg-cyan-500/10 rounded-2xl group-hover:bg-cyan-500/20 transition-all">
+              <MessageCircle className="text-cyan-400" size={28} />
+            </div>
+            <span className="text-sm font-[1000] uppercase tracking-wider text-center leading-tight">
+              {t('support_chat' as any) || (lang === 'ar' ? 'محادثة مباشرة' : 'Live Chat')}
+            </span>
+          </button>
+
+          <button 
+            onClick={() => toast.info(lang === 'ar' ? 'صفحة الأسئلة الشائعة ستتوفر قريباً ❓' : 'FAQs coming soon ❓')}
+            className="bg-[#0a0f3c] p-5 rounded-3xl border border-white/10 flex flex-col items-center gap-3 hover:border-purple-500/50 transition-all shadow-lg group"
+          >
+            <div className="p-3 bg-purple-500/10 rounded-2xl group-hover:bg-purple-500/20 transition-all">
+              <HelpCircle className="text-purple-400" size={28} />
+            </div>
+            <span className="text-sm font-[1000] uppercase tracking-wider text-center leading-tight">
+              {t('support_faq' as any) || (lang === 'ar' ? 'الأسئلة الشائعة' : 'FAQs')}
+            </span>
+          </button>
+        </div>
+
+        {/* فاصل مرئي لراسلنا عبر البريد */}
+        <div className="flex items-center gap-4 my-6 opacity-70">
+          <div className="h-px flex-1 bg-white/10"></div>
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+            {t('support_email' as any) || (lang === 'ar' ? 'راسلنا عبر البريد' : 'Email Us')}
+          </span>
+          <div className="h-px flex-1 bg-white/10"></div>
         </div>
 
         {/* بطاقة الإيميل الوهمي */}
