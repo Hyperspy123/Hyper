@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../LLL';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Zap, User, LogIn, Calendar, Loader2, Phone, ChevronLeft, ChevronRight, Activity, Hand, UserPlus } from 'lucide-react';
+import { Mail, Lock, Zap, UserPlus, LogIn, Calendar, Loader2, Phone, ChevronLeft, ChevronRight, Activity, Hand } from 'lucide-react';
 import { toast } from 'sonner';
 
-type AuthMode = 'signin' | 'signup' | 'reset';
+// 🔥 أضفنا حالة جديدة لتحديث كلمة المرور
+type AuthMode = 'signin' | 'signup' | 'reset' | 'update_password';
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
@@ -24,6 +25,20 @@ export default function Auth() {
   // بيانات البادل
   const [playLevel, setPlayLevel] = useState('مبتدئ');
   const [preferredSide, setPreferredSide] = useState('كلاهما');
+
+  // 🔥 مراقب ذكي يكتشف إذا المستخدم جاي من رابط استعادة كلمة المرور
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setMode('update_password');
+        setPassword(''); // تصفير حقل الباسورد احتياطياً
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   const handleNextStep = () => {
     if (step === 1 && (!firstName || !lastName || !phone || !birthDate)) {
@@ -69,12 +84,23 @@ export default function Auth() {
         navigate('/');
       }
       else if (mode === 'reset') {
+        // 🔥 إرسال رابط الاستعادة مع توجيه المستخدم لصفحة التطبيق الرئيسية
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/profile`,
+          redirectTo: window.location.origin, 
         });
         if (error) throw error;
         toast.success("تم إرسال رابط استعادة كلمة المرور لبريدك 📧");
         setMode('signin');
+        setEmail('');
+      }
+      else if (mode === 'update_password') {
+        // 🔥 تحديث كلمة المرور بعد ما يضغط على الرابط
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        toast.success("تم تغيير كلمة المرور بنجاح! 🎊");
+        setMode('signin');
+        setPassword('');
+        navigate('/');
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -100,11 +126,11 @@ export default function Auth() {
           </div>
           <h1 className="text-3xl font-[1000] italic uppercase leading-none tracking-tighter">هايب PADEL</h1>
           <p className="text-gray-400 mt-2 text-[10px] font-black uppercase italic tracking-[0.2em]">
-            {mode === 'reset' ? 'استعادة الوصول لحسابك' : mode === 'signup' ? 'سجل بياناتك وانضم للملعب' : 'سجل دخولك يا بطل'}
+            {mode === 'reset' ? 'استعادة الوصول لحسابك' : mode === 'update_password' ? 'تعيين كلمة مرور جديدة 🔐' : mode === 'signup' ? 'سجل بياناتك وانضم للملعب' : 'سجل دخولك يا بطل'}
           </p>
         </div>
 
-        {/* مؤشر الخطوات (فقط في التسجيل) */}
+        {/* مؤشر الخطوات */}
         {mode === 'signup' && (
           <div className="flex justify-center gap-2 mb-8">
             <div className={`h-1.5 w-12 rounded-full transition-all ${step >= 1 ? 'bg-cyan-400' : 'bg-white/10'}`} />
@@ -115,23 +141,31 @@ export default function Auth() {
 
         <form onSubmit={(e) => { if(mode !== 'signup' || step === 3) handleAuth(e); else e.preventDefault(); }} className="space-y-4">
           
-          {/* ================= تسجيل الدخول واستعادة كلمة المرور ================= */}
-          {mode !== 'signup' && (
-            <>
-              <div className="relative">
-                <Mail className="absolute right-4 top-4 text-gray-500" size={18} />
-                <input type="email" placeholder="البريد الإلكتروني" className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              {mode === 'signin' && (
-                <div className="relative">
-                  <Lock className="absolute right-4 top-4 text-gray-500" size={18} />
-                  <input type="password" placeholder="كلمة المرور" className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                </div>
-              )}
-            </>
+          {/* ================= الإيميل (يظهر في الدخول والاستعادة) ================= */}
+          {(mode === 'signin' || mode === 'reset') && (
+            <div className="relative animate-in fade-in duration-300">
+              <Mail className="absolute right-4 top-4 text-gray-500" size={18} />
+              <input type="email" placeholder="البريد الإلكتروني" className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
           )}
 
-          {/* ================= التسجيل - الخطوة 1: البيانات الشخصية ================= */}
+          {/* ================= الباسورد (يظهر في الدخول) ================= */}
+          {mode === 'signin' && (
+            <div className="relative animate-in fade-in duration-300">
+              <Lock className="absolute right-4 top-4 text-gray-500" size={18} />
+              <input type="password" placeholder="كلمة المرور" className="w-full bg-white/5 border border-white/10 p-4 pr-12 rounded-2xl text-xs font-bold outline-none focus:border-cyan-500 transition-all placeholder:text-gray-500" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+          )}
+
+          {/* ================= كلمة المرور الجديدة (يظهر بعد الضغط على رابط الاستعادة) ================= */}
+          {mode === 'update_password' && (
+            <div className="relative animate-in zoom-in duration-300">
+              <Lock className="absolute right-4 top-4 text-cyan-400" size={18} />
+              <input type="password" placeholder="اكتب كلمة المرور الجديدة" className="w-full bg-[#0a0f3c] border border-cyan-500 p-4 pr-12 rounded-2xl text-xs font-bold outline-none ring-1 ring-cyan-500/50 transition-all placeholder:text-gray-500" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            </div>
+          )}
+
+          {/* ================= التسجيل - الخطوة 1 ================= */}
           {mode === 'signup' && step === 1 && (
             <div className="space-y-4 animate-in slide-in-from-left-4 fade-in duration-300">
               <div className="flex gap-3">
@@ -149,7 +183,6 @@ export default function Auth() {
                 <button type="button" onClick={() => setGender('أنثى')} className={`flex-1 py-4 rounded-2xl font-black text-[10px] border transition-all ${gender === 'أنثى' ? 'bg-purple-500 border-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}>أنثى ♀</button>
               </div>
 
-              {/* 🔥 تعديل حقل تاريخ الميلاد ليكون واضح وفخم 🔥 */}
               <div className="space-y-2 text-right">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block pr-2">تاريخ الميلاد</label>
                 <div className="relative">
@@ -170,7 +203,7 @@ export default function Auth() {
             </div>
           )}
 
-          {/* ================= التسجيل - الخطوة 2: بيانات البادل ================= */}
+          {/* ================= التسجيل - الخطوة 2 ================= */}
           {mode === 'signup' && step === 2 && (
             <div className="space-y-6 animate-in slide-in-from-left-4 fade-in duration-300">
               
@@ -203,7 +236,7 @@ export default function Auth() {
             </div>
           )}
 
-          {/* ================= التسجيل - الخطوة 3: الإيميل والباسورد ================= */}
+          {/* ================= التسجيل - الخطوة 3 ================= */}
           {mode === 'signup' && step === 3 && (
             <div className="space-y-4 animate-in slide-in-from-left-4 fade-in duration-300">
               <div className="relative">
@@ -224,11 +257,16 @@ export default function Auth() {
             </div>
           )}
 
-          {/* زر تسجيل الدخول العادي */}
+          {/* أزرار الإجراءات (دخول، إرسال رابط، تغيير باسورد) */}
           {mode !== 'signup' && (
-            <button type="submit" disabled={loading} className="w-full py-5 bg-cyan-500 text-[#0a0f3c] rounded-[24px] font-[1000] text-sm uppercase shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 mt-4">
+            <button type="submit" disabled={loading} className={`w-full py-5 rounded-[24px] font-[1000] text-sm uppercase shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 mt-4 ${mode === 'update_password' ? 'bg-purple-500 text-white' : 'bg-cyan-500 text-[#0a0f3c]'}`}>
               {loading ? <Loader2 className="animate-spin" size={20} /> : (
-                <><span>{mode === 'signin' ? 'تسجيل الدخول' : 'إرسال رابط الاستعادة'}</span><LogIn size={20} /></>
+                <>
+                  <span>
+                    {mode === 'signin' ? 'تسجيل الدخول' : mode === 'reset' ? 'إرسال رابط الاستعادة' : 'حفظ كلمة المرور'}
+                  </span>
+                  {mode === 'signin' && <LogIn size={20} />}
+                </>
               )}
             </button>
           )}
@@ -238,10 +276,14 @@ export default function Auth() {
           {mode === 'signin' && (
             <button onClick={() => setMode('reset')} className="text-[10px] font-black text-cyan-400 uppercase tracking-widest block mx-auto underline">نسيت كلمة المرور؟</button>
           )}
-          <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setStep(1); }} className="text-[10px] font-black text-gray-400 hover:text-white transition-colors uppercase tracking-[0.2em] italic block mx-auto bg-white/5 px-6 py-2.5 rounded-full border border-white/5">
-            {mode === 'signup' ? 'لديك حساب بالفعل؟ سجل دخولك' : 'لاعب جديد؟ أنشئ حسابك الآن'}
-          </button>
-          {mode === 'reset' && (
+          
+          {(mode === 'signin' || mode === 'signup') && (
+             <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setStep(1); }} className="text-[10px] font-black text-gray-400 hover:text-white transition-colors uppercase tracking-[0.2em] italic block mx-auto bg-white/5 px-6 py-2.5 rounded-full border border-white/5">
+               {mode === 'signup' ? 'لديك حساب بالفعل؟ سجل دخولك' : 'لاعب جديد؟ أنشئ حسابك الآن'}
+             </button>
+          )}
+
+          {(mode === 'reset' || mode === 'update_password') && (
             <button onClick={() => setMode('signin')} className="text-[10px] font-black text-white uppercase underline">الرجوع لتسجيل الدخول</button>
           )}
         </div>
