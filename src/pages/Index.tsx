@@ -27,37 +27,37 @@ export default function Index() {
     fetchCourts();
   }, []);
 
-  // 🔥 التعديل الجذري: تطابق الفلتر مع طريقة عرض البطاقات 100%
+  // 🔥 الدرع السحري: الفلتر الأقوى ضد أي خطأ أو نقص في الداتا
   const filteredCourts = courts.filter(court => {
+    // نحول كل شيء لنصوص باستخدام String() عشان نمنع الكراش نهائياً
+    const safeName = String(court.name || '').toLowerCase();
+    const safeLocation = String(court.location || '').toLowerCase();
+    const safeGender = String(court.gender || '').toLowerCase();
+    const safeType = String(court.type || '').toLowerCase();
+
     // 1. فرز البحث
     const searchStr = searchTerm.toLowerCase().trim();
-    const matchesSearch = !searchStr || 
-      (court.name && court.name.toLowerCase().includes(searchStr)) || 
-      (court.location && court.location.toLowerCase().includes(searchStr));
+    const matchesSearch = !searchStr || safeName.includes(searchStr) || safeLocation.includes(searchStr);
     
     // 2. فرز الفئة
     let matchesGender = true;
     if (genderFilter !== 'all') {
-      // نعرف هل هو نسائي أولاً (نفس شرط البطاقة بالضبط)
-      const isFemale = court.gender && (court.gender.toLowerCase().includes('female') || court.gender.includes('نسا') || court.gender.includes('women'));
-      
+      const isFemale = safeGender.includes('female') || safeGender.includes('women') || safeGender.includes('نسا');
       if (genderFilter === 'female') {
-        matchesGender = !!isFemale; // لازم يكون نسائي
+        matchesGender = isFemale;
       } else if (genderFilter === 'male') {
-        matchesGender = !isFemale; // 🔥 أي شيء ليس نسائي، نعتبره رجالي! (كذا مستحيل يختفي الملعب)
+        matchesGender = !isFemale; // أي شيء مو نسائي صريح، بنعتبره رجالي ويظهر!
       }
     }
     
     // 3. فرز نمط اللعب
     let matchesType = true;
     if (typeFilter !== 'all') {
-      // نعرف هل هو 1 ضد 1
-      const is1v1 = court.type && court.type.toLowerCase().includes('1');
-      
+      const is1v1 = safeType.includes('1') || safeType.includes('single') || safeType.includes('فردي');
       if (typeFilter === '1v1') {
-        matchesType = !!is1v1; // لازم يكون 1v1
+        matchesType = is1v1;
       } else if (typeFilter === '2v2') {
-        matchesType = court.type ? !is1v1 : false; // 🔥 إذا كان مسجل له نوع ومافيه رقم 1، نعتبره 2v2
+        matchesType = !is1v1; // أي شيء مو 1v1 صريح، بنعتبره 2v2 ويظهر!
       }
     }
     
@@ -184,12 +184,13 @@ export default function Index() {
                         <ShieldCheck size={12} /> {lang === 'ar' ? 'موثق' : 'Verified'}
                       </span>
                     )}
-                    <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase text-center backdrop-blur-xl border ${court.gender?.toLowerCase().includes('female') || court.gender?.includes('نسا') ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
-                      {court.gender?.toLowerCase().includes('female') || court.gender?.includes('نسا') ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
+                    {/* استخدمت String() هنا كمان عشان البطاقة ما تعلق أبد */}
+                    <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase text-center backdrop-blur-xl border ${String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا') ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
+                      {String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا') ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
                     </span>
                     {court.type && (
                       <span className="px-4 py-2 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
-                        {court.type.toLowerCase().includes('1') ? '1 VS 1' : '2 VS 2'}
+                        {String(court.type).toLowerCase().includes('1') ? '1 VS 1' : '2 VS 2'}
                       </span>
                     )}
                   </div>
