@@ -27,33 +27,37 @@ export default function Index() {
     fetchCourts();
   }, []);
 
-  // 🔥 هنا عدلت الفلتر عشان يقرأ العربي والإنجليزي بذكاء ويفرز صح 100%
+  // 🔥 التعديل الجذري: تطابق الفلتر مع طريقة عرض البطاقات 100%
   const filteredCourts = courts.filter(court => {
-    // فرز البحث
+    // 1. فرز البحث
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = !searchStr || 
       (court.name && court.name.toLowerCase().includes(searchStr)) || 
       (court.location && court.location.toLowerCase().includes(searchStr));
     
-    // فرز الفئة (رجالي / نسائي)
+    // 2. فرز الفئة
     let matchesGender = true;
     if (genderFilter !== 'all') {
-      const courtGen = (court.gender || '').toLowerCase();
-      if (genderFilter === 'male') {
-        matchesGender = courtGen.includes('male') || courtGen.includes('men') || courtGen.includes('رجال');
-      } else if (genderFilter === 'female') {
-        matchesGender = courtGen.includes('female') || courtGen.includes('women') || courtGen.includes('نسا');
+      // نعرف هل هو نسائي أولاً (نفس شرط البطاقة بالضبط)
+      const isFemale = court.gender && (court.gender.toLowerCase().includes('female') || court.gender.includes('نسا') || court.gender.includes('women'));
+      
+      if (genderFilter === 'female') {
+        matchesGender = !!isFemale; // لازم يكون نسائي
+      } else if (genderFilter === 'male') {
+        matchesGender = !isFemale; // 🔥 أي شيء ليس نسائي، نعتبره رجالي! (كذا مستحيل يختفي الملعب)
       }
     }
     
-    // فرز نوع اللعب (1v1 / 2v2)
+    // 3. فرز نمط اللعب
     let matchesType = true;
     if (typeFilter !== 'all') {
-      const courtType = (court.type || '').toLowerCase();
+      // نعرف هل هو 1 ضد 1
+      const is1v1 = court.type && court.type.toLowerCase().includes('1');
+      
       if (typeFilter === '1v1') {
-        matchesType = courtType.includes('1');
+        matchesType = !!is1v1; // لازم يكون 1v1
       } else if (typeFilter === '2v2') {
-        matchesType = courtType.includes('2');
+        matchesType = court.type ? !is1v1 : false; // 🔥 إذا كان مسجل له نوع ومافيه رقم 1، نعتبره 2v2
       }
     }
     
@@ -180,7 +184,6 @@ export default function Index() {
                         <ShieldCheck size={12} /> {lang === 'ar' ? 'موثق' : 'Verified'}
                       </span>
                     )}
-                    {/* 🔥 وتعديل بسيط هنا عشان شكل التاق (Tag) يطلع لونه صح سواء الكلمة بالعربي أو الإنجليزي */}
                     <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase text-center backdrop-blur-xl border ${court.gender?.toLowerCase().includes('female') || court.gender?.includes('نسا') ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
                       {court.gender?.toLowerCase().includes('female') || court.gender?.includes('نسا') ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
                     </span>
