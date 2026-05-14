@@ -27,17 +27,35 @@ export default function Index() {
     fetchCourts();
   }, []);
 
+  // 🔥 هنا عدلت الفلتر عشان يقرأ العربي والإنجليزي بذكاء ويفرز صح 100%
   const filteredCourts = courts.filter(court => {
-    const matchesSearch = (court.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         (court.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+    // فرز البحث
+    const searchStr = searchTerm.toLowerCase().trim();
+    const matchesSearch = !searchStr || 
+      (court.name && court.name.toLowerCase().includes(searchStr)) || 
+      (court.location && court.location.toLowerCase().includes(searchStr));
     
-    // 💡 ذكاء الفرز: توحيد حالة الأحرف عشان يتطابق صح 100٪
-    const safeGender = (court.gender || '').toLowerCase();
-    const matchesGender = genderFilter === 'all' || safeGender === genderFilter;
+    // فرز الفئة (رجالي / نسائي)
+    let matchesGender = true;
+    if (genderFilter !== 'all') {
+      const courtGen = (court.gender || '').toLowerCase();
+      if (genderFilter === 'male') {
+        matchesGender = courtGen.includes('male') || courtGen.includes('men') || courtGen.includes('رجال');
+      } else if (genderFilter === 'female') {
+        matchesGender = courtGen.includes('female') || courtGen.includes('women') || courtGen.includes('نسا');
+      }
+    }
     
-    // 💡 ذكاء الفرز لنمط اللعب: إزالة المسافات وتوحيد الكلمة عشان يقبل 1v1 أو 1 VS 1
-    const safeType = (court.type || '').toLowerCase().replace(/\s/g, '').replace('vs', 'v'); 
-    const matchesType = typeFilter === 'all' || safeType === typeFilter;
+    // فرز نوع اللعب (1v1 / 2v2)
+    let matchesType = true;
+    if (typeFilter !== 'all') {
+      const courtType = (court.type || '').toLowerCase();
+      if (typeFilter === '1v1') {
+        matchesType = courtType.includes('1');
+      } else if (typeFilter === '2v2') {
+        matchesType = courtType.includes('2');
+      }
+    }
     
     return matchesSearch && matchesGender && matchesType;
   });
@@ -162,8 +180,9 @@ export default function Index() {
                         <ShieldCheck size={12} /> {lang === 'ar' ? 'موثق' : 'Verified'}
                       </span>
                     )}
-                    <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase text-center backdrop-blur-xl border ${court.gender?.toLowerCase() === 'female' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
-                      {court.gender?.toLowerCase() === 'female' ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
+                    {/* 🔥 وتعديل بسيط هنا عشان شكل التاق (Tag) يطلع لونه صح سواء الكلمة بالعربي أو الإنجليزي */}
+                    <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase text-center backdrop-blur-xl border ${court.gender?.toLowerCase().includes('female') || court.gender?.includes('نسا') ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
+                      {court.gender?.toLowerCase().includes('female') || court.gender?.includes('نسا') ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
                     </span>
                     {court.type && (
                       <span className="px-4 py-2 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
