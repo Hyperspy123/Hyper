@@ -13,8 +13,20 @@ export default function Header() {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  // 🔥 تحديد الصفحات الرئيسية التي يظهر فيها "المنيو" بدلاً من "الرجوع"
-  const mainTabs = ['/', '/bookings', '/community', '/wallet', '/profile'];
+  // 🔥 التحديث هنا: ضفنا كل المسارات المحتملة لصفحاتك الرئيسية عشان يظهر فيها المنيو 🔥
+  const mainTabs = [
+    '/',                // الرئيسية
+    '/bookings',        // حجوزاتي
+    '/my-bookings',     // حجوزاتي (لو كان هذا مسارها)
+    '/community',       // المجتمع
+    '/events',          // فعاليات
+    '/activities',      // فعاليات (لو كان هذا مسارها)
+    '/rewards',         // مكافآتي
+    '/wallet',          // المحفظة
+    '/payment',         // المحفظة/الدفع
+    '/profile'          // الملف الشخصي
+  ];
+  
   const isMainPage = mainTabs.includes(location.pathname);
 
   const menuItems = [
