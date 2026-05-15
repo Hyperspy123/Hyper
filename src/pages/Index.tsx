@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL'; 
 import Header from '@/components/Header';
-import { MapPin, ChevronRight, Zap, Search, SlidersHorizontal, Users, User, SearchX, Star, ShieldCheck, Loader2 } from 'lucide-react';
+import { MapPin, ChevronRight, Zap, Search, SlidersHorizontal, Users, User, SearchX, Star, ShieldCheck, Loader2, Trophy } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext'; 
 
 export default function Index() {
@@ -90,7 +90,7 @@ export default function Index() {
                 </div>
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 mb-8">
               <h2 className="text-6xl font-[1000] italic tracking-tighter uppercase leading-[0.8] flex flex-col items-center">
                 HYPER <span className="text-cyan-400 text-4xl block mt-1 underline decoration-cyan-500/30 underline-offset-8">PADEL</span>
               </h2>
@@ -100,7 +100,39 @@ export default function Index() {
             </div>
           </section>
 
-          <div className="relative z-50 group">
+          {/* 🔥 بطاقة تصنيف اللاعب وتقدمه 🔥 */}
+          <div className="relative group cursor-pointer hover:scale-[1.02] transition-transform duration-300">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-[30px] opacity-20 blur transition duration-500 group-hover:opacity-40" />
+            <div className="relative bg-[#0a0f3c]/80 backdrop-blur-xl border border-white/10 p-6 rounded-[28px] shadow-2xl">
+              <div className="flex justify-between items-center mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="bg-gradient-to-br from-cyan-500/20 to-purple-500/20 p-3 rounded-2xl border border-white/10 shadow-inner">
+                    <Trophy className="text-cyan-400" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{lang === 'ar' ? 'التصنيف الحالي' : 'CURRENT RANK'}</h3>
+                    <p className="text-2xl font-[1000] italic text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
+                      {lang === 'ar' ? 'متوسط - Lvl 3' : 'INTER - Lvl 3'}
+                    </p>
+                  </div>
+                </div>
+                <div dir="ltr" className="text-right">
+                  <span className="block text-[9px] text-gray-500 font-black uppercase tracking-[0.2em]">{lang === 'ar' ? 'النقاط' : 'XP POINTS'}</span>
+                  <span className="text-xl font-black text-white">850<span className="text-xs text-gray-500">/1000</span></span>
+                </div>
+              </div>
+              
+              {/* شريط التقدم النيون */}
+              <div className="relative h-3 bg-white/5 rounded-full overflow-hidden border border-white/10 shadow-inner" dir="ltr">
+                <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 rounded-full w-[85%] shadow-[0_0_15px_rgba(6,182,212,0.6)] animate-pulse" />
+              </div>
+              <p className="text-[10px] text-center text-gray-400 mt-4 font-bold tracking-wide">
+                {lang === 'ar' ? 'باقي 150 نقطة للوصول إلى Lvl 4! 🚀' : '150 XP remaining to reach Lvl 4! 🚀'}
+              </p>
+            </div>
+          </div>
+
+          <div className="relative z-50 group mt-4">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-[26px] opacity-20 group-focus-within:opacity-40 transition duration-500 blur" />
             <div className="relative flex gap-3">
               <div className="relative flex-1 group/input">
@@ -183,7 +215,6 @@ export default function Index() {
                       {String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا') ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
                     </span>
                     {court.type && (
-                      /* 🔥 تم إضافة dir="ltr" هنا عشان الرقم والحرف ما ينقلبون 🔥 */
                       <span dir="ltr" className="inline-block px-4 py-2 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
                         {String(court.type).toLowerCase().includes('1') ? '1 VS 1' : '2 VS 2'}
                       </span>
@@ -203,7 +234,6 @@ export default function Index() {
                           <MapPin size={16} className="text-cyan-400" /> {court.location}
                       </div>
                     </div>
-                    {/* 🔥 تم إضافة dir="ltr" هنا كمان للسعر عشان كلمة SAR ما تنعكس 🔥 */}
                     <div dir="ltr" className="bg-white/5 backdrop-blur-md p-4 rounded-[28px] border border-white/10 text-center min-w-[100px] shadow-inner">
                       <span className="block text-[8px] text-gray-600 font-black uppercase tracking-[0.2em] mb-1">SAR / HR</span>
                       <span className="text-2xl font-black text-white italic leading-none">{court.price_per_hour || court.price}</span>
