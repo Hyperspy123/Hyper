@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom'; 
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe, Headphones, Trophy, Zap } from 'lucide-react';
+import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe, Headphones, Zap } from 'lucide-react';
 import { supabase } from '../LLL';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -13,19 +13,15 @@ export default function Header() {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  // هل نحن في الصفحة الرئيسية؟
-  const isHome = location.pathname === '/';
-
-  // بيانات التصنيف (تقدر مستقبلاً تسحبها من الداتا بيس)
-  const rank = lang === 'ar' ? 'متوسط 3' : 'INTER 3';
-  const progress = 85; // النسبة المئوية للتقدم
+  // 🔥 تحديد الصفحات الرئيسية التي يظهر فيها "المنيو" بدلاً من "الرجوع"
+  const mainTabs = ['/', '/bookings', '/community', '/wallet', '/profile'];
+  const isMainPage = mainTabs.includes(location.pathname);
 
   const menuItems = [
     { icon: User, label: t('profile'), path: '/profile' },
     { icon: Wallet, label: t('payment'), path: '/payment' },
   ];
 
-  // 🔥 محتوى السايد بار (القائمة الجانبية)
   const sidebarContent = (
     <div className={`fixed inset-0 z-[99999] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`} dir={dir}>
       <div 
@@ -97,20 +93,20 @@ export default function Header() {
     <>
       <header className="fixed top-0 left-0 right-0 z-[40] px-6 py-4 flex justify-between items-center bg-[#05081d]/80 backdrop-blur-xl border-b border-white/5">
         
-        {/* القسم الأيسر: زر القائمة الجانبية (أو زر الرجوع) */}
+        {/* القسم الأيسر: يظهر المنيو في الصفحات الرئيسية، والرجوع في الصفحات الفرعية */}
         <div className="flex items-center z-10">
-          {!isHome ? (
-            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/5 rounded-xl transition-all">
-              <ChevronLeft size={24} className={`text-white ${dir === 'rtl' ? 'rotate-180' : ''}`} />
-            </button>
-          ) : (
+          {isMainPage ? (
             <button onClick={toggleMenu} className="p-2 hover:bg-white/5 rounded-xl transition-all">
               <Menu size={24} className="text-white" />
+            </button>
+          ) : (
+            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/5 rounded-xl transition-all">
+              <ChevronLeft size={24} className={`text-white ${dir === 'rtl' ? 'rotate-180' : ''}`} />
             </button>
           )}
         </div>
         
-        {/* القسم الأوسط: الشعار (يظهر في المنتصف بالضبط) */}
+        {/* القسم الأوسط: الشعار ثابت */}
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 cursor-pointer z-0" onClick={() => navigate('/')}>
           <div className="w-7 h-7 bg-cyan-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.4)]">
             <Zap size={14} className="text-[#0a0f3c] fill-[#0a0f3c]" />
@@ -118,26 +114,8 @@ export default function Header() {
           <span className="font-[1000] text-lg tracking-tighter italic uppercase text-white">HYPER</span>
         </div>
 
-        {/* القسم الأيمن: التصنيف + التنبيهات */}
-        <div className="flex items-center gap-3 z-10">
-          {/* يظهر التصنيف بس إذا كنا في الصفحة الرئيسية */}
-          {isHome && (
-            <div className="flex flex-col items-end gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-black text-cyan-400 italic tracking-tighter uppercase">
-                  {rank}
-                </span>
-                <Trophy size={12} className="text-cyan-400" />
-              </div>
-              <div className="w-14 h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5" dir="ltr">
-                <div 
-                  className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]" 
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
+        {/* القسم الأيمن: زر التنبيهات فقط */}
+        <div className="flex items-center z-10">
           <button onClick={() => navigate('/notifications')} className="p-2 hover:bg-white/5 rounded-xl relative transition-all">
             <Bell size={22} className="text-white" />
             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#05081d]"></span>
@@ -145,7 +123,7 @@ export default function Header() {
         </div>
       </header>
 
-      {/* 🔥 البوابة السحرية للسايد بار 🔥 */}
+      {/* البوابة السحرية للسايد بار */}
       {typeof document !== 'undefined' && createPortal(sidebarContent, document.body)}
     </>
   );
