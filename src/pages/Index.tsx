@@ -27,37 +27,32 @@ export default function Index() {
     fetchCourts();
   }, []);
 
-  // 🔥 الدرع السحري: الفلتر الأقوى ضد أي خطأ أو نقص في الداتا
   const filteredCourts = courts.filter(court => {
-    // نحول كل شيء لنصوص باستخدام String() عشان نمنع الكراش نهائياً
     const safeName = String(court.name || '').toLowerCase();
     const safeLocation = String(court.location || '').toLowerCase();
     const safeGender = String(court.gender || '').toLowerCase();
     const safeType = String(court.type || '').toLowerCase();
 
-    // 1. فرز البحث
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = !searchStr || safeName.includes(searchStr) || safeLocation.includes(searchStr);
     
-    // 2. فرز الفئة
     let matchesGender = true;
     if (genderFilter !== 'all') {
       const isFemale = safeGender.includes('female') || safeGender.includes('women') || safeGender.includes('نسا');
       if (genderFilter === 'female') {
         matchesGender = isFemale;
       } else if (genderFilter === 'male') {
-        matchesGender = !isFemale; // أي شيء مو نسائي صريح، بنعتبره رجالي ويظهر!
+        matchesGender = !isFemale; 
       }
     }
     
-    // 3. فرز نمط اللعب
     let matchesType = true;
     if (typeFilter !== 'all') {
       const is1v1 = safeType.includes('1') || safeType.includes('single') || safeType.includes('فردي');
       if (typeFilter === '1v1') {
         matchesType = is1v1;
       } else if (typeFilter === '2v2') {
-        matchesType = !is1v1; // أي شيء مو 1v1 صريح، بنعتبره 2v2 ويظهر!
+        matchesType = !is1v1; 
       }
     }
     
@@ -96,7 +91,6 @@ export default function Index() {
               </div>
             </div>
             <div className="space-y-1">
-              {/* 🔥 تم تغيير الاسم هنا إلى HYPER 🔥 */}
               <h2 className="text-6xl font-[1000] italic tracking-tighter uppercase leading-[0.8] flex flex-col items-center">
                 HYPER <span className="text-cyan-400 text-4xl block mt-1 underline decoration-cyan-500/30 underline-offset-8">PADEL</span>
               </h2>
@@ -189,7 +183,8 @@ export default function Index() {
                       {String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا') ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
                     </span>
                     {court.type && (
-                      <span className="px-4 py-2 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
+                      /* 🔥 تم إضافة dir="ltr" هنا عشان الرقم والحرف ما ينقلبون 🔥 */
+                      <span dir="ltr" className="inline-block px-4 py-2 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
                         {String(court.type).toLowerCase().includes('1') ? '1 VS 1' : '2 VS 2'}
                       </span>
                     )}
@@ -208,7 +203,8 @@ export default function Index() {
                           <MapPin size={16} className="text-cyan-400" /> {court.location}
                       </div>
                     </div>
-                    <div className="bg-white/5 backdrop-blur-md p-4 rounded-[28px] border border-white/10 text-center min-w-[100px] shadow-inner">
+                    {/* 🔥 تم إضافة dir="ltr" هنا كمان للسعر عشان كلمة SAR ما تنعكس 🔥 */}
+                    <div dir="ltr" className="bg-white/5 backdrop-blur-md p-4 rounded-[28px] border border-white/10 text-center min-w-[100px] shadow-inner">
                       <span className="block text-[8px] text-gray-600 font-black uppercase tracking-[0.2em] mb-1">SAR / HR</span>
                       <span className="text-2xl font-black text-white italic leading-none">{court.price_per_hour || court.price}</span>
                     </div>
