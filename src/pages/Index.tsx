@@ -96,8 +96,9 @@ export default function Index() {
               </div>
             </div>
             <div className="space-y-1">
+              {/* 🔥 تم تغيير الاسم هنا إلى HYPER 🔥 */}
               <h2 className="text-6xl font-[1000] italic tracking-tighter uppercase leading-[0.8] flex flex-col items-center">
-                HYPE <span className="text-cyan-400 text-4xl block mt-1 underline decoration-cyan-500/30 underline-offset-8">PADEL</span>
+                HYPER <span className="text-cyan-400 text-4xl block mt-1 underline decoration-cyan-500/30 underline-offset-8">PADEL</span>
               </h2>
               <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em] pt-4 opacity-70">
                 {lang === 'ar' ? 'مجتمع الرياض المتميز' : 'Elite Riyadh Community'}
@@ -184,7 +185,6 @@ export default function Index() {
                         <ShieldCheck size={12} /> {lang === 'ar' ? 'موثق' : 'Verified'}
                       </span>
                     )}
-                    {/* استخدمت String() هنا كمان عشان البطاقة ما تعلق أبد */}
                     <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase text-center backdrop-blur-xl border ${String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا') ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
                       {String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا') ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
                     </span>
