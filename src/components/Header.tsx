@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom'; 
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe, Headphones, Zap } from 'lucide-react';
+import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe, Headphones, Zap, Crown } from 'lucide-react';
 import { supabase } from '../LLL';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -13,26 +13,37 @@ export default function Header() {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  // 🔥 التحديث هنا: ضفنا كل المسارات المحتملة لصفحاتك الرئيسية عشان يظهر فيها المنيو 🔥
+  // الصفحات الرئيسية اللي يظهر فيها المنيو
   const mainTabs = [
-    '/',                // الرئيسية
-    '/bookings',        // حجوزاتي
-    '/my-bookings',     // حجوزاتي (لو كان هذا مسارها)
-    '/community',       // المجتمع
-    '/events',          // فعاليات
-    '/activities',      // فعاليات (لو كان هذا مسارها)
-    '/rewards',         // مكافآتي
-    '/wallet',          // المحفظة
-    '/payment',         // المحفظة/الدفع
-    '/profile'          // الملف الشخصي
+    '/', '/bookings', '/my-bookings', '/community', '/events', 
+    '/activities', '/rewards', '/wallet', '/payment', '/profile'
   ];
-  
   const isMainPage = mainTabs.includes(location.pathname);
 
   const menuItems = [
     { icon: User, label: t('profile'), path: '/profile' },
     { icon: Wallet, label: t('payment'), path: '/payment' },
   ];
+
+  // 🔥 نظام التصنيفات الديناميكي (في الهيدر) 🔥
+  const matchesPlayed = 115; // رقم تجريبي (يتغير لاحقاً من قاعدة البيانات)
+  const ranks = [
+    { titleAr: 'مبتدئ', titleEn: 'Beginner', req: 0 },
+    { titleAr: 'هاوي', titleEn: 'Amateur', req: 50 },
+    { titleAr: 'متقدم', titleEn: 'Advanced', req: 100 },
+    { titleAr: 'محترف', titleEn: 'Pro', req: 150 },
+    { titleAr: 'أمير', titleEn: 'Prince', req: 200 }
+  ];
+
+  const currentRankIndex = ranks.reduce((acc, rank, index) => matchesPlayed >= rank.req ? index : acc, 0);
+  const currentRank = ranks[currentRankIndex];
+  const nextRank = ranks[currentRankIndex + 1] || ranks[ranks.length - 1];
+  
+  // حساب النسبة المئوية للمستوى الحالي فقط (عشان البار يكون دقيق)
+  let progressPercent = 100;
+  if (matchesPlayed < 200) {
+    progressPercent = ((matchesPlayed - currentRank.req) / (nextRank.req - currentRank.req)) * 100;
+  }
 
   const sidebarContent = (
     <div className={`fixed inset-0 z-[99999] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`} dir={dir}>
@@ -105,8 +116,8 @@ export default function Header() {
     <>
       <header className="fixed top-0 left-0 right-0 z-[40] px-6 py-4 flex justify-between items-center bg-[#05081d]/80 backdrop-blur-xl border-b border-white/5">
         
-        {/* القسم الأيسر: يظهر المنيو في الصفحات الرئيسية، والرجوع في الصفحات الفرعية */}
-        <div className="flex items-center z-10">
+        {/* القسم الأيسر: المنيو أو زر الرجوع */}
+        <div className="flex items-center z-10 w-1/4">
           {isMainPage ? (
             <button onClick={toggleMenu} className="p-2 hover:bg-white/5 rounded-xl transition-all">
               <Menu size={24} className="text-white" />
@@ -126,12 +137,35 @@ export default function Header() {
           <span className="font-[1000] text-lg tracking-tighter italic uppercase text-white">HYPER</span>
         </div>
 
-        {/* القسم الأيمن: زر التنبيهات فقط */}
-        <div className="flex items-center z-10">
+        {/* القسم الأيمن: شريط التصنيف + التنبيهات */}
+        <div className="flex items-center justify-end gap-3 z-10 w-1/4">
+          
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 tracking-tighter uppercase whitespace-nowrap">
+                {lang === 'ar' ? currentRank.titleAr : currentRank.titleEn}
+              </span>
+              {matchesPlayed >= 200 ? (
+                <Crown size={12} className="text-yellow-400" />
+              ) : (
+                <Zap size={10} className="text-cyan-400" />
+              )}
+            </div>
+            
+            {/* شريط التقدم المصغر للمستوى */}
+            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5" dir="ltr">
+              <div 
+                className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 shadow-[0_0_8px_rgba(6,182,212,0.6)] transition-all duration-1000" 
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
           <button onClick={() => navigate('/notifications')} className="p-2 hover:bg-white/5 rounded-xl relative transition-all">
-            <Bell size={22} className="text-white" />
+            <Bell size={20} className="text-white" />
             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#05081d]"></span>
           </button>
+          
         </div>
       </header>
 
