@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom'; 
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe, Headphones, Zap, Trophy } from 'lucide-react';
+import { Menu, X, User, Wallet, Bell, LogOut, ChevronLeft, ChevronRight, Globe, Headphones, Zap, Medal } from 'lucide-react';
 import { supabase } from '../LLL';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -25,13 +25,24 @@ export default function Header() {
     { icon: Wallet, label: t('payment'), path: '/payment' },
   ];
 
-  // 🔥 نظام اللفلات والنقاط (مطابق للملف الشخصي 100%) 🔥
-  const currentXP = 850; 
-  const nextLevelXP = 1000;
-  const progressPercent = (currentXP / nextLevelXP) * 100; // 85%
-  
-  const rankTitleAr = 'متوسط - Lvl 3';
-  const rankTitleEn = 'INTER - Lvl 3';
+  // 🔥 نظام التصنيفات المأخوذ من الملف الشخصي حقك بالملي 🔥
+  const matchesPlayed = 3; // الرقم الحالي زي ما هو بصورتك
+  const ranks = [
+    { titleAr: 'مبتدئ', titleEn: 'Beginner', req: 0 },
+    { titleAr: 'محترف', titleEn: 'Pro', req: 50 },
+    { titleAr: 'نخبة', titleEn: 'Elite', req: 100 }
+  ];
+
+  // تحديد التصنيف الحالي
+  const currentRankIndex = ranks.reduce((acc, rank, index) => matchesPlayed >= rank.req ? index : acc, 0);
+  const currentRank = ranks[currentRankIndex];
+  const nextRank = ranks[currentRankIndex + 1] || ranks[ranks.length - 1];
+
+  // حساب نسبة شريط التقدم للترقية
+  let progressPercent = 100;
+  if (matchesPlayed < 100) {
+    progressPercent = ((matchesPlayed - currentRank.req) / (nextRank.req - currentRank.req)) * 100;
+  }
 
   const sidebarContent = (
     <div className={`fixed inset-0 z-[99999] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`} dir={dir}>
@@ -125,21 +136,21 @@ export default function Header() {
           <span className="font-[1000] text-lg tracking-tighter italic uppercase text-white">HYPER</span>
         </div>
 
-        {/* القسم الأيمن: شريط مستوى الـ XP + التنبيهات */}
+        {/* القسم الأيمن: شريط مستوى التصنيف (مبتدئ، محترف، نخبة) + التنبيهات */}
         <div className="flex items-center justify-end gap-3 z-10 w-1/4">
           
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-1">
-              <span className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 tracking-tighter uppercase whitespace-nowrap">
-                {lang === 'ar' ? rankTitleAr : rankTitleEn}
+              <span className="text-[10px] font-black text-cyan-400 tracking-tighter uppercase whitespace-nowrap">
+                {lang === 'ar' ? currentRank.titleAr : currentRank.titleEn}
               </span>
-              <Trophy size={10} className="text-cyan-400" />
+              <Medal size={12} className="text-cyan-400" />
             </div>
             
-            {/* شريط التقدم للـ XP */}
-            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5" dir="ltr">
+            {/* شريط التقدم للترقية */}
+            <div className="w-16 h-1.5 bg-[#0a0f3c] rounded-full overflow-hidden border border-white/10 relative" dir="ltr">
               <div 
-                className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 shadow-[0_0_8px_rgba(6,182,212,0.6)] transition-all duration-1000" 
+                className="absolute top-0 left-0 h-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)] transition-all duration-1000" 
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
