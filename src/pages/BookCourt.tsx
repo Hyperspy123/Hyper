@@ -4,13 +4,13 @@ import { supabase } from '../LLL';
 import Header from '@/components/Header';
 import { ChevronRight, Clock, Zap, CalendarDays, Timer, Loader2, Lock, Swords } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLanguage } from '../context/LanguageContext'; // 🔥 أضفنا استدعاء اللغة هنا
+import { useLanguage } from '../context/LanguageContext'; 
 
 export default function BookCourt() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, lang } = useLanguage(); // 🔥 سحبنا اللغة والترجمة
+  const { t, lang } = useLanguage(); 
   
   const challengeInfo = location.state as { isChallengeMode?: boolean, opponentId?: string, opponentName?: string };
 
@@ -24,8 +24,10 @@ export default function BookCourt() {
   const [selectedTime, setSelectedTime] = useState('');
   const [duration, setDuration] = useState(60);
 
-  // تنظيف الـ ID والتأكد من وجوده
   const cleanId = id ? id.replace(/[^a-f0-9-]/g, '') : '';
+
+  // 🔥 تحديد ما إذا كان المستخدم يختار وضع "قائمة الانتظار"
+  const isWaitlistMode = bookedSlots.includes(selectedTime) && !challengeInfo?.isChallengeMode;
 
   const calculateTotalPrice = () => {
     if (!court?.price_per_hour) return 0;
@@ -51,13 +53,11 @@ export default function BookCourt() {
     if (!cleanId || !date || !courtName) return;
     setIsCheckingTime(true);
     
-    // ضبط الوقت المحلي للسعودية (+3)
     const startOfDay = `${date}T00:00:00+03:00`;
     const endOfDay = `${date}T23:59:59+03:00`;
     const taken: string[] = [];
 
     try {
-      // 1. الحجوزات العادية
       const { data: normalBookings } = await supabase
         .from('bookings')
         .select('start_time')
@@ -74,7 +74,6 @@ export default function BookCourt() {
         });
       }
 
-      // 2. التحديات القائمة
       const { data: challenges } = await supabase
         .from('challenges')
         .select('match_time')
@@ -138,6 +137,23 @@ export default function BookCourt() {
       const endDate = new Date(startDate.getTime() + duration * 60000);
       const finalPrice = calculateTotalPrice();
       
+      // 🔥 1. حالة قائمة الانتظار (إذا الوقت محجوز)
+      if (isWaitlistMode) {
+        const { error: waitlistError } = await supabase.from('booking_queue').insert([{
+          user_id: user.id,
+          court_id: cleanId,
+          booking_date: selectedDate,
+          time_slot: selectedTime
+        }]);
+
+        if (waitlistError) throw waitlistError;
+
+        toast.success(lang === 'ar' ? "تمت إضافتك لقائمة الانتظار! سنبلغك فور شغور الوقت ⏱️" : "Added to waiting list! We'll notify you ⏱️");
+        setTimeout(() => navigate('/my-bookings'), 1500);
+        return;
+      }
+
+      // 2. حالة وضع التحدي
       if (challengeInfo?.isChallengeMode) {
         const { error: challengeError } = await supabase.from('challenges').insert([{
           challenger_id: user.id,
@@ -153,33 +169,34 @@ export default function BookCourt() {
         if (challengeError) throw challengeError;
         toast.success(`تم إرسال التحدي لـ ${challengeInfo.opponentName} 🔥`);
         setTimeout(() => navigate('/community'), 1200);
-      } else {
-        const { error: bookingError } = await supabase.from('bookings').insert([{ 
-          court_id: cleanId, 
-          user_id: user.id, 
-          start_time: startTimeISO,
-          end_time: endDate.toISOString(), 
-          total_price: finalPrice,
-          status: 'confirmed' 
-        }]);
+        return;
+      } 
+      
+      // 3. حالة الحجز الطبيعي المباشر
+      const { error: bookingError } = await supabase.from('bookings').insert([{ 
+        court_id: cleanId, 
+        user_id: user.id, 
+        start_time: startTimeISO,
+        end_time: endDate.toISOString(), 
+        total_price: finalPrice,
+        status: 'confirmed' 
+      }]);
 
-        if (bookingError) throw bookingError;
+      if (bookingError) throw bookingError;
 
-        // 🔥 كود الإشعارات الجديد: ينرسل الإشعار بعد تأكيد الحجز مباشرة
-        await supabase.from('notifications').insert([{
-          user_id: user.id,
-          title: lang === 'ar' ? 'تأكيد الحجز 🎾' : 'Booking Confirmed 🎾',
-          message: t('notif_booking_confirmed' as any),
-          type: 'booking',
-          is_read: false
-        }]);
+      await supabase.from('notifications').insert([{
+        user_id: user.id,
+        title: lang === 'ar' ? 'تأكيد الحجز 🎾' : 'Booking Confirmed 🎾',
+        message: t('notif_booking_confirmed' as any) || 'تم تأكيد حجزك بنجاح.',
+        type: 'booking',
+        is_read: false
+      }]);
 
-        toast.success("تم الحجز بنجاح! ننتظرك في الملعب 🎾");
-        setTimeout(() => navigate('/my-bookings'), 1000);
-      }
+      toast.success("تم الحجز بنجاح! ننتظرك في الملعب 🎾");
+      setTimeout(() => navigate('/my-bookings'), 1000);
+      
     } catch (error: any) {
       toast.error("عذراً، حدث خطأ في العملية. تأكد من اتصالك.");
-    } finally {
       setBookingInProgress(false);
     }
   };
@@ -283,17 +300,26 @@ export default function BookCourt() {
           <div className="grid grid-cols-3 gap-3">
             {timeSlots.map((slot) => {
               const isBooked = bookedSlots.includes(slot.id);
+              const isSelected = selectedTime === slot.id;
+              
+              // لا يمكنك الانضمام للانتظار إذا كنت في وضع التحدي
+              const canSelect = !isCheckingTime && (!isBooked || !challengeInfo?.isChallengeMode);
+
               return (
                 <button 
                   key={slot.id} 
-                  disabled={isBooked || isCheckingTime} 
+                  disabled={!canSelect} 
                   onClick={() => setSelectedTime(slot.id)} 
-                  className={`py-5 rounded-2xl border-2 font-black text-xs transition-all flex items-center justify-center 
-                    ${isBooked ? 'bg-black/40 border-white/5 text-red-500/50 opacity-40 cursor-not-allowed' 
-                    : selectedTime === slot.id ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg shadow-cyan-500/20' 
-                    : 'bg-[#14224d] border-white/5 text-gray-400'}`}
+                  className={`py-4 rounded-2xl border-2 font-black text-xs transition-all flex flex-col items-center justify-center gap-1
+                    ${!canSelect && isBooked ? 'bg-black/40 border-white/5 text-red-500/50 opacity-40 cursor-not-allowed' 
+                    : isBooked && isSelected ? 'bg-purple-500 border-purple-400 text-white shadow-lg shadow-purple-500/30' 
+                    : isBooked && !isSelected ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20' 
+                    : !isBooked && isSelected ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg shadow-cyan-500/20' 
+                    : 'bg-[#14224d] border-white/5 text-gray-400 hover:border-white/10'}`}
                 >
-                  {isBooked ? "محجوز" : slot.label}
+                  <span>{slot.label}</span>
+                  {isBooked && canSelect && <span className="text-[9px] opacity-80">{lang === 'ar' ? 'انتظار ⏱️' : 'Waitlist ⏱️'}</span>}
+                  {isBooked && !canSelect && <span className="text-[9px] opacity-50"><Lock size={10} className="inline mb-0.5"/> محجوز</span>}
                 </button>
               );
             })}
@@ -304,12 +330,15 @@ export default function BookCourt() {
           <button 
             onClick={handleConfirm} 
             disabled={!selectedDate || !selectedTime || bookingInProgress || isCheckingTime} 
-            className="w-full py-6 bg-cyan-500 text-[#0a0f3c] rounded-[30px] font-[1000] text-xl shadow-[0_0_30px_rgba(34,211,238,0.3)] flex items-center justify-center gap-3 active:scale-95 disabled:opacity-20 transition-all uppercase italic"
+            className={`w-full py-6 rounded-[30px] font-[1000] text-xl flex items-center justify-center gap-3 active:scale-95 disabled:opacity-20 transition-all uppercase italic
+              ${isWaitlistMode 
+                ? 'bg-purple-500 text-white shadow-[0_0_30px_rgba(168,85,247,0.3)]' 
+                : 'bg-cyan-500 text-[#0a0f3c] shadow-[0_0_30px_rgba(34,211,238,0.3)]'}`}
           >
             {bookingInProgress ? <Loader2 className="animate-spin" /> : (
               <>
-                {challengeInfo?.isChallengeMode ? 'إرسال التحدي النهائي' : 'إتمام الحجز'} 
-                <Zap size={22} fill="currentColor" />
+                {challengeInfo?.isChallengeMode ? 'إرسال التحدي النهائي' : (isWaitlistMode ? (lang === 'ar' ? 'احجز انتظار' : 'Join Waitlist') : 'إتمام الحجز')} 
+                {isWaitlistMode ? <Timer size={22} /> : <Zap size={22} fill="currentColor" />}
               </>
             )}
           </button>
