@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../LLL'; 
 import Header from '@/components/Header';
-import { MapPin, ChevronRight, Zap, Search, SlidersHorizontal, Users, User, SearchX, Star, ShieldCheck, Loader2, Crown } from 'lucide-react';
+import { MapPin, ChevronRight, Zap, Search, SlidersHorizontal, Users, User, SearchX, Star, ShieldCheck, Loader2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext'; 
 
 export default function Index() {
@@ -14,21 +14,6 @@ export default function Index() {
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | '1v1' | '2v2'>('all');
   const [showFilters, setShowFilters] = useState(false);
-
-  // 🔥 نظام التصنيفات المأخوذ من الملف الشخصي 🔥
-  const matchesPlayed = 3; 
-  const ranks = [
-    { titleAr: 'مبتدئ', titleEn: 'Beginner', req: 0 },
-    { titleAr: 'محترف', titleEn: 'Pro', req: 50 },
-    { titleAr: 'نخبة', titleEn: 'Elite', req: 100 }
-  ];
-
-  const currentRankIndex = ranks.reduce((acc, rank, index) => matchesPlayed >= rank.req ? index : acc, 0);
-  const nextRank = ranks[currentRankIndex + 1] || ranks[ranks.length - 1];
-  let progressPercent = 100;
-  if (matchesPlayed < 100) {
-    progressPercent = ((matchesPlayed - currentRank.req) / (nextRank.req - currentRank.req)) * 100;
-  }
 
   useEffect(() => {
     const fetchCourts = async () => {
@@ -95,72 +80,76 @@ export default function Index() {
       <div className="relative z-10">
         <Header />
         
-        <main className="p-6 max-w-md mx-auto space-y-6 pt-24">
+        <main className="p-6 max-w-md mx-auto space-y-10 pt-28">
           <section className="text-center space-y-4">
             <div className="flex justify-center mb-2">
               <div className="relative group">
                 <div className="absolute inset-0 bg-cyan-500 blur-2xl opacity-20" />
-                <div className="relative bg-white/5 border border-white/10 p-5 rounded-[30px] backdrop-blur-xl">
-                   <Zap size={35} className="text-cyan-400 fill-cyan-400" />
+                <div className="relative bg-white/5 border border-white/10 p-5 rounded-[35px] backdrop-blur-xl">
+                   <Zap size={45} className="text-cyan-400 fill-cyan-400" />
                 </div>
               </div>
             </div>
-            <div className="space-y-1 mb-4">
-              <h2 className="text-5xl font-[1000] italic tracking-tighter uppercase leading-[0.8] flex flex-col items-center">
-                HYPER <span className="text-cyan-400 text-3xl block mt-1 underline decoration-cyan-500/30 underline-offset-8">PADEL</span>
+            <div className="space-y-1">
+              <h2 className="text-6xl font-[1000] italic tracking-tighter uppercase leading-[0.8] flex flex-col items-center">
+                HYPER <span className="text-cyan-400 text-4xl block mt-1 underline decoration-cyan-500/30 underline-offset-8">PADEL</span>
               </h2>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em] pt-4 opacity-70">
+                {lang === 'ar' ? 'مجتمع الرياض المتميز' : 'Elite Riyadh Community'}
+              </p>
             </div>
           </section>
 
-          <div className="relative z-50 group mt-2">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-[20px] opacity-20 group-focus-within:opacity-40 transition duration-500 blur" />
+          <div className="relative z-50 group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-[26px] opacity-20 group-focus-within:opacity-40 transition duration-500 blur" />
             <div className="relative flex gap-3">
               <div className="relative flex-1 group/input">
-                <Search className={`absolute ${dir === 'rtl' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-gray-500 group-focus-within/input:text-cyan-400 transition-colors`} size={16} />
+                <Search className={`absolute ${dir === 'rtl' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-gray-500 group-focus-within/input:text-cyan-400 transition-colors`} size={18} />
                 <input 
                   type="text" 
-                  placeholder={lang === 'ar' ? 'ابحث عن ملاعب في الرياض...' : 'Search for courts...'} 
-                  className={`w-full bg-[#0a0f3c]/60 backdrop-blur-3xl border border-white/10 p-3.5 ${dir === 'rtl' ? 'pr-10' : 'pl-10'} rounded-[18px] text-xs font-bold outline-none focus:border-cyan-500/50 transition-all shadow-2xl placeholder:text-gray-600`}
+                  placeholder={lang === 'ar' ? 'ابحث عن ملاعب في الرياض...' : 'Search for courts in Riyadh...'} 
+                  className={`w-full bg-[#0a0f3c]/60 backdrop-blur-3xl border border-white/10 p-4 ${dir === 'rtl' ? 'pr-12' : 'pl-12'} rounded-[24px] text-xs font-bold outline-none focus:border-cyan-500/50 transition-all shadow-2xl placeholder:text-gray-600`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <button onClick={() => setShowFilters(!showFilters)} className={`p-3.5 rounded-[16px] border transition-all duration-500 ${showFilters ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg' : 'bg-white/5 border-white/10 text-gray-400'}`}>
-                <SlidersHorizontal size={18} />
+              <button onClick={() => setShowFilters(!showFilters)} className={`p-4 rounded-[22px] border transition-all duration-500 ${showFilters ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c] shadow-lg' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                <SlidersHorizontal size={20} />
               </button>
             </div>
 
             {showFilters && (
-              <div className="absolute top-full right-0 left-0 mt-3 p-5 bg-[#0a0f3c]/95 backdrop-blur-3xl rounded-[24px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] space-y-5 animate-in fade-in zoom-in-95 duration-300 z-[100]">
+              <div className="absolute top-full right-0 left-0 mt-4 p-6 bg-[#0a0f3c]/95 backdrop-blur-3xl rounded-[30px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] space-y-6 animate-in fade-in zoom-in-95 duration-300 z-[100]">
+                
                 <div>
-                  <div className={`flex items-center gap-2 mb-2 text-gray-400 text-[9px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
-                    <User size={12} className="text-cyan-400" /> {lang === 'ar' ? 'الفئة' : 'CATEGORY'}
+                  <div className={`flex items-center gap-2 mb-3 text-gray-400 text-[10px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
+                    <User size={14} className="text-cyan-400" /> {lang === 'ar' ? 'الفئة' : 'CATEGORY'}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => setGenderFilter('all')} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${genderFilter === 'all' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                    <button onClick={() => setGenderFilter('all')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'all' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
                       {t('filter_all' as any) || 'الكل'}
                     </button>
-                    <button onClick={() => setGenderFilter('male')} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${genderFilter === 'male' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                    <button onClick={() => setGenderFilter('male')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'male' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
                       {t('filter_mens' as any) || 'رجالي'}
                     </button>
-                    <button onClick={() => setGenderFilter('female')} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${genderFilter === 'female' ? 'bg-purple-500 border-purple-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                    <button onClick={() => setGenderFilter('female')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${genderFilter === 'female' ? 'bg-purple-500 border-purple-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
                       {t('filter_womens' as any) || 'نسائي'}
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <div className={`flex items-center gap-2 mb-2 text-gray-400 text-[9px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
-                    <Users size={12} className="text-cyan-400" /> {lang === 'ar' ? 'نمط اللعب' : 'PLAY STYLE'}
+                  <div className={`flex items-center gap-2 mb-3 text-gray-400 text-[10px] font-black uppercase tracking-widest ${dir === 'ltr' ? 'flex-row' : ''}`}>
+                    <Users size={14} className="text-cyan-400" /> {lang === 'ar' ? 'نمط اللعب' : 'PLAY STYLE'}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => setTypeFilter('all')} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${typeFilter === 'all' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                    <button onClick={() => setTypeFilter('all')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === 'all' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
                       {t('filter_all' as any) || 'الكل'}
                     </button>
-                    <button onClick={() => setTypeFilter('1v1')} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${typeFilter === '1v1' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                    <button onClick={() => setTypeFilter('1v1')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === '1v1' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
                       {t('filter_1v1' as any) || '1 VS 1'}
                     </button>
-                    <button onClick={() => setTypeFilter('2v2')} className={`py-2 rounded-xl text-[9px] font-black border transition-all ${typeFilter === '2v2' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                    <button onClick={() => setTypeFilter('2v2')} className={`py-3 rounded-2xl text-[10px] font-black border transition-all ${typeFilter === '2v2' ? 'bg-cyan-500 border-cyan-400 text-[#0a0f3c]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>
                       {t('filter_2v2' as any) || '2 VS 2'}
                     </button>
                   </div>
@@ -169,84 +158,66 @@ export default function Index() {
             )}
           </div>
 
-          {/* 🔥 التصميم الجديد للملاعب (مستطيلات مدمجة) 🔥 */}
-          <div className="grid gap-4 mt-4">
+          <div className="grid gap-12">
             {loading ? (
               <div className="flex flex-col items-center py-20 text-cyan-400 font-black italic">
                 <Loader2 className="animate-spin mb-4" size={40} /> {lang === 'ar' ? 'جاري جلب الملاعب...' : 'Fetching Courts...'}
               </div>
-            ) : filteredCourts.length > 0 ? filteredCourts.map((court) => {
-              const isFemale = String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا');
-              const is1v1 = String(court.type).toLowerCase().includes('1');
-
-              return (
-                <div 
-                  key={court.id} 
-                  onClick={() => navigate(`/book/${court.id}`)} 
-                  className="group relative bg-[#0a0f3c]/60 backdrop-blur-xl rounded-[24px] overflow-hidden border border-white/10 cursor-pointer active:scale-[0.98] transition-all duration-300 shadow-xl hover:border-cyan-500/40 flex h-36"
-                >
-                  {/* قسم الصورة (يأخذ 35% من العرض) */}
-                  <div className="w-[35%] h-full relative overflow-hidden shrink-0">
-                    <img src={court.image_url || court.image} alt={court.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    <div className={`absolute inset-0 bg-gradient-to-${dir === 'rtl' ? 'l' : 'r'} from-[#0a0f3c]/90 to-transparent`} />
-                    
-                    {/* الشارات المصغرة فوق الصورة */}
-                    <div className={`absolute top-2 ${dir === 'rtl' ? 'right-2' : 'left-2'} flex flex-col gap-1`}>
-                      {court.isVerified && (
-                        <span className="bg-cyan-500 text-[#0a0f3c] p-1 rounded-md shadow-lg border border-cyan-400">
-                          <ShieldCheck size={12} />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* قسم التفاصيل (يأخذ 65% من العرض) */}
-                  <div className={`w-[65%] p-4 flex flex-col justify-between relative z-10 ${dir === 'rtl' ? '-mr-6' : '-ml-6'}`}>
-                    <div>
-                      <div className="flex justify-between items-start gap-2">
-                        <h3 className="text-xl font-[1000] italic uppercase leading-none truncate text-white">{court.name}</h3>
-                        <div dir="ltr" className="bg-[#05081d]/80 backdrop-blur-md px-2 py-1 rounded-lg border border-white/5 text-center shrink-0">
-                          <span className="block text-[14px] font-black text-cyan-400 italic leading-none">{court.price_per_hour || court.price}</span>
-                          <span className="text-[6px] text-gray-500 font-black uppercase tracking-widest mt-0.5 block">SAR/HR</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-1 mt-1.5 text-gray-400 text-[9px] font-bold tracking-tight">
-                        <MapPin size={10} className="text-cyan-500" /> 
-                        <span className="truncate">{court.location}</span>
-                      </div>
-                    </div>
-
-                    {/* الفئات وزر الحجز المصغر */}
-                    <div className="flex justify-between items-end mt-2">
-                      <div className="flex gap-1.5 flex-wrap">
-                        <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase border ${isFemale ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
-                          {isFemale ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
-                        </span>
-                        {court.type && (
-                          <span dir="ltr" className="px-2 py-1 bg-white/5 text-gray-300 border border-white/10 rounded-md text-[8px] font-black uppercase">
-                            {is1v1 ? '1 VS 1' : '2 VS 2'}
-                          </span>
-                        )}
-                      </div>
-
-                      <button className="bg-cyan-500 text-[#0a0f3c] p-2 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:bg-cyan-400 transition-colors">
-                        <ChevronRight size={16} className={dir === 'rtl' ? 'rotate-180' : ''} />
-                      </button>
-                    </div>
-                  </div>
+            ) : filteredCourts.length > 0 ? filteredCourts.map((court) => (
+              <div 
+                key={court.id} 
+                onClick={() => navigate(`/book/${court.id}`)} 
+                className="group relative bg-[#0a0f3c]/40 backdrop-blur-xl rounded-[50px] overflow-hidden border border-white/10 cursor-pointer active:scale-[0.96] transition-all duration-500 shadow-2xl hover:border-cyan-500/30"
+              >
+                <div className="h-72 overflow-hidden relative">
+                  <img src={court.image_url || court.image} alt={court.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#05081d] via-transparent to-black/10" />
                   
-                  {/* نجمة مميز */}
-                  <div className={`absolute top-0 ${dir === 'rtl' ? 'left-4' : 'right-4'} bg-yellow-500 p-1.5 rounded-b-lg shadow-lg`}>
-                    <Star size={10} className="fill-[#0a0f3c] text-[#0a0f3c]" />
+                  <div className={`absolute top-6 ${dir === 'rtl' ? 'left-6' : 'right-6'} flex flex-col gap-2`}>
+                    {court.isVerified && (
+                      <span className="bg-cyan-500 text-[#0a0f3c] px-3 py-1.5 rounded-2xl text-[9px] font-[1000] uppercase flex items-center justify-center gap-1 shadow-lg border border-cyan-400">
+                        <ShieldCheck size={12} /> {lang === 'ar' ? 'موثق' : 'Verified'}
+                      </span>
+                    )}
+                    <span className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase text-center backdrop-blur-xl border ${String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا') ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
+                      {String(court.gender || '').toLowerCase().includes('female') || String(court.gender || '').includes('نسا') ? (lang === 'ar' ? 'نسائي' : 'Women') : (lang === 'ar' ? 'رجالي' : 'Men')}
+                    </span>
+                    {court.type && (
+                      <span dir="ltr" className="inline-block px-4 py-2 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-2xl text-[9px] font-black uppercase shadow-lg text-center mt-1">
+                        {String(court.type).toLowerCase().includes('1') ? '1 VS 1' : '2 VS 2'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className={`absolute top-6 ${dir === 'rtl' ? 'right-6' : 'left-6'} bg-yellow-500 text-black px-4 py-2 rounded-2xl text-[10px] font-black flex items-center gap-2 shadow-2xl border border-yellow-400 ${dir === 'rtl' ? 'rotate-3' : '-rotate-3'}`}>
+                    <Star size={14} className="fill-black" /> {lang === 'ar' ? 'مـمـيـز' : 'FEATURED'}
                   </div>
                 </div>
-              );
-            }) : (
-              <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-[30px] border border-dashed border-white/20 mt-4">
-                <SearchX size={50} className="text-gray-700 mx-auto mb-4" />
-                <h3 className="text-lg font-black text-white mb-1 tracking-tight">
-                  {lang === 'ar' ? 'لا توجد ملاعب!' : 'No Courts!'}
+
+                <div className={`p-10 pt-4 relative z-10 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <h3 className="text-3xl font-[1000] italic tracking-tighter uppercase leading-none text-white">{court.name}</h3>
+                      <div className="flex items-center gap-2 text-gray-500 text-xs font-bold tracking-tight">
+                          <MapPin size={16} className="text-cyan-400" /> {court.location}
+                      </div>
+                    </div>
+                    <div dir="ltr" className="bg-white/5 backdrop-blur-md p-4 rounded-[28px] border border-white/10 text-center min-w-[100px] shadow-inner">
+                      <span className="block text-[8px] text-gray-600 font-black uppercase tracking-[0.2em] mb-1">SAR / HR</span>
+                      <span className="text-2xl font-black text-white italic leading-none">{court.price_per_hour || court.price}</span>
+                    </div>
+                  </div>
+
+                  <button className="w-full mt-8 py-5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-[#0a0f3c] rounded-[30px] font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/50 transition-all flex items-center justify-center gap-3">
+                    {t('book_now' as any)} <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
+                  </button>
+                </div>
+              </div>
+            )) : (
+              <div className="text-center py-24 bg-white/5 backdrop-blur-xl rounded-[50px] border border-dashed border-white/20">
+                <SearchX size={60} className="text-gray-700 mx-auto mb-6" />
+                <h3 className="text-xl font-black text-white mb-2 tracking-tight">
+                  {lang === 'ar' ? 'لا توجد ملاعب تطابق بحثك!' : 'No Courts Found!'}
                 </h3>
               </div>
             )}
